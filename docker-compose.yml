@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: eduai-postgres
+    environment:
+      POSTGRES_USER: eduai
+      POSTGRES_PASSWORD: eduai
+      POSTGRES_DB: eduai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eduai -d eduai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: eduai-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: eduai-backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://eduai:eduai@postgres:5432/eduai?schema=public
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./backend/src:/app/src"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  
+  ai-service:
+    build: ./ai-services
+    container_name: eduai-ai
+    env_file: ./ai-services/.env
+    environment:
+      DATABASE_URL: postgresql://eduai:eduai@postgres:5432/eduai
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-services/src:/app/src
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  frontend:
+    build: ./frontend
+    container_name: eduai-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+volumes:
+  pgdata:

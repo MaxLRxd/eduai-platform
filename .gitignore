@@ -1,0 +1,25 @@
+#ENTORNO
+.env
+.env.*
+!.env.example
+
+#NODE
+node_modules/
+dist/
+build/
+coverage/
+
+#Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+#Datps locales/docker
+data/
+pgdata/
+*.log
+
+#Editor
+.vscode/
