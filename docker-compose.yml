@@ -1,0 +1,122 @@
+name: eduai
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: eduai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eduai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eduai}
+      POSTGRES_DB: ${POSTGRES_DB:-eduai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eduai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: eduai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: eduai-chroma
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadata:/data
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    container_name: eduai-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - backend_modules:/app/node_modules
+      - backend_dist:/app/dist
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eduai}:${POSTGRES_PASSWORD:-eduai}@db:5432/${POSTGRES_DB:-eduai}
+      REDIS_URL: redis://redis:6379
+      CHROMA_URL: http://chromadb:8000
+      AI_SERVICE_URL: http://ai-service:8000
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-service:
+    build:
+      context: ./ai-service
+      target: dev
+    container_name: eduai-ai-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app
+      - aipy_venv:/app/.venv
+    env_file:
+      - .env
+    environment:
+      CHROMA_URL: http://chromadb:8000
+      REDIS_URL: redis://redis:6379
+      PORT: 8000
+    depends_on:
+      chromadb:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    container_name: eduai-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
+    env_file:
+      - .env
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:
+  chromadata:
+  backend_modules:
+  backend_dist:
+  frontend_modules:
+  aipy_venv:

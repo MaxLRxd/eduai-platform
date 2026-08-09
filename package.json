@@ -1,0 +1,25 @@
+{
+  "name": "eduai-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EduAI: Campus educativo virtual integrado con asistente de IA",
+  "type": "module",
+  "scripts": {
+    "dev": "docker compose up --build",
+    "dev:local": "concurrently -n backend,ai,frontend -c blue,green,magenta \"npm run dev --workspace backend\" \"npm run dev:local --workspace ai-service\" \"npm run dev --workspace frontend\"",
+    "ai:setup": "cd ai-service && python -m venv .venv && .venv\\Scripts\\pip install -r requirements-dev.txt",
+    "ai:test": "cd ai-service && .venv\\Scripts\\pytest tests",
+    "db:migrate": "npm run db:migrate --workspace backend",
+    "db:generate": "npm run db:generate --workspace backend",
+    "logs": "docker compose logs -f",
+    "test": "npm run test --workspace backend && npm run ai:test && npm run test --workspace frontend",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

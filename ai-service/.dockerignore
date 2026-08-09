@@ -1,0 +1,7 @@
+# No vendored deps, cachés ni entornos locales
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
