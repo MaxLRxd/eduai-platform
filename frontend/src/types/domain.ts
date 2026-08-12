@@ -215,3 +215,13 @@ export interface ColorPreset {
   secondary: string;
   lighter: string;
 }
+
+export type RagStatus = "Indexado" | "Sin indexar" | "Indexando…";
+
+export interface UploadedMaterial {
+  name: string;
+  fileType: "pdf" | "pptx" | "docx" | "img" | "txt";
+  sizeLabel: string;
+  ragStatus: RagStatus;
+  date: string;
+}

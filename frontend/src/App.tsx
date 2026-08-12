@@ -5,7 +5,6 @@ import { ProtectedRoute } from "./router/ProtectedRoute";
 import { DEFAULT_PATH_BY_ROLE } from "./router/navConfig";
 import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./pages/LoginPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { StudentDashboardPage } from "./pages/student/StudentDashboardPage";
 import { StudentCoursesPage } from "./pages/student/StudentCoursesPage";
 import { StudentCourseDetailPage } from "./pages/student/StudentCourseDetailPage";
@@ -23,6 +22,8 @@ import { TeacherAnalyticsPage } from "./pages/teacher/TeacherAnalyticsPage";
 import { TeacherAIPage } from "./pages/teacher/TeacherAIPage";
 import { TeacherPlanningPage } from "./pages/teacher/TeacherPlanningPage";
 import { TeacherMessagesPage } from "./pages/teacher/TeacherMessagesPage";
+import { TeacherContentPage } from "./pages/teacher/TeacherContentPage";
+import { TeacherProfilePage } from "./pages/teacher/TeacherProfilePage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminMateriasPage } from "./pages/admin/AdminMateriasPage";
 import { AdminClavesPage } from "./pages/admin/AdminClavesPage";
@@ -217,20 +218,26 @@ export function App(): React.ReactElement {
         }
       />
 
-      {/* Docente — placeholders, nav ya armada en navConfig.ts */}
-      {["/teacher/content", "/teacher/profile"].map((path) => (
-        <Route
-          key={path}
-          path={path}
-          element={
-            <ProtectedRoute allow="PROFESOR">
-              <Shell title="Panel docente">
-                <PlaceholderPage title="Panel docente" />
-              </Shell>
-            </ProtectedRoute>
-          }
-        />
-      ))}
+      <Route
+        path="/teacher/content"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Contenidos">
+              <TeacherContentPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/profile"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Mi perfil">
+              <TeacherProfilePage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin */}
       <Route
