@@ -1,6 +1,7 @@
 """Tests del servicio de búsqueda vectorial en Pinecone."""
 
 import pytest
+from pinecone import NotFoundError
 
 from src.services.pinecone_service import PineconeRetrievalService
 
@@ -10,14 +11,18 @@ class FakeIndex:
         self.upserts: list[tuple[list, str]] = []
         self.deletes: list[tuple[dict, str]] = []
         self.matches: list = []
+        self.namespaces: set[str] = set()
 
     def upsert(self, vectors, namespace):
         self.upserts.append((vectors, namespace))
+        self.namespaces.add(namespace)
 
     def query(self, vector, top_k, namespace, include_metadata):
         return FakeQueryResponse(self.matches)
 
     def delete(self, filter, namespace):
+        if namespace not in self.namespaces:
+            raise NotFoundError(f"[404] Namespace not found: {namespace}")
         self.deletes.append((filter, namespace))
 
 
@@ -161,10 +166,18 @@ async def test_search_maps_matches(fake_pinecone):
 @pytest.mark.asyncio
 async def test_delete_material_filters_by_material_id(fake_pinecone):
     service = make_service(fake_pinecone)
+    await service.upsert_chunks("mat-1", "m1", ["c"], [[0.1] * 3072])
     await service.delete_material("mat-1", "m1")
     filter, namespace = fake_pinecone.index.deletes[0]
     assert filter == {"material_id": "m1"}
     assert namespace == "mat-1"
+
+
+@pytest.mark.asyncio
+async def test_delete_material_on_missing_namespace_is_noop(fake_pinecone):
+    service = make_service(fake_pinecone)
+    await service.delete_material("mat-1", "m1")
+    assert fake_pinecone.index.deletes == []
 
 
 @pytest.mark.asyncio

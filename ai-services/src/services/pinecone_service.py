@@ -8,7 +8,7 @@ y guarda el texto del chunk en los metadatos de cada vector.
 import time
 
 import structlog
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import NotFoundError, Pinecone, ServerlessSpec
 
 logger = structlog.get_logger(__name__)
 
@@ -88,7 +88,14 @@ class PineconeRetrievalService:
 
     async def delete_material(self, subject_id: str, material_id: str) -> None:
         index = self._ensure_index()
-        index.delete(filter={"material_id": material_id}, namespace=subject_id)
+        try:
+            index.delete(filter={"material_id": material_id}, namespace=subject_id)
+        except NotFoundError:
+            logger.info(
+                "pinecone_namespace_missing",
+                namespace=subject_id,
+                material_id=material_id,
+            )
 
     async def search(self, subject_id: str, embedding: list[float], top_k: int = 5) -> list[dict]:
         index = self._ensure_index()
