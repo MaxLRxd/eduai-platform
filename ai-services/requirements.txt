@@ -6,6 +6,7 @@ structlog
 redis
 asyncpg
 pgvector
+pinecone
 pypdf
 python-docx
 python-pptx

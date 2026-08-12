@@ -1,6 +1,6 @@
 # EduAI · AI Service — Tutor IA
 
-Microservicio en **Python / FastAPI** con responsabilidad única: todo lo relacionado con inteligencia artificial del proyecto EduAI. Su pieza central es el **tutor IA contextualizado por materia**, construido sobre un pipeline RAG (recuperación aumentada por generación) que usa **Gemini** como LLM, **pgvector** (PostgreSQL) como base vectorial y **Redis** como caché.
+Microservicio en **Python / FastAPI** con responsabilidad única: todo lo relacionado con inteligencia artificial del proyecto EduAI. Su pieza central es el **tutor IA contextualizado por materia**, construido sobre un pipeline RAG (recuperación aumentada por generación) que usa **Gemini** como LLM, **pgvector** (PostgreSQL) o **Pinecone** como base vectorial (se elige con `VECTOR_STORE`) y **Redis** como caché.
 
 El backend de Node.js lo consume por HTTP y no necesita saber cómo funciona internamente.
 
@@ -52,6 +52,8 @@ ai-services/
     │   ├── llm_service.py    # Llamadas a Gemini (sync + streaming)
     │   ├── embeddings_service.py  # Embeddings (texto → vector)
     │   ├── retrieval_service.py   # Búsqueda vectorial en pgvector
+    │   ├── pinecone_service.py    # Búsqueda vectorial en Pinecone
+    │   ├── vector_store.py        # Factory: elige vector store por VECTOR_STORE
     │   ├── cache_service.py       # Caché Redis con TTL
     │   ├── chunking_service.py    # División de textos en fragmentos
     │   ├── document_service.py    # Extracción de texto (PDF/DOCX/PPTX/TXT)
@@ -70,7 +72,9 @@ ai-services/
         ├── test_chunking.py
         ├── test_prompt_sanitizer.py
         ├── test_ask_tutor.py
-        └── test_router.py
+        ├── test_router.py
+        ├── test_pinecone_service.py
+        └── test_vector_store.py
 ```
 
 ---
@@ -88,8 +92,14 @@ ai-services/
 | `GEMINI_EMBEDDING_MODEL` | Modelo de embeddings (por defecto `gemini-embedding-2`) |
 | `EMBEDDING_DIMENSIONS` | Dimensión de los vectores (3072 para `gemini-embedding-2`) |
 | `LLM_PROVIDER` | Proveedor LLM (solo `gemini` por ahora) |
-| `DATABASE_URL` | Conexión a PostgreSQL con pgvector |
+| `DATABASE_URL` | Conexión a PostgreSQL (usada por pgvector) |
 | `REDIS_URL` | Conexión a Redis para el caché |
+| `VECTOR_STORE` | Base vectorial: `pgvector` (por defecto) o `pinecone` |
+| `PINECONE_API_KEY` | Clave de API de Pinecone (requerida si `VECTOR_STORE=pinecone`) |
+| `PINECONE_INDEX` | Nombre del índice de Pinecone (por defecto `eduai`, se auto-crea si no existe) |
+| `PINECONE_CLOUD` | Nube del índice serverless (por defecto `aws`) |
+| `PINECONE_REGION` | Región del índice serverless (por defecto `us-east-1`) |
+| `PINECONE_METRIC` | Métrica de distancia (por defecto `cosine`) |
 | `REDIS_CACHE_TTL_SECONDS` | TTL de las respuestas cacheadas (3600 s) |
 | `RETRIEVAL_TOP_K` | Cantidad de fragmentos recuperados por consulta (5) |
 
@@ -99,7 +109,7 @@ ai-services/
 - `[tool.pytest.ini_options]`: `testpaths` apunta a `src/tests`, `asyncio_mode = "auto"` (los tests asíncronos corren sin decoradores extra) y `addopts = "-q"`.
 - `[tool.ruff]`: linter con `line-length = 100`, `select = ["E", "F", "I", "W"]` (errores, no-usados, imports, warnings). Se ignora `E501` en `src/prompts/*` porque ahí el contenido son prompts de texto, no código.
 
-**`requirements.txt`** — Dependencias de producción: `fastapi`, `uvicorn[standard]`, `pydantic-settings`, `google-genai` (cliente de Gemini), `structlog` (logging JSON), `redis`, `asyncpg` + `pgvector` (base vectorial), `pypdf`, `python-docx`, `python-pptx` (extracción de texto de documentos).
+**`requirements.txt`** — Dependencias de producción: `fastapi`, `uvicorn[standard]`, `pydantic-settings`, `google-genai` (cliente de Gemini), `structlog` (logging JSON), `redis`, `asyncpg` + `pgvector` (base vectorial local), `pinecone` (base vectorial gestionada), `pypdf`, `python-docx`, `python-pptx` (extracción de texto de documentos).
 
 **`requirements-dev.txt`** — Herramientas de desarrollo: `pytest`, `pytest-asyncio`, `httpx` (para `TestClient`) y `ruff`.
 
@@ -165,11 +175,22 @@ Capa que encapsula el acceso a los **recursos externos**. No saben nada de HTTP.
 - Ambos usan el mismo cliente compartido de `config/genai.py`.
 
 **`src/services/retrieval_service.py`** — Acceso a **pgvector** (PostgreSQL):
-- Crea el pool `asyncpg` y registra el tipo `vector` en cada conexión (`init=register_vector`).
+- Crea el pool `asyncpg` y registra el tipo `vector` en cada conexión (`init=register_vector`). Primero se asegura de que exista la extensión `vector` (sin eso, `register_vector` falla con `unknown type: public.vector`).
 - Crea la tabla `ai_materials` (id, subject_id, material_id, chunk_index, content, embedding) e índices: por `subject_id` y HNSW por coseno.
 - `upsert_chunks(...)` → inserta/actualiza los fragmentos con su embedding.
 - `delete_material(...)` → borra un material (útil para re-indexar).
 - `search(subject_id, embedding, top_k)` → recupera los `top_k` fragmentos más similares por coseno (`1 - (embedding <=> $vector)`), filtrados por materia.
+
+**`src/services/pinecone_service.py`** — Acceso a **Pinecone** (serverless) con **la misma interfaz** que `retrieval_service`:
+- `_ensure_index()` → crea el cliente Pinecone y, si el índice no existe, lo **crea solo** (`create_index` serverless con `ServerlessSpec(cloud, region)` y dimensiones = `EMBEDDING_DIMENSIONS`), esperando a que esté listo.
+- Usa un **namespace por `subject_id`** (las consultas de una materia solo ven sus vectores).
+- Guarda `material_id`, `chunk_index` y el texto del fragmento en los **metadatos** de cada vector (id `material_id:chunk_index`).
+- `upsert_chunks(...)` → sube los vectores en lotes de 100.
+- `delete_material(...)` → borra por filtro de `material_id` dentro del namespace.
+- `search(subject_id, embedding, top_k)` → `query` con `include_metadata=True` y mapea los matches a los mismos dicts que pgvector.
+- `close()` → cierra el cliente Pinecone.
+
+**`src/services/vector_store.py`** — Factory `build_retrieval_service()`: lee `settings.vector_store` y devuelve `RetrievalService` (pgvector) o `PineconeRetrievalService`. Si es `pinecone` y falta `PINECONE_API_KEY`, falla explícitamente al arrancar. Es lo que `main.py` usa para que los casos de uso no sepan con qué base vectorial trabajan.
 
 **`src/services/cache_service.py`** — Caché en Redis con TTL:
 - `initialize()` prueba la conexión; **si Redis no está disponible, degrada silenciosamente** (loguea warning y deja el caché desactivado en vez de romper la app).
@@ -257,6 +278,8 @@ Los casos de uso se toman de `request.app.state` (inyectados en `main.py`). Los 
 - **`test_prompt_sanitizer.py`** — Prueba la depuración: saludos, muletillas, puntuación repetida, prompts vacíos.
 - **`test_ask_tutor.py`** — Prueba el caso de uso completo con fakes: respuesta + fuentes, **segunda llamada servida desde caché**, y el streaming (tokens + evento done).
 - **`test_router.py`** — Prueba los endpoints HTTP con `TestClient` y fakes: `/healthz`, `/tutor/chat`, validación 422, `/tutor/chat/stream` (formato SSE) y `/tutor/depurar`.
+- **`test_pinecone_service.py`** — Prueba `PineconeRetrievalService` con un cliente Pinecone falso: auto-creación del índice serverless, no recreación si existe, metadatos/namespace en upsert, mapeo de matches en search, delete por filtro y `close()`.
+- **`test_vector_store.py`** — Prueba la factory: devuelve el tipo correcto según `VECTOR_STORE`, exige `PINECONE_API_KEY` en modo pinecone y rechaza valores desconocidos.
 
 ---
 
@@ -291,10 +314,10 @@ Los casos de uso se toman de `request.app.state` (inyectados en `main.py`). Los 
                                 └───┬─────────┬─────┘
                                     │         │
                     ┌───────────────▼───┐   ┌─▼──────────────┐
-                    │  Gemini API       │   │  PostgreSQL     │
-                    │  (LLM + embeddings)│  │  pgvector       │
-                    └───────────────────┘   │  Redis          │
-                                            └─────────────────┘
+                    │  Gemini API       │   │  pgvector  ◄───┼──┐
+                    │  (LLM + embeddings)│  │  o Pinecone    │  │ VECTOR_STORE
+                    └───────────────────┘   │  Redis         │  │
+                                            └────────────────┘◄─┘
 ```
 
 **Flujo de una consulta al tutor (`/tutor/chat`):**
@@ -302,13 +325,13 @@ Los casos de uso se toman de `request.app.state` (inyectados en `main.py`). Los 
 1. `tutor_router` recibe la petición y la valida contra `TutorRequest`.
 2. Llama a `AskTutorUseCase.execute()`.
 3. El caso de uso verifica **Redis** (caché) → si existe la misma respuesta, la devuelve sin gastar tokens.
-4. Si es cache miss: depura el prompt → `embeddings_service` convierte la pregunta en vector → `retrieval_service` busca en **pgvector** los fragmentos de la materia → arma el mensaje con el prompt del modo (`prompts/*`) + contexto → `llm_service` llama a **Gemini** → guarda la respuesta en caché.
+4. Si es cache miss: depura el prompt → `embeddings_service` convierte la pregunta en vector → el vector store elegido por `VECTOR_STORE` (`vector_store.py`) busca en **pgvector o Pinecone** los fragmentos de la materia → arma el mensaje con el prompt del modo (`prompts/*`) + contexto → `llm_service` llama a **Gemini** → guarda la respuesta en caché.
 5. Devuelve `TutorResponse` (respuesta + fuentes usadas + metadatos de depuración).
 
 **Flujo de indexación (`POST /rag/material`):**
 
 1. `rag_router` recibe subject + material + texto (extraído previamente por el backend con `document_service` o ya en texto).
-2. `IndexMaterialUseCase` fragmenta el texto → genera embeddings → los persiste en pgvector.
+2. `IndexMaterialUseCase` fragmenta el texto → genera embeddings → los persiste en el vector store configurado (pgvector o Pinecone, en el namespace de la materia).
 3. A partir de ahí el material queda disponible para las consultas del tutor.
 
 ---
@@ -347,10 +370,14 @@ Los modos de estudio (`normal`, `socratic`, `hints`) se eligen con el campo `mod
 # 1) Copiar la plantilla y completar la clave
 cp .env.example .env          # en Windows: copy .env.example .env
 
-# 2) Con Docker (recomendado)
+# 2) Elegir base vectorial (por defecto pgvector)
+#    Para usar Pinecone: VECTOR_STORE=pinecone + PINECONE_API_KEY (y cloud/región)
+#    El índice se crea solo la primera vez.
+
+# 3) Con Docker (recomendado)
 docker compose up --build ai-service
 
-# 3) Sin Docker (local, con Python 3.12+)
+# 4) Sin Docker (local, con Python 3.12+)
 pip install -r requirements.txt -r requirements-dev.txt
 uvicorn src.main:app --reload --port 8000
 ```
@@ -363,5 +390,5 @@ La documentación interactiva (Swagger) queda en `http://localhost:8000/docs`.
 
 ```bash
 ruff check src conftest.py     # linter
-pytest                         # 17 tests
+pytest                         # 27 tests
 ```

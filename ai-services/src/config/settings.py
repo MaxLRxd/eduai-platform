@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://eduai:eduai@localhost:5432/eduai"
     redis_url: str = "redis://localhost:6379"
 
+    vector_store: str = "pgvector"
+    pinecone_api_key: str = ""
+    pinecone_index: str = "eduai"
+    pinecone_cloud: str = "aws"
+    pinecone_region: str = "us-east-1"
+    pinecone_metric: str = "cosine"
+
     redis_cache_ttl_seconds: int = 3600
     retrieval_top_k: int = 5
 

@@ -21,17 +21,22 @@ class RetrievalService:
 
     async def _get_pool(self) -> asyncpg.Pool:
         if self._pool is None:
+            await self._ensure_extension()
             self._pool = await asyncpg.create_pool(self._database_url, init=_init_connection)
             await self._init_schema()
         return self._pool
+
+    async def _ensure_extension(self) -> None:
+        conn = await asyncpg.connect(self._database_url)
+        try:
+            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        finally:
+            await conn.close()
 
     async def _init_schema(self) -> None:
         if self._pool is None:
             return
         async with self._pool.acquire() as conn:
-            await conn.execute(
-                "CREATE EXTENSION IF NOT EXISTS vector"
-            )
             await conn.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS ai_materials (

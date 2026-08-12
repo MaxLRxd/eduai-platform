@@ -10,7 +10,7 @@ from src.services.chunking_service import ChunkingService
 from src.services.document_service import DocumentService
 from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
-from src.services.retrieval_service import RetrievalService
+from src.services.vector_store import build_retrieval_service
 from src.use_cases.ask_tutor import AskTutorUseCase
 from src.use_cases.depurar_prompt import DepurarPromptUseCase
 from src.use_cases.examen import GenerarExamenUseCase
@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     cache = CacheService(settings.redis_url, settings.redis_cache_ttl_seconds)
     await cache.initialize()
     embeddings = EmbeddingsService()
-    retrieval = RetrievalService(settings.database_url, settings.embedding_dimensions)
+    retrieval = build_retrieval_service()
     chunking = ChunkingService()
     document = DocumentService()
 
