@@ -1,0 +1,48 @@
+import type { EnrollmentKeyAdmin } from "../../types/domain";
+
+export const MOCK_ADMIN_KEYS: EnrollmentKeyAdmin[] = [
+  {
+    id: 1,
+    materiaId: "101",
+    materiaNombre: "Programación II",
+    codigo: "PROG2-2024",
+    estado: "activa",
+    vencimiento: "2024-12-31",
+    maxUsos: 50,
+    usos: 48,
+    inscriptos: ["Acevedo, Lautaro", "Báez, María", "Cardozo, Juan", "Díaz, Lucas", "Espinoza, Ana"],
+  },
+  {
+    id: 2,
+    materiaId: "102",
+    materiaNombre: "Bases de Datos",
+    codigo: "BD-2024-A",
+    estado: "activa",
+    vencimiento: "2024-12-31",
+    maxUsos: null,
+    usos: 35,
+    inscriptos: ["Fernández, Sofía", "González, Matías"],
+  },
+  {
+    id: 3,
+    materiaId: "103",
+    materiaNombre: "Matemática Discreta",
+    codigo: "DISC-2024",
+    estado: "activa",
+    vencimiento: null,
+    maxUsos: 60,
+    usos: 52,
+    inscriptos: ["Kupfer, Lucas", "López, Ana"],
+  },
+  {
+    id: 4,
+    materiaId: "101",
+    materiaNombre: "Programación II",
+    codigo: "PROG2-OLD",
+    estado: "revocada",
+    vencimiento: "2024-06-30",
+    maxUsos: 30,
+    usos: 28,
+    inscriptos: [],
+  },
+];

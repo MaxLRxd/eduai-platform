@@ -22,7 +22,7 @@ coverage/
 pgdata/
 chroma/
 chromadb/
-data/
+/data/
 *.log
 
 # Vite
