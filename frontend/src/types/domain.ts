@@ -161,3 +161,57 @@ export interface InboxMessage {
   when: string;
   unread: boolean;
 }
+
+export type SubjectStatus = "Activa" | "Pendiente" | "Inactiva";
+
+export interface AdminSubject {
+  id: string;
+  nombre: string;
+  profesor: string;
+  alumnos: number;
+  estado: SubjectStatus;
+}
+
+export type UserRole = "Alumno" | "Docente" | "Admin";
+export type UserStatus = "Activo" | "Inactivo" | "Pendiente";
+
+export interface AdminUser {
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+}
+
+export interface EnrollmentKeyAdmin {
+  id: number;
+  materiaId: string;
+  materiaNombre: string;
+  codigo: string;
+  estado: "activa" | "revocada";
+  vencimiento: string | null;
+  maxUsos: number | null;
+  usos: number;
+  inscriptos: string[];
+}
+
+export interface LicensePlan {
+  name: string;
+  range: string;
+  features: string;
+  current: boolean;
+}
+
+export interface ReportCard {
+  title: string;
+  description: string;
+  actionLabel: string;
+}
+
+export interface ColorPreset {
+  id: string;
+  name: string;
+  inst: string;
+  primary: string;
+  secondary: string;
+  lighter: string;
+}

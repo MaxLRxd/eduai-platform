@@ -23,6 +23,13 @@ import { TeacherAnalyticsPage } from "./pages/teacher/TeacherAnalyticsPage";
 import { TeacherAIPage } from "./pages/teacher/TeacherAIPage";
 import { TeacherPlanningPage } from "./pages/teacher/TeacherPlanningPage";
 import { TeacherMessagesPage } from "./pages/teacher/TeacherMessagesPage";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminMateriasPage } from "./pages/admin/AdminMateriasPage";
+import { AdminClavesPage } from "./pages/admin/AdminClavesPage";
+import { AdminUsuariosPage } from "./pages/admin/AdminUsuariosPage";
+import { AdminLicenciasPage } from "./pages/admin/AdminLicenciasPage";
+import { AdminReportsPage } from "./pages/admin/AdminReportsPage";
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return <AppShell title={title}>{children}</AppShell>;
@@ -225,20 +232,77 @@ export function App(): React.ReactElement {
         />
       ))}
 
-      {/* Admin — placeholders, nav ya armada en navConfig.ts */}
-      {["/admin", "/admin/materias", "/admin/claves", "/admin/usuarios", "/admin/licencias", "/admin/reports", "/admin/settings"].map((path) => (
-        <Route
-          key={path}
-          path={path}
-          element={
-            <ProtectedRoute allow="ADMIN">
-              <Shell title="Panel de administración">
-                <PlaceholderPage title="Panel de administración" />
-              </Shell>
-            </ProtectedRoute>
-          }
-        />
-      ))}
+      {/* Admin */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Panel institucional">
+              <AdminDashboardPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/materias"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Materias">
+              <AdminMateriasPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/claves"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Claves de Matriculación">
+              <AdminClavesPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/usuarios"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Usuarios">
+              <AdminUsuariosPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/licencias"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Licencias">
+              <AdminLicenciasPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Reportes">
+              <AdminReportsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute allow="ADMIN">
+            <Shell title="Apariencia">
+              <AdminSettingsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="*" element={<Navigate to={user ? DEFAULT_PATH_BY_ROLE[user.role] : "/login"} replace />} />
     </Routes>
