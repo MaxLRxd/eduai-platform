@@ -54,3 +54,39 @@ export interface TutorMessage {
   role: "user" | "tutor";
   content: string;
 }
+
+export interface TeacherCourse {
+  id: string;
+  label: string;
+  curso: string;
+  studentNames: string[];
+}
+
+export type StudentStanding = "Regular" | "En riesgo";
+
+export interface TeacherStudentRow {
+  name: string;
+  legajo: string;
+  average: string;
+  attendance: string;
+  standing: StudentStanding;
+}
+
+export interface TeacherGradeRow {
+  name: string;
+  tp1: string;
+  tp2: string;
+  tp3: string;
+  parcial: string;
+  average: string;
+}
+
+export type DailyAttendanceStatus = "present" | "absent" | "late";
+
+export interface StudentAttendanceState {
+  name: string;
+  status: DailyAttendanceStatus;
+  history: boolean[];
+  total: number;
+  absent: number;
+}

@@ -13,6 +13,11 @@ import { StudentAssignmentsPage } from "./pages/student/StudentAssignmentsPage";
 import { StudentProgressPage } from "./pages/student/StudentProgressPage";
 import { StudentProfilePage } from "./pages/student/StudentProfilePage";
 import { StudentEnrollPage } from "./pages/student/StudentEnrollPage";
+import { TeacherDashboardPage } from "./pages/teacher/TeacherDashboardPage";
+import { TeacherCoursesPage } from "./pages/teacher/TeacherCoursesPage";
+import { TeacherStudentsPage } from "./pages/teacher/TeacherStudentsPage";
+import { TeacherGradesPage } from "./pages/teacher/TeacherGradesPage";
+import { TeacherAttendancePage } from "./pages/teacher/TeacherAttendancePage";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return <AppShell title={title}>{children}</AppShell>;
@@ -97,22 +102,72 @@ export function App(): React.ReactElement {
         }
       />
 
+      {/* Docente — núcleo operativo */}
+      <Route
+        path="/teacher"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Panel docente">
+              <TeacherDashboardPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/courses"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Mis materias">
+              <TeacherCoursesPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/students"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Mis estudiantes">
+              <TeacherStudentsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/grades"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Calificaciones">
+              <TeacherGradesPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/attendance"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Asistencia">
+              <TeacherAttendancePage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Docente — placeholders, nav ya armada en navConfig.ts */}
-      {["/teacher", "/teacher/courses", "/teacher/students", "/teacher/grades", "/teacher/attendance", "/teacher/corrections", "/teacher/analytics", "/teacher/ai", "/teacher/content", "/teacher/messages", "/teacher/profile"].map(
-        (path) => (
-          <Route
-            key={path}
-            path={path}
-            element={
-              <ProtectedRoute allow="PROFESOR">
-                <Shell title="Panel docente">
-                  <PlaceholderPage title="Panel docente" />
-                </Shell>
-              </ProtectedRoute>
-            }
-          />
-        )
-      )}
+      {["/teacher/corrections", "/teacher/analytics", "/teacher/ai", "/teacher/content", "/teacher/messages", "/teacher/profile"].map((path) => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <ProtectedRoute allow="PROFESOR">
+              <Shell title="Panel docente">
+                <PlaceholderPage title="Panel docente" />
+              </Shell>
+            </ProtectedRoute>
+          }
+        />
+      ))}
 
       {/* Admin — placeholders, nav ya armada en navConfig.ts */}
       {["/admin", "/admin/materias", "/admin/claves", "/admin/usuarios", "/admin/licencias", "/admin/reports", "/admin/settings"].map((path) => (
