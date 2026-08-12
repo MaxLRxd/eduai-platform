@@ -90,3 +90,74 @@ export interface StudentAttendanceState {
   total: number;
   absent: number;
 }
+
+export interface CorrectionQueueItem {
+  id: string;
+  student: string;
+  activity: string;
+  course: string;
+  type: string;
+  aiGrade: string;
+  submission: string;
+  aiFeedback: string;
+}
+
+export interface RubricCriterion {
+  name: string;
+  weight: string;
+  level: "Excelente" | "Bueno" | "Regular";
+}
+
+export interface Rubric {
+  name: string;
+  criteriaCount: number;
+  activitiesCount: number;
+}
+
+export interface TopicUnderstanding {
+  topic: string;
+  level: "Dominado" | "En proceso" | "Crítico";
+}
+
+export type RiskLevel = "Alto" | "Medio";
+
+export interface RiskAlert {
+  name: string;
+  issue: string;
+  risk: RiskLevel;
+}
+
+export interface FrequentError {
+  rank: number;
+  description: string;
+  studentCount: number;
+  topics: string;
+}
+
+export interface FrequentQuestion {
+  question: string;
+  count: number;
+}
+
+export interface PlanningAttachment {
+  name: string;
+  sizeLabel: string;
+}
+
+export interface PlanningClass {
+  date: string;
+  title: string;
+  course: string;
+  material: string;
+  studentVisible: boolean;
+  aiEnabled: boolean;
+  attachments: PlanningAttachment[];
+}
+
+export interface InboxMessage {
+  id: string;
+  from: string;
+  subject: string;
+  when: string;
+  unread: boolean;
+}

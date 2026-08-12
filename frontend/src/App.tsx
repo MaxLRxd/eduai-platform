@@ -18,6 +18,11 @@ import { TeacherCoursesPage } from "./pages/teacher/TeacherCoursesPage";
 import { TeacherStudentsPage } from "./pages/teacher/TeacherStudentsPage";
 import { TeacherGradesPage } from "./pages/teacher/TeacherGradesPage";
 import { TeacherAttendancePage } from "./pages/teacher/TeacherAttendancePage";
+import { TeacherCorrectionsPage } from "./pages/teacher/TeacherCorrectionsPage";
+import { TeacherAnalyticsPage } from "./pages/teacher/TeacherAnalyticsPage";
+import { TeacherAIPage } from "./pages/teacher/TeacherAIPage";
+import { TeacherPlanningPage } from "./pages/teacher/TeacherPlanningPage";
+import { TeacherMessagesPage } from "./pages/teacher/TeacherMessagesPage";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return <AppShell title={title}>{children}</AppShell>;
@@ -154,8 +159,59 @@ export function App(): React.ReactElement {
         }
       />
 
+      <Route
+        path="/teacher/corrections"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Correcciones">
+              <TeacherCorrectionsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/analytics"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Analytics">
+              <TeacherAnalyticsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/ai"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Asistente IA">
+              <TeacherAIPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/planning"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Planificación">
+              <TeacherPlanningPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/messages"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Mensajes">
+              <TeacherMessagesPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Docente — placeholders, nav ya armada en navConfig.ts */}
-      {["/teacher/corrections", "/teacher/analytics", "/teacher/ai", "/teacher/content", "/teacher/messages", "/teacher/profile"].map((path) => (
+      {["/teacher/content", "/teacher/profile"].map((path) => (
         <Route
           key={path}
           path={path}
