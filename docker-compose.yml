@@ -14,7 +14,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eduai}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eduai} -d ${POSTGRES_DB:-eduai}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,18 +33,6 @@ services:
       timeout: 5s
       retries: 10
 
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: eduai-chroma
-    restart: unless-stopped
-    ports:
-      - "8001:8000"
-    volumes:
-      - chromadata:/data
-    environment:
-      IS_PERSISTENT: "TRUE"
-      ANONYMIZED_TELEMETRY: "FALSE"
-
   backend:
     build:
       context: ./backend
@@ -62,7 +50,6 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-eduai}:${POSTGRES_PASSWORD:-eduai}@db:5432/${POSTGRES_DB:-eduai}
       REDIS_URL: redis://redis:6379
-      CHROMA_URL: http://chromadb:8000
       AI_SERVICE_URL: http://ai-service:8000
       PORT: 3000
     depends_on:
@@ -73,24 +60,24 @@ services:
 
   ai-service:
     build:
-      context: ./ai-service
+      context: ./ai-services
       target: dev
     container_name: eduai-ai-service
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - ./ai-service:/app
+      - ./ai-services:/app
       - aipy_venv:/app/.venv
     env_file:
       - .env
     environment:
-      CHROMA_URL: http://chromadb:8000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eduai}:${POSTGRES_PASSWORD:-eduai}@db:5432/${POSTGRES_DB:-eduai}
       REDIS_URL: redis://redis:6379
       PORT: 8000
     depends_on:
-      chromadb:
-        condition: service_started
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -115,7 +102,6 @@ services:
 volumes:
   pgdata:
   redisdata:
-  chromadata:
   backend_modules:
   backend_dist:
   frontend_modules:

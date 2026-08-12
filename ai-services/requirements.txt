@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+google-genai
+structlog
+redis
+asyncpg
+pgvector
+pinecone
+pypdf
+python-docx
+python-pptx
