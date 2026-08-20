@@ -1,0 +1,469 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────── ENUMS ───────────────────────────────
+enum Rol {
+  ALUMNO
+  PROFESOR
+  ADMIN
+}
+
+enum TipoProfesor {
+  TITULAR
+  ADJUNTO
+}
+
+enum TipoSeccion {
+  TEORIA
+  PRACTICA
+}
+
+enum TipoContenido {
+  TEXTO
+  PDF
+  DOCX
+  PPTX
+  IMAGEN
+  VIDEO
+}
+
+enum TipoActividad {
+  MULTIPLE_CHOICE
+  DESARROLLO
+  ARCHIVO
+  CODIGO
+}
+
+enum RevisionTipo {
+  IA
+  MANUAL
+}
+
+enum ModoSesionIA {
+  NORMAL
+  SOCRATIC
+  HINTS
+}
+
+enum RolMensajeIA {
+  USER
+  ASSISTANT
+}
+
+enum EstadoAsistencia {
+  PRESENTE
+  AUSENTE
+  TARDANZA
+  JUSTIFICADO
+}
+
+enum TipoAlerta {
+  ASISTENCIA
+  NOTAS
+  INTERACCIONES
+}
+
+enum NivelSeveridad {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum TipoErrorDuda {
+  ERROR
+  DUDA
+}
+
+enum TipoNotificacion {
+  ENTREGA
+  FEEDBACK
+  ALERTA
+  MENSAJE
+}
+
+// ─────────────────────────────── AUTH ────────────────────────────────
+model Usuario {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @db.VarChar(100)
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @db.VarChar(255)
+  rol           Rol
+  activo        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  perfilProfesor Profesor?
+  sesiones       Sesion[]
+  inscripciones  Inscripcion[]
+  entregas       Entrega[]
+  sesionesIa     SesionIA[]
+  notas          Nota[]
+  asistencias    Asistencia[]
+  alertasRiesgo  AlertaRiesgoAcademico[]
+  notificaciones Notificacion[]
+
+  @@map("usuarios")
+}
+
+model Profesor {
+  id            String       @id @default(uuid()) @db.Uuid
+  usuario_id    String       @unique @db.Uuid
+  tipo_profesor TipoProfesor
+  created_at    DateTime     @default(now())
+
+  usuario    Usuario          @relation(fields: [usuario_id], references: [id])
+  materias   MateriaProfesor[]
+  rubricas   Rubrica[]
+  notas      Nota[]
+  asistencias Asistencia[]
+
+  @@map("profesores")
+}
+
+model Sesion {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuario_id String   @db.Uuid
+  token_hash String   @unique @db.VarChar(255)
+  expires_at DateTime
+  revocado   Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@map("sesiones")
+}
+
+// ─────────────────────── MATERIAS y INSCRIPCIONES ────────────────────
+model Materia {
+  id              String   @id @default(uuid()) @db.Uuid
+  nombre          String   @db.VarChar(150)
+  descripcion     String?
+  nivel_educativo String   @db.VarChar(100)
+  activa          Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  profesores          MateriaProfesor[]
+  clavesMatriculacion ClaveMatriculacion[]
+  inscripciones       Inscripcion[]
+  secciones           Seccion[]
+  rubricas            Rubrica[]
+  sesionesIa          SesionIA[]
+  preguntasFrecuentes PreguntaFrecuente[]
+  notas               Nota[]
+  asistencias         Asistencia[]
+  analyticsComprension AnalyticsComprensionTema[]
+  alertasRiesgo       AlertaRiesgoAcademico[]
+  erroresDudas        ErrorDudaFrecuente[]
+
+  @@map("materias")
+}
+
+model MateriaProfesor {
+  id             String    @id @default(uuid()) @db.Uuid
+  materia_id     String    @db.Uuid
+  profesor_id    String    @db.Uuid
+  activo         Boolean   @default(true)
+  asignado_en    DateTime  @default(now())
+  desasignado_en DateTime?
+
+  materia  Materia  @relation(fields: [materia_id], references: [id])
+  profesor Profesor @relation(fields: [profesor_id], references: [id])
+
+  @@unique([materia_id, profesor_id]) 
+  @@map("materia_profesores")
+}
+
+model ClaveMatriculacion {
+  id            String    @id @default(uuid()) @db.Uuid
+  materia_id    String    @db.Uuid
+  clave         String    @unique @db.VarChar(50)
+  activa        Boolean   @default(true)
+  vencimiento   DateTime?
+  max_usos      Int?
+  usos_actuales Int       @default(0)
+  created_at    DateTime  @default(now())
+  revocada_en   DateTime?
+
+  materia       Materia       @relation(fields: [materia_id], references: [id])
+  inscripciones Inscripcion[]
+
+  @@map("claves_matriculacion")
+}
+
+model Inscripcion {
+  id           String   @id @default(uuid()) @db.Uuid
+  alumno_id    String   @db.Uuid
+  materia_id   String   @db.Uuid
+  clave_id     String   @db.Uuid
+  inscripto_en DateTime @default(now())
+
+  alumno  Usuario           @relation(fields: [alumno_id], references: [id])
+  materia Materia           @relation(fields: [materia_id], references: [id])
+  clave   ClaveMatriculacion @relation(fields: [clave_id], references: [id])
+
+  @@unique([alumno_id, materia_id])
+  @@map("inscripciones")
+}
+
+// ────────────────────────────── CONTENIDO ────────────────────────────
+model Seccion {
+  id          String      @id @default(uuid()) @db.Uuid
+  materia_id  String      @db.Uuid
+  nombre      String      @db.VarChar(150)
+  descripcion String?
+  tipo        TipoSeccion
+  orden       Int
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  materia      Materia                    @relation(fields: [materia_id], references: [id])
+  contenidos   Contenido[]
+  actividades  Actividad[]
+  analyticsComprension AnalyticsComprensionTema[]
+  erroresDudas ErrorDudaFrecuente[]
+
+  @@map("secciones")
+}
+
+model Contenido {
+  id                String       @id @default(uuid()) @db.Uuid
+  seccion_id        String       @db.Uuid
+  tipo              TipoContenido
+  titulo            String       @db.VarChar(200)
+  texto_contenido   String?
+  archivo_url       String?
+  archivo_nombre    String?      @db.VarChar(255)
+  archivo_formato   String?      @db.VarChar(20)
+  archivo_tamano_kb Int?
+  rag_indexado      Boolean      @default(false)
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+
+  seccion Seccion @relation(fields: [seccion_id], references: [id])
+
+  @@map("contenidos")
+}
+
+// ─────────────────────── ACTIVIDADES y CORRECCIÓN ────────────────────
+model Rubrica {
+  id          String   @id @default(uuid()) @db.Uuid
+  profesor_id String   @db.Uuid
+  materia_id  String   @db.Uuid
+  nombre      String   @db.VarChar(200)
+  descripcion String?
+  criterios   Json     @db.JsonB
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  profesor    Profesor    @relation(fields: [profesor_id], references: [id])
+  materia     Materia     @relation(fields: [materia_id], references: [id])
+  actividades Actividad[]
+
+  @@map("rubricas")
+}
+
+model Actividad {
+  id                  String        @id @default(uuid()) @db.Uuid
+  seccion_id          String        @db.Uuid
+  rubrica_id          String?       @db.Uuid
+  nombre              String        @db.VarChar(200)
+  consigna            String
+  tipo                TipoActividad
+  opciones_mc         Json?         @db.JsonB
+  formatos_permitidos String?       @db.VarChar(100)
+  fecha_limite        DateTime
+  correccion_manual   Boolean       @default(false)
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
+
+  seccion  Seccion   @relation(fields: [seccion_id], references: [id])
+  rubrica  Rubrica?  @relation(fields: [rubrica_id], references: [id])
+  entregas Entrega[]
+
+  @@map("actividades")
+}
+
+model Entrega {
+  id                       String        @id @default(uuid()) @db.Uuid
+  actividad_id             String        @db.Uuid
+  alumno_id                String        @db.Uuid
+  respuesta_texto          String?
+  respuesta_codigo         String?
+  archivo_url              String?
+  archivo_nombre           String?       @db.VarChar(255)
+  entregado_en             DateTime      @default(now())
+  feedback_ia              String?
+  calificacion_ia          Decimal?      @db.Decimal(5, 2)
+  feedback_final           String?
+  calificacion_final       Decimal?      @db.Decimal(5, 2)
+  publicado                Boolean       @default(false)
+  revision_tipo            RevisionTipo?
+  publicado_en             DateTime?
+  feedback_revisado_alumno Boolean       @default(false)
+
+  actividad Actividad @relation(fields: [actividad_id], references: [id])
+  alumno    Usuario   @relation(fields: [alumno_id], references: [id])
+
+  @@unique([actividad_id, alumno_id])
+  @@map("entregas")
+}
+
+// ─────────────────────────────── TUTOR IA ────────────────────────────
+model SesionIA {
+  id          String      @id @default(uuid()) @db.Uuid
+  alumno_id   String      @db.Uuid
+  materia_id  String      @db.Uuid
+  modo        ModoSesionIA
+  iniciada_en DateTime    @default(now())
+  cerrada_en  DateTime?
+
+  alumno   Usuario     @relation(fields: [alumno_id], references: [id])
+  materia  Materia     @relation(fields: [materia_id], references: [id])
+  mensajes MensajeIA[]
+
+  @@map("sesiones_ia")
+}
+
+model MensajeIA {
+  id                  String       @id @default(uuid()) @db.Uuid
+  sesion_id           String       @db.Uuid
+  rol                 RolMensajeIA
+  prompt_original     String?
+  prompt_depurado     String?
+  contenido           String
+  tokens_prompt       Int?
+  tokens_respuesta    Int?
+  tiempo_respuesta_ms Int?
+  creado_en           DateTime     @default(now())
+
+  sesion SesionIA @relation(fields: [sesion_id], references: [id])
+
+  @@index([sesion_id])
+  @@map("mensajes_ia")
+}
+
+model PreguntaFrecuente {
+  id         String   @id @default(uuid()) @db.Uuid
+  materia_id String   @db.Uuid
+  pregunta   String
+  respuesta  String
+  activa     Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  materia Materia @relation(fields: [materia_id], references: [id])
+
+  @@map("preguntas_frecuentes")
+}
+
+// ─────────────────────────── NOTAS y ASISTENCIA ──────────────────────
+model Nota {
+  id            String   @id @default(uuid()) @db.Uuid
+  alumno_id     String   @db.Uuid
+  materia_id    String   @db.Uuid
+  profesor_id   String   @db.Uuid
+  periodo       String   @db.VarChar(100)
+  calificacion  Decimal  @db.Decimal(5, 2)
+  observaciones String?
+  registrado_en DateTime @default(now())
+  editado_en    DateTime?
+
+  alumno   Usuario  @relation(fields: [alumno_id], references: [id])
+  materia  Materia  @relation(fields: [materia_id], references: [id])
+  profesor Profesor @relation(fields: [profesor_id], references: [id])
+
+  @@unique([alumno_id, materia_id, periodo])
+  @@map("notas")
+}
+
+model Asistencia {
+  id            String           @id @default(uuid()) @db.Uuid
+  alumno_id     String           @db.Uuid
+  materia_id    String           @db.Uuid
+  profesor_id   String           @db.Uuid
+  fecha_clase   DateTime         @db.Date
+  estado        EstadoAsistencia
+  registrado_en DateTime         @default(now())
+  editado_en    DateTime?
+
+  alumno   Usuario  @relation(fields: [alumno_id], references: [id])
+  materia  Materia  @relation(fields: [materia_id], references: [id])
+  profesor Profesor @relation(fields: [profesor_id], references: [id])
+
+  @@unique([alumno_id, materia_id, fecha_clase])
+  @@map("asistencias")
+}
+
+// ──────────────────────────── ANALYTICS ENGINE ───────────────────────
+model AnalyticsComprensionTema {
+  id                String   @id @default(uuid()) @db.Uuid
+  materia_id        String   @db.Uuid
+  seccion_id        String?  @db.Uuid
+  total_consultas   Int
+  total_errores     Int
+  nivel_comprension Decimal  @db.Decimal(4, 2)
+  periodo           String   @db.VarChar(50)
+  actualizado_en    DateTime @default(now())
+
+  materia Materia  @relation(fields: [materia_id], references: [id])
+  seccion Seccion? @relation(fields: [seccion_id], references: [id])
+
+  @@index([materia_id])
+  @@map("analytics_comprension_temas")
+}
+
+model AlertaRiesgoAcademico {
+  id              String        @id @default(uuid()) @db.Uuid
+  alumno_id       String        @db.Uuid
+  materia_id      String        @db.Uuid
+  tipo_alerta     TipoAlerta
+  descripcion     String
+  nivel_severidad NivelSeveridad
+  activa          Boolean       @default(true)
+  generada_en     DateTime      @default(now())
+  resuelta_en     DateTime?
+
+  alumno  Usuario @relation(fields: [alumno_id], references: [id])
+  materia Materia @relation(fields: [materia_id], references: [id])
+
+  @@map("alertas_riesgo_academico")
+}
+
+model ErrorDudaFrecuente {
+  id             String      @id @default(uuid()) @db.Uuid
+  materia_id     String      @db.Uuid
+  seccion_id     String?     @db.Uuid
+  tipo           TipoErrorDuda
+  descripcion    String
+  frecuencia     Int
+  periodo        String      @db.VarChar(50)
+  actualizado_en DateTime    @default(now())
+
+  materia Materia  @relation(fields: [materia_id], references: [id])
+  seccion Seccion? @relation(fields: [seccion_id], references: [id])
+
+  @@map("errores_dudas_frecuentes")
+}
+
+model Notificacion {
+  id              String   @id @default(uuid()) @db.Uuid
+  usuario_id      String   @db.Uuid
+  tipo            TipoNotificacion
+  titulo          String   @db.VarChar(200)
+  mensaje         String
+  referencia_tipo String?  @db.VarChar(50)
+  referencia_id   String?  @db.Uuid
+  leida           Boolean  @default(false)
+  creada_en       DateTime @default(now())
+  leida_en        DateTime?
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@map("notificaciones")
+}
