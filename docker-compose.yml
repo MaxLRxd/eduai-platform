@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: eduai
       POSTGRES_DB: eduai
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,9 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: dev
     container_name: eduai-backend
     env_file: ./backend/.env
     environment:
@@ -43,7 +45,9 @@ services:
       redis: { condition: service_healthy }
   
   ai-service:
-    build: ./ai-services
+    build:
+      context: ./ai-services
+      target: dev
     container_name: eduai-ai
     env_file: ./ai-services/.env
     environment:
