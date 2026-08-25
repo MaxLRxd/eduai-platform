@@ -12,7 +12,7 @@ COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY . .
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["sh", "-c", "pip install --no-cache-dir -r requirements-dev.txt && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"]
 
 # --- Dependencias de producción ---
 FROM base AS prod-deps
