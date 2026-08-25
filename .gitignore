@@ -1,25 +1,34 @@
-#ENTORNO
+# Environment
 .env
 .env.*
 !.env.example
 
-#NODE
+# Node
 node_modules/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Builds
 dist/
 build/
 coverage/
 
-#Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-.pytest_cache/
-
-#Datps locales/docker
-data/
+# Docker local data / logs
 pgdata/
+chroma/
+chromadb/
+/data/
 *.log
 
-#Editor
+# Vite
+*.local
+
+# Editor
 .vscode/
+.idea/
+.DS_Store
