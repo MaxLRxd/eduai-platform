@@ -113,3 +113,23 @@ export async function indexMaterial(
     return null;
   }
 }
+
+export interface CorreccionIARequest {
+  subject_id: string;
+  material_id: string | null;
+  entrega: string;
+  rubrica: unknown;
+}
+
+export interface CorreccionIAResult {
+  feedback: string;
+  calificacion: number;
+}
+
+export async function corregirEntregaIA(
+  _input: CorreccionIARequest
+): Promise<CorreccionIAResult | null> {
+  // TODO: conectar con el endpoint de correccion del ai-service (correct_submission)
+  // cuando exista. Por ahora es un stub: el flujo queda preparado sin llamar al LLM.
+  return null;
+}
