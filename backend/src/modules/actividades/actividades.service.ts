@@ -1,6 +1,7 @@
 import type { Prisma, Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
+import { crearNoLeidas } from "../notificaciones/notificaciones.service";
 import {
   obtenerInscripcion,
   obtenerProfesorAsignado,
@@ -249,6 +250,27 @@ export async function enviar(actividadId: string, alumnoId: string, input: Envia
     },
   });
 
+  const [alumno, profesores] = await Promise.all([
+    prisma.usuario.findUnique({ where: { id: alumnoId }, select: { nombre: true } }),
+    prisma.materiaProfesor.findMany({
+      where: { materia_id: materiaId, activo: true },
+      select: { profesor: { select: { usuario_id: true } } },
+    }),
+  ]);
+
+  await Promise.all(
+    profesores.map((mp) =>
+      crearNoLeidas({
+        usuario_id: mp.profesor.usuario_id,
+        tipo: "ENTREGA",
+        titulo: "Nueva entrega",
+        mensaje: `${alumno?.nombre ?? "El alumno"} entrego la actividad "${actividad.nombre}"`,
+        referencia_tipo: "entrega",
+        referencia_id: entrega.id,
+      })
+    )
+  );
+
   return toEntregaDto(entrega);
 }
 
@@ -311,6 +333,15 @@ export async function corregir(
     include: {
       alumno: { select: { id: true, nombre: true, email: true } },
     },
+  });
+
+  await crearNoLeidas({
+    usuario_id: corregida.alumno_id,
+    tipo: "FEEDBACK",
+    titulo: "Entrega corregida",
+    mensaje: `Tu actividad "${actividad.nombre}" fue corregida. Revisa el feedback.`,
+    referencia_tipo: "entrega",
+    referencia_id: corregida.id,
   });
 
   return toEntregaDto(corregida);
