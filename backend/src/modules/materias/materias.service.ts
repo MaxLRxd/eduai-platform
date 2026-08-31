@@ -80,10 +80,36 @@ export async function listarMias(usuarioId: string, rol: Rol) {
   return materias.map(toMateriaDto);
 }
 
-async function assertUuid(id: string): Promise<void> {
+export async function assertUuid(id: string): Promise<void> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
     throw new AppError(404, "Materia no encontrada");
   }
+}
+
+export async function obtenerProfesorAsignado(materiaId: string, usuarioId: string) {
+  await assertUuid(materiaId);
+  const perfil = await prisma.profesor.findUnique({ where: { usuario_id: usuarioId } });
+
+  if (!perfil) {
+    return null;
+  }
+
+  const asignacion = await prisma.materiaProfesor.findUnique({
+    where: { materia_id_profesor_id: { materia_id: materiaId, profesor_id: perfil.id } },
+  });
+
+  if (!asignacion?.activo) {
+    return null;
+  }
+
+  return perfil;
+}
+
+export async function obtenerInscripcion(materiaId: string, alumnoId: string) {
+  await assertUuid(materiaId);
+  return prisma.inscripcion.findUnique({
+    where: { alumno_id_materia_id: { alumno_id: alumnoId, materia_id: materiaId } },
+  });
 }
 
 export async function obtenerDetalle(materiaId: string, usuarioId: string, rol: Rol) {
