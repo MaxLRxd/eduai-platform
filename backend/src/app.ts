@@ -7,6 +7,7 @@ import seccionesRoutes from "./modules/secciones/secciones.routes";
 import contenidosRoutes from "./modules/contenidos/contenidos.routes";
 import notificacionesRoutes from "./modules/notificaciones/notificaciones.routes";
 import tutorRoutes from "./modules/tutor/tutor.routes";
+import analyticsRoutes from "./modules/analytics/analytics.routes";
 import healthRoutes from "./routes/health.routes";  export function createApp(): express.Express {   const app = express();    app.use(pinoHttp({ logger }));   app.use(     cors({       origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),       credentials: true,     })   );   app.use(express.json({ limit: "1mb" }));   app.use(cookieParser());    app.get("/", (_req, res) => {     res.json({ service: "eduai-backend", status: "ok" });   });    app.use("/api/auth", authRoutes);
   app.use("/api/materias", materiasRoutes);
   app.use("/api", notasRoutes);
@@ -16,4 +17,5 @@ import healthRoutes from "./routes/health.routes";  export function createApp():
   app.use("/api", contenidosRoutes);
   app.use("/api", notificacionesRoutes);
   app.use("/api", tutorRoutes);
+  app.use("/api", analyticsRoutes);
   app.use("/api", healthRoutes);    app.use(notFound);   app.use(errorHandler);    return app; }

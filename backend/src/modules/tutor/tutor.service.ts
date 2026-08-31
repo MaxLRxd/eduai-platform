@@ -2,6 +2,7 @@ import type { ModoSesionIA } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { chatTutor } from "../../config/aiClient";
+import { registrarConsultaTutor } from "../analytics/analytics.service";
 import { obtenerInscripcion } from "../materias/materias.service";
 import type { CrearSesionInput, EnviarMensajeInput } from "./tutor.schemas";
 
@@ -139,6 +140,12 @@ export async function enviarMensaje(
       prompt_original: input.contenido,
     },
   });
+
+  try {
+    await registrarConsultaTutor(sesion.materia_id, input.contenido, false);
+  } catch {
+    // los analytics no deben interrumpir el flujo del chat
+  }
 
   const inicio = Date.now();
   const resultado = await chatTutor(
