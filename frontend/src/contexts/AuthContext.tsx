@@ -12,22 +12,94 @@ export interface User {
 
 interface AuthContextValue {
   user: User | null;
-  login: (role: Role, username: string, password: string) => boolean;
+  isAuthenticating: boolean;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
 }
 
 const STORAGE_KEY = "eduai.session";
 
-// Credenciales demo — reemplazar por el login real (JWT) cuando el backend
-// tenga el módulo de autenticación (CU-AD03 / Sprint 1). Mismo esquema que
-// la maqueta: un usuario/contraseña fijo por rol.
-const DEMO_CREDENTIALS: Record<Role, { username: string; password: string; profile: Omit<User, "id" | "username" | "role"> }> = {
-  ALUMNO: { username: "alumno", password: "alumno123", profile: { name: "Lautaro", lastName: "Acevedo" } },
-  PROFESOR: { username: "docente", password: "docente123", profile: { name: "Prof.", lastName: "Martínez" } },
-  ADMIN: { username: "admin", password: "admin123", profile: { name: "Admin", lastName: "IES Santa Fe" } },
-};
+// Login real contra el backend (módulo auth): POST /api/auth/login (JWT).
+// El backend guarda el refresh token en una cookie httpOnly y el accessToken
+// se conserva en localStorage a través de services/api.ts.
+export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+  const [user, setUser] = useState<User | null>(() => readStoredUser());
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restore(): Promise<void> {
+      const { meRequest } = await import("../services/auth.service");
+      try {
+        const usuario = await meRequest();
+        if (!cancelled) setUser(toFrontendUser(usuario));
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsAuthenticating(false);
+      }
+    }
+
+    void restore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<User> => {
+    const { loginRequest } = await import("../services/auth.service");
+    const { usuario } = await loginRequest(email, password);
+    const frontendUser = toFrontendUser(usuario);
+    setUser(frontendUser);
+    return frontendUser;
+  }, []);
+
+  const logout = useCallback((): void => {
+    void (async () => {
+      const { logoutRequest } = await import("../services/auth.service");
+      await logoutRequest();
+      setUser(null);
+    })();
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticating, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function toFrontendUser(usuario: {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: string;
+}): User {
+  const role = toFrontendRole(usuario.rol);
+  return {
+    id: usuario.id,
+    username: usuario.email,
+    name: usuario.nombre,
+    lastName: "",
+    role,
+  };
+}
+
+function toFrontendRole(rol: string): Role {
+  if (rol === "PROFESOR") return "PROFESOR";
+  if (rol === "ADMIN") return "ADMIN";
+  return "ALUMNO";
+}
 
 function readStoredUser(): User | null {
   try {
@@ -38,30 +110,7 @@ function readStoredUser(): User | null {
   }
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  const [user, setUser] = useState<User | null>(() => readStoredUser());
-
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [user]);
-
-  const login = useCallback((role: Role, username: string, password: string): boolean => {
-    const cred = DEMO_CREDENTIALS[role];
-    if (username !== cred.username || password !== cred.password) {
-      return false;
-    }
-    setUser({ id: `demo-${role.toLowerCase()}`, username, role, ...cred.profile });
-    return true;
-  }, []);
-
-  const logout = useCallback(() => setUser(null), []);
-
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
-}
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);

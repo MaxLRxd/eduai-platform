@@ -37,7 +37,11 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export function App(): React.ReactElement {
-  const { user } = useAuth();
+  const { user, isAuthenticating } = useAuth();
+
+  if (isAuthenticating) {
+    return <div className="p-10 text-sm text-text-2">Cargando sesión…</div>;
+  }
 
   return (
     <Routes>

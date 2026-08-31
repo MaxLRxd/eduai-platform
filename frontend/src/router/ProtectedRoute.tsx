@@ -10,8 +10,11 @@ export function ProtectedRoute({
   children: React.ReactNode;
   allow: Role;
 }): React.ReactElement {
-  const { user } = useAuth();
+  const { user, isAuthenticating } = useAuth();
 
+  if (isAuthenticating) {
+    return <div className="p-10 text-sm text-text-2">Cargando sesión…</div>;
+  }
   if (!user) {
     return <Navigate to="/login" replace />;
   }
