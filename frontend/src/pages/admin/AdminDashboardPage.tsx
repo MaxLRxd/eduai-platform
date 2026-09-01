@@ -22,7 +22,7 @@ export function AdminDashboardPage(): React.ReactElement {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard icon="materias" label="Materias activas" value="12" meta="1 pendiente de asignar" accent="#003d7a" accentLight="#dbeafe" />
         <StatCard icon="usuarios" label="Docentes" value="8" meta="Todos activos" accent="#059669" accentLight="#d1fae5" />
-        <StatCard icon="brand" label="Alumnos totales" value="342" meta="+18 este mes" accent="#2563eb" accentLight="#dbeafe" />
+        <StatCard icon="students" label="Alumnos totales" value="342" meta="+18 este mes" accent="#2563eb" accentLight="#dbeafe" />
         <StatCard icon="analytics" label="MAU este mes" value="298" meta="Plan Growth · 59.6%" accent="#d97706" accentLight="#fef3c7" />
       </div>
 

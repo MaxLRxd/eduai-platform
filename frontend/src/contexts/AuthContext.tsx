@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { loginRequest, logoutRequest, meRequest } from "../services/auth.service";
+import { setAccessToken } from "../services/authToken";
 
 export type Role = "ALUMNO" | "PROFESOR" | "ADMIN";
 
@@ -12,20 +14,12 @@ export interface User {
 
 interface AuthContextValue {
   user: User | null;
-  login: (role: Role, username: string, password: string) => boolean;
-  logout: () => void;
+  isAuthenticating: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const STORAGE_KEY = "eduai.session";
-
-// Credenciales demo — reemplazar por el login real (JWT) cuando el backend
-// tenga el módulo de autenticación (CU-AD03 / Sprint 1). Mismo esquema que
-// la maqueta: un usuario/contraseña fijo por rol.
-const DEMO_CREDENTIALS: Record<Role, { username: string; password: string; profile: Omit<User, "id" | "username" | "role"> }> = {
-  ALUMNO: { username: "alumno", password: "alumno123", profile: { name: "Lautaro", lastName: "Acevedo" } },
-  PROFESOR: { username: "docente", password: "docente123", profile: { name: "Prof.", lastName: "Martínez" } },
-  ADMIN: { username: "admin", password: "admin123", profile: { name: "Admin", lastName: "IES Santa Fe" } },
-};
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -40,6 +34,7 @@ function readStoredUser(): User | null {
 
 export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [user, setUser] = useState<User | null>(() => readStoredUser());
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -49,18 +44,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     }
   }, [user]);
 
-  const login = useCallback((role: Role, username: string, password: string): boolean => {
-    const cred = DEMO_CREDENTIALS[role];
-    if (username !== cred.username || password !== cred.password) {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      const u = await loginRequest(email, password);
+      setUser(u);
+      return true;
+    } catch {
+      // credenciales inválidas / error de red
+      setUser(null);
+      setAccessToken(null);
       return false;
     }
-    setUser({ id: `demo-${role.toLowerCase()}`, username, role, ...cred.profile });
-    return true;
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(async (): Promise<void> => {
+    await logoutRequest();
+    setUser(null);
+  }, []);
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  // Al montar, intentamos restaurar la sesión desde el backend (refresh cookie / /me)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const u = await meRequest();
+        if (mounted) setUser(u);
+      } catch {
+        if (mounted) setUser(null);
+      } finally {
+        if (mounted) setIsAuthenticating(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticating, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

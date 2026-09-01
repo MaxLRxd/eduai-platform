@@ -103,14 +103,14 @@ export async function dashboardProfesor(usuarioId: string) {
 
   const materiaIds = asignaciones.map((a) => a.materia_id);
 
-  const [materias, actividades, pendientes, alumnos, alertas] = await Promise.all([
+  const [materias, actividades, pendientes, alumnos, alertas, seccionesConteo] = await Promise.all([
     prisma.materia.findMany({
       where: { id: { in: materiaIds } },
       select: {
         id: true,
         nombre: true,
         nivel_educativo: true,
-        _count: { select: { inscripciones: true, secciones: true, actividades: true } },
+        _count: { select: { inscripciones: true, secciones: true } },
       },
       orderBy: { created_at: "desc" },
     }),
@@ -131,9 +131,21 @@ export async function dashboardProfesor(usuarioId: string) {
     prisma.alertaRiesgoAcademico.count({
       where: { materia_id: { in: materiaIds }, activa: true },
     }),
+    prisma.seccion.findMany({
+      where: { materia_id: { in: materiaIds } },
+      select: { materia_id: true, _count: { select: { actividades: true } } },
+    }),
   ]);
 
   const alumnosCount = alumnos.reduce((a, b) => a + b._count._all, 0);
+
+  const actividadesPorMateria = new Map<string, number>();
+  for (const s of seccionesConteo) {
+    actividadesPorMateria.set(
+      s.materia_id,
+      (actividadesPorMateria.get(s.materia_id) ?? 0) + s._count.actividades
+    );
+  }
 
   return {
     rol: "PROFESOR",
@@ -150,7 +162,7 @@ export async function dashboardProfesor(usuarioId: string) {
       nivel_educativo: m.nivel_educativo,
       inscriptos: m._count.inscripciones,
       secciones: m._count.secciones,
-      actividades: m._count.actividades,
+      actividades: actividadesPorMateria.get(m.id) ?? 0,
     })),
   };
 }
