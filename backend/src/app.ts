@@ -11,6 +11,9 @@ import analyticsRoutes from "./modules/analytics/analytics.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import correccionRoutes from "./modules/correccion/correccion.routes";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes";
+import planningRoutes from "./modules/planning/planning.routes";
+import messagesRoutes from "./modules/messages/messages.routes";
+import configRoutes from "./modules/config/config.routes";
 import healthRoutes from "./routes/health.routes";  export function createApp(): express.Express {   const app = express();    app.use(pinoHttp({ logger }));   app.use(     cors({       origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),       credentials: true,     })   );   app.use(express.json({ limit: "1mb" }));   app.use(cookieParser());    app.get("/", (_req, res) => {     res.json({ service: "eduai-backend", status: "ok" });   });    app.use("/api/auth", authRoutes);
   app.use("/api/materias", materiasRoutes);
   app.use("/api", notasRoutes);
@@ -24,4 +27,7 @@ import healthRoutes from "./routes/health.routes";  export function createApp():
   app.use("/api", adminRoutes);
   app.use("/api", correccionRoutes);
   app.use("/api", dashboardRoutes);
+  app.use("/api", planningRoutes);
+  app.use("/api", messagesRoutes);
+  app.use("/api", configRoutes);
   app.use("/api", healthRoutes);    app.use(notFound);   app.use(errorHandler);    return app; }

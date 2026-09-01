@@ -86,6 +86,11 @@ enum TipoNotificacion {
   MENSAJE
 }
 
+enum EstadoPlanningClase {
+  PLANIFICADO
+  PUBLICADO
+}
+
 // ─────────────────────────────── AUTH ────────────────────────────────
 model Usuario {
   id            String   @id @default(uuid()) @db.Uuid
@@ -106,6 +111,9 @@ model Usuario {
   asistencias    Asistencia[]
   alertasRiesgo  AlertaRiesgoAcademico[]
   notificaciones Notificacion[]
+  conversaciones ConversacionMiembro[]
+  mensajesEnviados MensajeDirecto[]
+  broadcastsEnviados MensajeBroadcast[]
 
   @@map("usuarios")
 }
@@ -160,6 +168,7 @@ model Materia {
   analyticsComprension AnalyticsComprensionTema[]
   alertasRiesgo       AlertaRiesgoAcademico[]
   erroresDudas        ErrorDudaFrecuente[]
+  planning            PlanningClase[]
 
   @@map("materias")
 }
@@ -466,4 +475,86 @@ model Notificacion {
 
   @@index([usuario_id])
   @@map("notificaciones")
+}
+
+// ─────────────────────── PLANNING DE CLASES ─────────────────────────
+model PlanningClase {
+  id          String              @id @default(uuid()) @db.Uuid
+  materia_id  String              @db.Uuid
+  fecha_clase DateTime            @db.Date
+  titulo      String              @db.VarChar(200)
+  contenido   String?
+  estado      EstadoPlanningClase @default(PLANIFICADO)
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  materia Materia @relation(fields: [materia_id], references: [id])
+
+  @@unique([materia_id, fecha_clase])
+  @@map("planning_clases")
+}
+
+// ─────────────────── MENSAJES / CONVERSACIÓN ────────────────────────
+model Conversacion {
+  id         String              @id @default(uuid()) @db.Uuid
+  created_at DateTime            @default(now())
+  cerrada_en DateTime?
+
+  miembros   ConversacionMiembro[]
+  mensajes   MensajeDirecto[]
+
+  @@map("conversaciones")
+}
+
+model ConversacionMiembro {
+  id              String    @id @default(uuid()) @db.Uuid
+  conversacion_id String    @db.Uuid
+  usuario_id      String    @db.Uuid
+  unido_en        DateTime  @default(now())
+
+  conversacion Conversacion @relation(fields: [conversacion_id], references: [id])
+  usuario      Usuario      @relation(fields: [usuario_id], references: [id])
+
+  @@unique([conversacion_id, usuario_id])
+  @@map("conversacion_miembros")
+}
+
+model MensajeDirecto {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversacion_id String   @db.Uuid
+  emisor_id       String   @db.Uuid
+  contenido       String
+  leido           Boolean  @default(false)
+  enviado_en      DateTime @default(now())
+
+  conversacion Conversacion @relation(fields: [conversacion_id], references: [id])
+  emisor       Usuario      @relation(fields: [emisor_id], references: [id])
+
+  @@index([conversacion_id])
+  @@map("mensajes_directos")
+}
+
+model MensajeBroadcast {
+  id          String    @id @default(uuid()) @db.Uuid
+  emisor_id   String    @db.Uuid
+  titulo      String    @db.VarChar(200)
+  contenido   String
+  dirigido_a  Rol?
+  enviado_en  DateTime  @default(now())
+
+  emisor Usuario @relation(fields: [emisor_id], references: [id])
+
+  @@map("mensajes_broadcast")
+}
+
+// ───────────────────────── BRANDING INSTITUCIONAL ────────────────────
+model Institution {
+  id               String   @id @default(uuid()) @db.Uuid
+  nombre           String   @db.VarChar(200)
+  logo_url         String?  @db.VarChar(500)
+  color_primario   String?  @db.VarChar(20)
+  color_secundario String?  @db.VarChar(20)
+  updated_at       DateTime @updatedAt
+
+  @@map("institutions")
 }
