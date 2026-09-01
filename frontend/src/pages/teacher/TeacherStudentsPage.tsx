@@ -9,7 +9,8 @@ import { Button } from "../../components/ui/Button";
 export function TeacherStudentsPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const { data: courses } = useTeacherCourses();
-  const [courseId, setCourseId] = useState(searchParams.get("course") ?? "prog2");
+  const [selected, setSelected] = useState(searchParams.get("course") ?? "");
+  const courseId = selected || courses?.[0]?.id || "";
   const { data: students, isLoading } = useTeacherCourseStudents(courseId);
   const course = courses?.find((c) => c.id === courseId);
 
@@ -20,7 +21,7 @@ export function TeacherStudentsPage(): React.ReactElement {
         <p className="text-[13px] text-text-2">Listado de alumnos por materia y curso</p>
       </div>
 
-      <CourseFilter courses={courses ?? []} value={courseId} onChange={setCourseId} />
+      <CourseFilter courses={courses ?? []} value={courseId} onChange={setSelected} />
 
       {course && (
         <div className="text-xs text-text-2 mb-2 font-semibold">

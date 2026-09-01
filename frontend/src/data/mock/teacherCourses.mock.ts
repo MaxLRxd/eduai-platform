@@ -7,17 +7,20 @@ export const MOCK_TEACHER_COURSES: TeacherCourse[] = [
     label: "Programación II",
     curso: "2° Año A",
     studentNames: ["Acevedo, Lautaro", "Báez, María", "Cardozo, Juan", "Díaz, Lucas", "Espinoza, Ana"],
+    alumnos: 5,
   },
   {
     id: "prog1",
     label: "Programación I",
     curso: "1° Año A",
     studentNames: ["Fernández, Sofía", "González, Matías", "Herrera, Paula", "Ibáñez, Tomás", "Juárez, Camila"],
+    alumnos: 5,
   },
   {
     id: "analisis",
     label: "Análisis de Sistemas",
     curso: "3° Año B",
     studentNames: ["Kupfer, Lucas", "López, Ana", "Martín, Diego", "Núñez, Valentina", "Ortiz, Sebastián"],
+    alumnos: 5,
   },
 ];

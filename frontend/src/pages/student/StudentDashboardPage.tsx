@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCourses } from "../../hooks/useCourses";
+import { useDashboard } from "../../hooks/useDashboard";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { ProgressBar } from "../../components/ui/ProgressBar";
@@ -13,10 +14,22 @@ const UPCOMING = [
   { title: "💬 Debate grupal", course: "Redes", when: "En 5 días", color: "gray" as const },
 ];
 
+function tasaAsistencia(asistencia: { estado: string; count: number }[] | undefined): number {
+  if (!asistencia || asistencia.length === 0) return 0;
+  const total = asistencia.reduce((sum, a) => sum + a.count, 0);
+  if (total === 0) return 0;
+  const presente = (asistencia.find((a) => a.estado === "PRESENTE")?.count ?? 0) +
+    (asistencia.find((a) => a.estado === "TARDANZA")?.count ?? 0);
+  return Math.round((presente / total) * 100);
+}
+
 export function StudentDashboardPage(): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: courses } = useCourses();
+  const { data: dashboard } = useDashboard(user?.role);
+
+  const d = dashboard?.rol === "ALUMNO" ? dashboard.data : undefined;
 
   return (
     <div>
@@ -28,10 +41,10 @@ export function StudentDashboardPage(): React.ReactElement {
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard icon="progress" label="Promedio general" value="8.5" meta="↑ +0.3 vs mes anterior" accent="#003d7a" accentLight="#dbeafe" />
-        <StatCard icon="attendance" label="Asistencia" value="96%" meta="48 de 50 clases presentes" accent="#059669" accentLight="#d1fae5" />
-        <StatCard icon="assignments" label="Entregas realizadas" value="24" meta="Este semestre" accent="#2563eb" accentLight="#dbeafe" />
-        <StatCard icon="grades" label="Pendientes" value="3" meta="Próximo vence mañana" accent="#d97706" accentLight="#fef3c7" />
+        <StatCard icon="progress" label="Promedio general" value={d?.resumen.promedioGlobal ?? "—"} meta="Todos los periodos" accent="#003d7a" accentLight="#dbeafe" />
+        <StatCard icon="attendance" label="Asistencia" value={d ? `${tasaAsistencia(d.asistencia)}%` : "—"} meta="Basado en registros de clase" accent="#059669" accentLight="#d1fae5" />
+        <StatCard icon="assignments" label="Entregas pendientes" value={d?.resumen.entregasPendientes ?? "—"} meta="Sin corregir" accent="#2563eb" accentLight="#dbeafe" />
+        <StatCard icon="grades" label="Alertas activas" value={d?.resumen.alertasActivas ?? "—"} meta="Atención académica" accent="#d97706" accentLight="#fef3c7" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
@@ -56,6 +69,16 @@ export function StudentDashboardPage(): React.ReactElement {
                 <ProgressBar value={c.progress} color={c.color} />
               </div>
             ))}
+            {d && d.materias.length > 0 && (
+              <div className="mt-1 pt-3.5 border-t border-border flex flex-col gap-2">
+                {d.materias.map((m) => (
+                  <div key={m.id} className="flex justify-between text-[12.5px]">
+                    <span className="text-text-2">{m.nombre}</span>
+                    <strong className="text-text-1">{m.promedio != null ? m.promedio : "—"}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
 

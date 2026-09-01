@@ -6,7 +6,8 @@ import { Button } from "../../components/ui/Button";
 
 export function TeacherGradesPage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
-  const [courseId, setCourseId] = useState("prog2");
+  const [selected, setSelected] = useState("");
+  const courseId = selected || courses?.[0]?.id || "";
   const { data: grades, isLoading } = useTeacherCourseGrades(courseId);
   const course = courses?.find((c) => c.id === courseId);
 
@@ -17,7 +18,7 @@ export function TeacherGradesPage(): React.ReactElement {
         <p className="text-[13px] text-text-2">Ingreso y gestión de notas por materia</p>
       </div>
 
-      <CourseFilter courses={courses ?? []} value={courseId} onChange={setCourseId} />
+      <CourseFilter courses={courses ?? []} value={courseId} onChange={setSelected} />
 
       {course && (
         <div className="text-xs text-text-2 mb-2 font-semibold">

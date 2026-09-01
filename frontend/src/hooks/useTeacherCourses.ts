@@ -5,10 +5,18 @@ export function useTeacherCourses() {
   return useQuery({ queryKey: ["teacher-courses"], queryFn: getTeacherCourses });
 }
 
-export function useTeacherCourseStudents(courseId: string) {
-  return useQuery({ queryKey: ["teacher-courses", courseId, "students"], queryFn: () => getTeacherCourseStudents(courseId) });
+export function useTeacherCourseStudents(courseId: string | null) {
+  return useQuery({
+    queryKey: ["teacher-courses", courseId ?? "", "students"],
+    queryFn: () => getTeacherCourseStudents(courseId as string),
+    enabled: Boolean(courseId),
+  });
 }
 
-export function useTeacherCourseGrades(courseId: string) {
-  return useQuery({ queryKey: ["teacher-courses", courseId, "grades"], queryFn: () => getTeacherCourseGrades(courseId) });
+export function useTeacherCourseGrades(courseId: string | null) {
+  return useQuery({
+    queryKey: ["teacher-courses", courseId ?? "", "grades"],
+    queryFn: () => getTeacherCourseGrades(courseId as string),
+    enabled: Boolean(courseId),
+  });
 }

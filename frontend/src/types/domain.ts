@@ -60,6 +60,7 @@ export interface TeacherCourse {
   label: string;
   curso: string;
   studentNames: string[];
+  alumnos: number;
 }
 
 export type StudentStanding = "Regular" | "En riesgo";

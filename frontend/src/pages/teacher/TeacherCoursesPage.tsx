@@ -1,26 +1,29 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { useDashboard } from "../../hooks/useDashboard";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 
-const SUMMARY_BY_INDEX = [
-  { attendance: "93%", average: "8.3" },
-  { attendance: "88%", average: "7.8" },
-  { attendance: "91%", average: "8.6" },
-];
-
 export function TeacherCoursesPage(): React.ReactElement {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: courses, isLoading } = useTeacherCourses();
+  const { data: dashboard } = useDashboard(user?.role);
+  const d = dashboard?.rol === "PROFESOR" ? dashboard.data : undefined;
+
+  const resumenPorMateria = new Map(
+    (d?.materias ?? []).map((m) => [m.id, { secciones: m.secciones, actividades: m.actividades, inscriptos: m.inscriptos }])
+  );
 
   return (
     <div>
       <div className="mb-6">
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Mis materias</h2>
-        <p className="text-[13px] text-text-2">Prof. Martínez · Cursos y materias asignadas</p>
+        <p className="text-[13px] text-text-2">Cursos y materias asignadas</p>
       </div>
 
       {isLoading && <p className="text-sm text-text-2">Cargando materias…</p>}
@@ -34,11 +37,11 @@ export function TeacherCoursesPage(): React.ReactElement {
           >
             <div className="font-display text-sm font-bold text-text-1">{c.label}</div>
             <div className="text-xs text-text-3 mt-0.5">
-              {c.curso} · {c.studentNames.length} estudiantes
+              {c.curso} · {c.alumnos} estudiantes
             </div>
             <div className="flex gap-1.5 flex-wrap mt-2.5">
               <Tag color="blue">{c.curso}</Tag>
-              <Tag color="green">{c.studentNames.length} alumnos</Tag>
+              <Tag color="green">{c.alumnos} alumnos</Tag>
             </div>
             <div className="mt-2.5 text-xs text-primary font-semibold">Gestionar secciones →</div>
           </button>
@@ -54,26 +57,29 @@ export function TeacherCoursesPage(): React.ReactElement {
                 <Th>Materia</Th>
                 <Th>Curso</Th>
                 <Th>Alumnos</Th>
-                <Th>Asist. prom.</Th>
-                <Th>Promedio notas</Th>
+                <Th>Secciones</Th>
+                <Th>Actividades</Th>
                 <Th>Acciones</Th>
               </tr>
             </Thead>
             <tbody>
-              {(courses ?? []).map((c, i) => (
-                <tr key={c.id} className="hover:bg-surface-2">
-                  <Td className="font-semibold text-text-1">{c.label}</Td>
-                  <Td>{c.curso}</Td>
-                  <Td>{c.studentNames.length}</Td>
-                  <Td>{SUMMARY_BY_INDEX[i % 3].attendance}</Td>
-                  <Td className="font-bold text-primary">{SUMMARY_BY_INDEX[i % 3].average}</Td>
-                  <Td>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students?course=${c.id}`)}>
-                      Gestionar secciones
-                    </Button>
-                  </Td>
-                </tr>
-              ))}
+              {(courses ?? []).map((c) => {
+                const resumen = resumenPorMateria.get(c.id);
+                return (
+                  <tr key={c.id} className="hover:bg-surface-2">
+                    <Td className="font-semibold text-text-1">{c.label}</Td>
+                    <Td>{c.curso}</Td>
+                    <Td>{resumen?.inscriptos ?? c.alumnos}</Td>
+                    <Td>{resumen?.secciones ?? "—"}</Td>
+                    <Td>{resumen?.actividades ?? "—"}</Td>
+                    <Td>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students?course=${c.id}`)}>
+                        Gestionar secciones
+                      </Button>
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         </TableWrap>
