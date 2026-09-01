@@ -1,0 +1,121 @@
+============================================
+ EDUAI PLATFORM - ESTADO DEL PROYECTO
+ Fecha: 01/09/2026 - Rama: main
+============================================
+
+QUE ES ESTO
+----------
+Conexion del frontend React (vite) con el backend Express real + DB
+PostgreSQL, modulo por modulo. La app dejó de funcionar con datos de
+maqueta hardcodeados y pasa a consumir datos reales de la API, salvo
+en los modulos que todavia figuran como PENDIENTES.
+
+COMO LEVANTAR TODO
+------------------
+1) Docker Desktop corriendo (contiene la DB y Redis):
+   - eduai-db    (PostgreSQL en puerto 5433)
+   - eduai-redis (Redis en puerto 6379)
+
+2) Aplicar migraciones + seed (una sola vez):
+   cd backend
+   npm run db:migrate deploy   (o el comando que uses para migrate deploy)
+   npm run db:seed             (seed idempotente: trunca y recrea todo)
+
+3) Backend:
+   cd backend
+   set DATABASE_URL=postgresql://eduai:eduai@localhost:5433/eduai
+   set JWT_SECRET=<cualquier texto de 16+ caracteres>
+   npm run dev                  (levanta en http://localhost:3000)
+
+4) Frontend:
+   cd frontend
+   npm run dev                  (levanta en http://localhost:5173)
+   El proxy de /api -> localhost:3000 ya esta configurado.
+
+CREDENCIALES DE PRUEBA (pass unica: Clave1234)
+-----------------------------------------------
+   admin@ies.edu    (Administrador)
+   profe1@ies.edu   (Profesor - Programacion II / Seccion Teorica)
+   profe2@ies.edu   (Profesor - Bases de Datos)
+   profe3@ies.edu   (Profesor - Redes de Computadoras)
+   alumno1@ies.edu  ... alumno10@ies.edu  (Alumnos)
+
+LO QUE YA ESTA HECHO (conectado al backend real)
+------------------------------------------------
+[OK] Seed completo e idempotente (backend/prisma/seed.ts):
+     14 usuarios, 3 materias, 6 secciones, 60 notas, 180 asistencias,
+     18 planning de clases, 48 entregas, 30 sesiones IA + 60 mensajes,
+     60 analytics, 30 alertas, 30 notificaciones, 1 conversacion con 2
+     mensajes directos, 1 broadcast y 1 institucion.
+
+[OK] Backend completo y verificado en vivo:
+     health, auth, materias, notas, asistencias, actividades, entregas,
+     secciones, contenidos, notificaciones, tutor (stub), analytics,
+     admin, correccion (stub), dashboard, planning, messages, config.
+     Todos los endpoints responden [200] y el control de acceso por
+     materia funciona (403 a profesores ajenos).
+
+[OK] Login real en el frontend:
+     - Token en memoria + refresh automatico ante 401 (POST /api/auth/refresh).
+     - Login con email + credenciales del seed (ya no hay "demo" fijo).
+     - AuthContext restaura sesion con GET /api/auth/me.
+
+[OK] Cursos del alumno:
+     - GET /api/materias/mias, /api/materias/:id, /materias/:id/secciones,
+       /secciones/:id/contenidos. Transformados al tipo Course del front.
+
+[OK] Dashboard (los 3 roles):
+     - /api/dashboard/alumno, dashboard/profesor y /api/dashboard (admin).
+     - El fix del dashboard profe (que daba 500) ya esta aplicado.
+
+[OK] Docente: materias, estudiantes y calificaciones:
+     - GET /api/materias/mias (profesor), /api/materias/:id/notas y
+       /api/materias/:id/asistencias para armar listado de alumnos
+       (promedio, % asistencia, estado Regular/En riesgo) y las
+       calificaciones (periodos 2026-1 / 2026-2).
+
+[OK] Mensajes:
+     - Bandeja de entrada real (GET /api/messages).
+     - Envio individual a alumnos (POST /api/messages) con contactos
+       reales cargados desde las notas de cada materia.
+     - Difusion (POST /api/messages/broadcast) por rol ALUMNO/PROFESOR
+       o a toda la institucion, contando destinatarios reales.
+
+LO QUE FALTA (modulos con API real pero frontend todavia en maqueta)
+-------------------------------------------------------------------
+[ ] Inscripcion / alta de alumnos a materias (claves de matriculacion).
+[ ] Actividades y entregas del alumno (TPs, parciales, estado de entrega).
+[ ] Asistencias (cargar/detalle desde el rol docente).
+[ ] Correcciones (gestion de rubric + correccion; la correccion IA
+    sigue siendo un stub en el backend).
+[ ] Contenidos por seccion (edicion desde el rol docente).
+[ ] Planning de clases (backend tiene la tabla planning_clases poblada).
+[ ] Analytics institucional.
+[ ] Panel admin: usuarios y materias.
+[ ] AdminReports (parcial) y AdminLicencias (MODULO OBSOLETO: la
+    licencia fue eliminada del alcance comercial, no se reimplementa).
+[ ] Tutor IA (depende del ai-service - pinecone/streamLit; el frontend
+    queda con mock y TODO mientras no haya servicio levantado).
+
+NOTAS TECNICAS IMPORTANTES
+--------------------------
+- Los servicios del front conviven en frontend/src/services/*.service.ts.
+  Los conectados usan frontend/src/services/api.ts (fetch con Bearer,
+  credentials y auto-refresh). Los que quedan pendientes devuelven el
+  mock con un comentario TODO(backend).
+- Convenciones de la API: siempre en espanol y los GET suelen devolver
+  la lista envuelta ({ materias: [...] }, { secciones: [...] },
+  { items: [...] }, etc.). Verificarlo antes de mapear.
+- La estrategia es transformar la respuesta de la API dentro del
+  service (nunca tocar las paginas/hooks).
+- Build del front: npx tsc -b  y  npx vite build  (ambos pasan).
+- Commit base de la integracion: ccee774 / ab137bd (ya pusheados).
+
+PROXIMOS PASOS SUGERIDOS
+------------------------
+1) Conectar actividades/entregas (asignaciones) porque es lo que
+   sostiene la vista de cursada del alumno.
+2) Conectar asistencias para cerrar el ciclo docencia.
+3) Conectar contenidos y planning.
+4) Terminar panel admin (usuarios/materias).
+5) Dejar pendiente solamente el tutor IA (depende de ai-service).

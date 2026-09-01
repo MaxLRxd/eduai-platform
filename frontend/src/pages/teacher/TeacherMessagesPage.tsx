@@ -1,22 +1,46 @@
 import React, { useState } from "react";
-import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useInbox, useSendBroadcast, useSendMessage } from "../../hooks/useMessages";
+import { useInbox, useContacts, useSendBroadcast, useSendMessage } from "../../hooks/useMessages";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
 
 export function TeacherMessagesPage(): React.ReactElement {
   const { data: inbox } = useInbox();
-  const { data: courses } = useTeacherCourses();
+  const { data: contacts } = useContacts();
   const sendMessage = useSendMessage();
   const sendBroadcast = useSendBroadcast();
 
+  const [destinatarioId, setDestinatarioId] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
   const [broadcastTarget, setBroadcastTarget] = useState("all");
-  const totalStudents = (courses ?? []).reduce((acc, c) => acc + c.studentNames.length, 0);
+  const [broadcastTitulo, setBroadcastTitulo] = useState("");
+  const [broadcastContenido, setBroadcastContenido] = useState("");
+
+  const broadcastDirigidoA =
+    broadcastTarget === "all" ? undefined : (broadcastTarget as "ALUMNO" | "PROFESOR");
+
   const recipientsLabel =
     broadcastTarget === "all"
-      ? `📣 Se enviará a todos los cursos: ${totalStudents} alumnos en total`
-      : `📚 Se enviará a ${courses?.find((c) => c.id === broadcastTarget)?.studentNames.length ?? 0} alumnos`;
+      ? "📣 Se enviará a toda la institución"
+      : broadcastTarget === "ALUMNO"
+        ? "📚 Se enviará a todos los alumnos"
+        : "🧑🏫 Se enviará a todos los docentes";
+
+  const handleSendMessage = () => {
+    if (!destinatarioId || !body.trim()) return;
+    const contenido = subject.trim() ? `${subject.trim()}\n\n${body.trim()}` : body.trim();
+    sendMessage.mutate({ destinatario_id: destinatarioId, contenido });
+  };
+
+  const handleSendBroadcast = () => {
+    if (!broadcastContenido.trim()) return;
+    sendBroadcast.mutate({
+      dirigido_a: broadcastDirigidoA,
+      titulo: broadcastTitulo.trim() || "Comunicado",
+      contenido: broadcastContenido.trim(),
+    });
+  };
 
   return (
     <div>
@@ -35,7 +59,7 @@ export function TeacherMessagesPage(): React.ReactElement {
               <div className="flex justify-between items-start gap-2">
                 <div>
                   <div className={`text-[13px] ${m.unread ? "font-bold" : "font-medium"} text-text-1`}>{m.from}</div>
-                  <div className="text-xs text-text-2 mt-0.5">{m.subject}</div>
+                  <div className="text-xs text-text-2 mt-0.5 line-clamp-2">{m.subject}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className="text-[11px] text-text-3">{m.when}</span>
@@ -44,6 +68,9 @@ export function TeacherMessagesPage(): React.ReactElement {
               </div>
             </div>
           ))}
+          {inbox && inbox.length === 0 && (
+            <div className="px-5 py-6 text-center text-xs text-text-3">Sin conversaciones todavía</div>
+          )}
         </Card>
 
         <div className="flex flex-col gap-4">
@@ -53,10 +80,17 @@ export function TeacherMessagesPage(): React.ReactElement {
               <label htmlFor="msg-to" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Para
               </label>
-              <select id="msg-to" className="w-full px-3 py-2 border border-border rounded text-sm bg-surface">
+              <select
+                id="msg-to"
+                value={destinatarioId}
+                onChange={(e) => setDestinatarioId(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+              >
                 <option value="">— Seleccioná un estudiante —</option>
-                {["Acevedo, Lautaro", "Báez, María", "Cardozo, Juan", "Díaz, Lucas", "Espinoza, Ana"].map((n) => (
-                  <option key={n}>{n}</option>
+                {(contacts ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre} ({c.email})
+                  </option>
                 ))}
               </select>
             </div>
@@ -64,15 +98,28 @@ export function TeacherMessagesPage(): React.ReactElement {
               <label htmlFor="msg-subject" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Asunto
               </label>
-              <input id="msg-subject" placeholder="Asunto del mensaje" className="w-full px-3 py-2 border border-border rounded text-sm" />
+              <input
+                id="msg-subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Asunto del mensaje"
+                className="w-full px-3 py-2 border border-border rounded text-sm"
+              />
             </div>
             <div className="mb-3.5">
               <label htmlFor="msg-body" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Mensaje
               </label>
-              <textarea id="msg-body" rows={3} placeholder="Escribí tu mensaje..." className="w-full px-3 py-2 border border-border rounded text-sm" />
+              <textarea
+                id="msg-body"
+                rows={3}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Escribí tu mensaje..."
+                className="w-full px-3 py-2 border border-border rounded text-sm"
+              />
             </div>
-            <Button size="sm" onClick={() => sendMessage.mutate()} disabled={sendMessage.isPending}>
+            <Button size="sm" onClick={handleSendMessage} disabled={sendMessage.isPending || !destinatarioId || !body.trim()}>
               {sendMessage.isPending ? "Enviando…" : "Enviar mensaje"}
             </Button>
             {sendMessage.isSuccess && <p className="text-xs text-success mt-2">📨 Mensaje enviado</p>}
@@ -80,7 +127,7 @@ export function TeacherMessagesPage(): React.ReactElement {
 
           <Card className="border-[1.5px] border-primary bg-primary-light">
             <CardHeader title={<span className="text-primary">📢 Difusión a curso</span>} />
-            <InfoBox variant="info">Enviá un mensaje a todos los alumnos de un curso o a toda la institución.</InfoBox>
+            <InfoBox variant="info">Enviá un mensaje a todos los alumnos, docentes o a toda la institución.</InfoBox>
             <div className="mb-3.5">
               <label htmlFor="broadcast-target" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Destinatarios
@@ -91,12 +138,9 @@ export function TeacherMessagesPage(): React.ReactElement {
                 onChange={(e) => setBroadcastTarget(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
               >
-                <option value="all">📣 Todos mis cursos</option>
-                {(courses ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    📚 {c.label} — {c.curso}
-                  </option>
-                ))}
+                <option value="all">📣 Toda la institución</option>
+                <option value="ALUMNO">📚 Todos los alumnos</option>
+                <option value="PROFESOR">🧑‍🏫 Todos los docentes</option>
               </select>
             </div>
             <div className="text-xs text-primary font-semibold mb-2.5 px-2.5 py-1.5 bg-white rounded-sm border border-primary">{recipientsLabel}</div>
@@ -104,18 +148,31 @@ export function TeacherMessagesPage(): React.ReactElement {
               <label htmlFor="broadcast-subject" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Asunto de la difusión
               </label>
-              <input id="broadcast-subject" placeholder="Ej.: Recordatorio de entrega TP3" className="w-full px-3 py-2 border border-border rounded text-sm" />
+              <input
+                id="broadcast-subject"
+                value={broadcastTitulo}
+                onChange={(e) => setBroadcastTitulo(e.target.value)}
+                placeholder="Ej.: Recordatorio de entrega TP3"
+                className="w-full px-3 py-2 border border-border rounded text-sm"
+              />
             </div>
             <div className="mb-3.5">
               <label htmlFor="broadcast-body" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Mensaje
               </label>
-              <textarea id="broadcast-body" rows={3} placeholder="Escribí el mensaje de difusión..." className="w-full px-3 py-2 border border-border rounded text-sm" />
+              <textarea
+                id="broadcast-body"
+                rows={3}
+                value={broadcastContenido}
+                onChange={(e) => setBroadcastContenido(e.target.value)}
+                placeholder="Escribí el mensaje de difusión..."
+                className="w-full px-3 py-2 border border-border rounded text-sm"
+              />
             </div>
-            <Button size="sm" onClick={() => sendBroadcast.mutate()} disabled={sendBroadcast.isPending}>
+            <Button size="sm" onClick={handleSendBroadcast} disabled={sendBroadcast.isPending || !broadcastContenido.trim()}>
               {sendBroadcast.isPending ? "Enviando…" : "📢 Enviar difusión"}
             </Button>
-            {sendBroadcast.isSuccess && <p className="text-xs text-success mt-2">📢 Difusión enviada a {sendBroadcast.data?.recipients} alumnos</p>}
+            {sendBroadcast.isSuccess && <p className="text-xs text-success mt-2">📢 Difusión enviada a {sendBroadcast.data?.recipients} destinatarios</p>}
           </Card>
         </div>
       </div>
