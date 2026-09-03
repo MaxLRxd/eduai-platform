@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useUploadedMaterials, useUploadMaterial } from "../../hooks/useContent";
-import { CONTENT_SECTIONS } from "../../data/mock/content.mock";
+import { useCourseSections, useUploadedMaterials, useUploadMaterial } from "../../hooks/useContent";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
@@ -13,24 +12,40 @@ const RAG_LABEL: Record<RagStatus, string> = { Indexado: "🤖 RAG", "Indexando�
 
 export function TeacherContentPage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
-  const { data: materials, isLoading } = useUploadedMaterials();
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const activeCourse = courseId ?? courses?.[0]?.id ?? null;
+
+  const { data: sections } = useCourseSections(activeCourse);
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const activeSection = sectionId ?? sections?.[0]?.id ?? null;
+
+  const { data: materials, isLoading } = useUploadedMaterials(activeSection);
   const upload = useUploadMaterial();
 
-  const [courseId, setCourseId] = useState("prog2");
-  const [section, setSection] = useState(CONTENT_SECTIONS[0]);
   const [resourceTitle, setResourceTitle] = useState("");
   const [resourceBody, setResourceBody] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
 
   const handleUpload = (file: File): void => {
-    upload.mutate(file.name);
+    window.alert(
+      "La subida de archivos aún se encuentra pendiente. Añadí el contenido usando el editor de texto (será indexado por el RAG Pipeline)."
+    );
+    void file;
   };
 
   const handleSaveText = (): void => {
-    if (!resourceTitle.trim()) return;
-    setSavedMsg("✅ Texto guardado e indexado por el RAG Pipeline");
-    setResourceTitle("");
-    setResourceBody("");
+    if (!resourceTitle.trim() || !activeSection) return;
+    upload.mutate(
+      { sectionId: activeSection, title: resourceTitle, body: resourceBody },
+      {
+        onSuccess: () => {
+          setSavedMsg("✅ Texto guardado e indexado por el RAG Pipeline");
+          setResourceTitle("");
+          setResourceBody("");
+        },
+        onError: () => setSavedMsg("⚠️ Ocurrió un error al guardar. Intentá de nuevo."),
+      }
+    );
   };
 
   return (
@@ -53,8 +68,11 @@ export function TeacherContentPage(): React.ReactElement {
               </label>
               <select
                 id="content-course"
-                value={courseId}
-                onChange={(e) => setCourseId(e.target.value)}
+                value={activeCourse ?? ""}
+                onChange={(e) => {
+                  setCourseId(e.target.value);
+                  setSectionId(null);
+                }}
                 className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
               >
                 {(courses ?? []).map((c) => (
@@ -70,12 +88,14 @@ export function TeacherContentPage(): React.ReactElement {
               </label>
               <select
                 id="content-section"
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
+                value={activeSection ?? ""}
+                onChange={(e) => setSectionId(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
               >
-                {CONTENT_SECTIONS.map((s) => (
-                  <option key={s}>{s}</option>
+                {(sections ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
                 ))}
               </select>
             </div>
@@ -102,7 +122,6 @@ export function TeacherContentPage(): React.ReactElement {
                 }}
               />
             </label>
-            {upload.isPending && <p className="text-xs text-text-2 mt-2.5">Subiendo e indexando…</p>}
           </Card>
 
           <Card>
@@ -132,8 +151,8 @@ export function TeacherContentPage(): React.ReactElement {
                 className="w-full px-3 py-2 border border-border rounded text-sm"
               />
             </div>
-            <Button onClick={handleSaveText} disabled={!resourceTitle.trim()}>
-              Guardar y publicar
+            <Button onClick={handleSaveText} disabled={!resourceTitle.trim() || !activeSection || upload.isPending}>
+              {upload.isPending ? "Guardando…" : "Guardar y publicar"}
             </Button>
             {savedMsg && <p className="text-xs text-success mt-2">{savedMsg}</p>}
           </Card>
@@ -156,6 +175,9 @@ export function TeacherContentPage(): React.ReactElement {
                   <Tag color={RAG_COLOR[f.ragStatus]}>{RAG_LABEL[f.ragStatus]}</Tag>
                 </div>
               ))}
+              {!isLoading && (materials ?? []).length === 0 && (
+                <p className="text-xs text-text-2 py-2">Aún no hay material en esta sección.</p>
+              )}
             </div>
             <p className="text-[11px] text-text-2 mt-3.5 bg-info-light border border-blue-200 rounded px-3 py-2">
               Los archivos marcados como <strong>🤖 RAG</strong> ya están disponibles para el Tutor IA de la materia.
