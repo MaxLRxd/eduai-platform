@@ -85,6 +85,7 @@ export interface TeacherGradeRow {
 export type DailyAttendanceStatus = "present" | "absent" | "late";
 
 export interface StudentAttendanceState {
+  id: string;
   name: string;
   status: DailyAttendanceStatus;
   history: boolean[];

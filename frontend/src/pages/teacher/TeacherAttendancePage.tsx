@@ -1,12 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useAttendanceState } from "../../hooks/useAttendance";
-import { saveAttendance } from "../../services/attendance.service";
+import { useAttendanceState, useSaveAttendance } from "../../hooks/useAttendance";
 import { CourseFilter } from "../../components/ui/CourseFilter";
 import { Table, TableWrap, Td, Th, Thead } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
-import { ATTENDANCE_DATES } from "../../data/mock/attendance.mock";
 import type { DailyAttendanceStatus } from "../../types/domain";
 
 const STATUS_META: Record<DailyAttendanceStatus, { label: string; short: string; classes: string }> = {
@@ -17,39 +15,50 @@ const STATUS_META: Record<DailyAttendanceStatus, { label: string; short: string;
 
 export function TeacherAttendancePage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
-  const [courseId, setCourseId] = useState("prog2");
-  const { data: initialState, isLoading } = useAttendanceState();
+  const [selected, setSelected] = useState("");
+  const courseId = selected || courses?.[0]?.id || "";
+  const { data: students, isLoading, refetch } = useAttendanceState(courseId);
+  const save = useSaveAttendance();
+
   const [today, setToday] = useState(() => new Date().toISOString().split("T")[0]);
   const [statuses, setStatuses] = useState<Record<string, DailyAttendanceStatus>>({});
   const [savedMsg, setSavedMsg] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const students = initialState ?? [];
+  const all = students ?? [];
 
-  const currentStatus = (name: string, fallback: DailyAttendanceStatus): DailyAttendanceStatus => statuses[name] ?? fallback;
+  const currentStatus = (id: string, fallback: DailyAttendanceStatus): DailyAttendanceStatus =>
+    statuses[id] ?? fallback;
 
   const setAll = (status: DailyAttendanceStatus): void => {
     const next: Record<string, DailyAttendanceStatus> = {};
-    students.forEach((s) => (next[s.name] = status));
+    all.forEach((s) => (next[s.id] = status));
     setStatuses(next);
   };
 
   const summary = useMemo(() => {
     const counts = { present: 0, absent: 0, late: 0 };
-    students.forEach((s) => {
-      counts[statuses[s.name] ?? s.status]++;
+    all.forEach((s) => {
+      counts[statuses[s.id] ?? s.status]++;
     });
     return counts;
-  }, [students, statuses]);
+  }, [all, statuses]);
+
+  const fechas = useMemo(() => {
+    const set = new Set<string>();
+    all.forEach((s) => s.history.forEach((_, i) => set.add(String(i))));
+    if (all.length > 0 && all[0].history.length > 0) {
+      return all[0].history.map((_, i) => `Clase ${i + 1}`);
+    }
+    return [...set];
+  }, [all]);
 
   const handleConfirm = async (): Promise<void> => {
-    setSaving(true);
-    try {
-      await saveAttendance();
-      setSavedMsg("✅ Asistencia guardada correctamente");
-    } finally {
-      setSaving(false);
-    }
+    if (!courseId) return;
+    const registros = all.map((s) => ({ alumno_id: s.id, estado: statuses[s.id] ?? s.status }));
+    await save.mutateAsync({ courseId, fechaClase: today, registros });
+    setSavedMsg("✅ Asistencia guardada correctamente");
+    setStatuses({});
+    refetch();
   };
 
   return (
@@ -59,7 +68,7 @@ export function TeacherAttendancePage(): React.ReactElement {
         <p className="text-[13px] text-text-2">Registro de presencias por materia y curso</p>
       </div>
 
-      <CourseFilter courses={courses ?? []} value={courseId} onChange={setCourseId} />
+      <CourseFilter courses={courses ?? []} value={courseId} onChange={setSelected} />
 
       <div className="bg-surface border border-border rounded-lg px-4 py-3 mb-4 shadow-xs flex items-center gap-3 flex-wrap">
         <label htmlFor="att-date" className="text-[13px] font-semibold">
@@ -105,20 +114,20 @@ export function TeacherAttendancePage(): React.ReactElement {
             <tr>
               <Th>Estudiante</Th>
               <Th>Hoy</Th>
-              {ATTENDANCE_DATES.map((d) => (
+              {fechas.map((d) => (
                 <Th key={d}>{d}</Th>
               ))}
               <Th>% Asist.</Th>
             </tr>
           </Thead>
           <tbody>
-            {students.map((s) => {
-              const status = currentStatus(s.name, s.status);
-              const pct = Math.round((s.total / (s.total + s.absent)) * 100);
+            {all.map((s) => {
+              const status = currentStatus(s.id, s.status);
+              const pct = s.total ? Math.round(((s.total - s.absent) / s.total) * 100) : 0;
               const pctColor = pct >= 90 ? "text-success" : pct >= 75 ? "text-warning" : "text-danger";
               const barColor = pct >= 90 ? "bg-success" : pct >= 75 ? "bg-warning" : "bg-danger";
               return (
-                <tr key={s.name} className="hover:bg-surface-2">
+                <tr key={s.id} className="hover:bg-surface-2">
                   <Td className="font-semibold text-text-1">
                     {s.name}
                     {pct < 75 && (
@@ -133,10 +142,10 @@ export function TeacherAttendancePage(): React.ReactElement {
                         <label key={k} className="cursor-pointer flex flex-col items-center">
                           <input
                             type="radio"
-                            name={`att-${s.name}`}
+                            name={`att-${s.id}`}
                             className="sr-only"
                             checked={status === k}
-                            onChange={() => setStatuses((prev) => ({ ...prev, [s.name]: k }))}
+                            onChange={() => setStatuses((prev) => ({ ...prev, [s.id]: k }))}
                             aria-label={STATUS_META[k].label}
                           />
                           <span
@@ -169,8 +178,8 @@ export function TeacherAttendancePage(): React.ReactElement {
       </TableWrap>
 
       <div className="flex items-center gap-3 flex-wrap mb-3.5">
-        <Button onClick={handleConfirm} disabled={saving}>
-          {saving ? "Guardando…" : "✅ Confirmar asistencia del día"}
+        <Button onClick={handleConfirm} disabled={save.isPending || all.length === 0}>
+          {save.isPending ? "Guardando…" : "✅ Confirmar asistencia del día"}
         </Button>
         <Button variant="secondary" size="sm">
           Exportar Excel
