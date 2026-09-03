@@ -47,7 +47,9 @@ export function StudentAssignmentsPage(): React.ReactElement {
                   <Tag color={STATUS_COLOR[a.status]}>{a.status}</Tag>
                 </Td>
                 <Td>
-                  <Button size="sm">Enviar</Button>
+                  <Button size="sm" variant={a.status === "Entregado" ? "secondary" : "primary"}>
+                    {a.status === "Entregado" ? "Ver nota" : "Enviar"}
+                  </Button>
                 </Td>
               </tr>
             ))}
