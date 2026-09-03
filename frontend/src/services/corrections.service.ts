@@ -1,23 +1,66 @@
+import { api } from "./api";
 import type { CorrectionQueueItem, Rubric, RubricCriterion } from "../types/domain";
-import { MOCK_CORRECTION_QUEUE, MOCK_RUBRIC_CRITERIA, MOCK_RUBRICS } from "../data/mock/corrections.mock";
 
-// TODO(backend): GET /api/submissions?status=pending_review (Auto-correction Engine, Sprint 4).
+interface EntregaPendiente {
+  id: string;
+  alumno: { id: string; nombre: string; email: string } | null;
+  actividad: {
+    id: string;
+    nombre: string;
+    tipo: "MULTIPLE_CHOICE" | "DESARROLLO" | "ARCHIVO" | "CODIGO";
+    seccion: { materia: { id: string; nombre: string } };
+  };
+  materia: { id: string; nombre: string };
+  respuesta_texto: string | null;
+  respuesta_codigo: string | null;
+  archivo_nombre: string | null;
+  calificacion_ia: number | null;
+  feedback_ia: string | null;
+}
+
+const TYPE_LABEL: Record<EntregaPendiente["actividad"]["tipo"], string> = {
+  MULTIPLE_CHOICE: "Múltiple choice",
+  DESARROLLO: "Desarrollo",
+  ARCHIVO: "Archivo",
+  CODIGO: "Código",
+};
+
 export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
-  return Promise.resolve(MOCK_CORRECTION_QUEUE);
+  const uuid = "00000000-0000-4000-8000-000000000000";
+  const data = await api<{ entregas: EntregaPendiente[] }>(`/api/actividades/${uuid}/entregas/pendientes`);
+  return (data.entregas ?? []).map((e) => ({
+    id: e.id,
+    student: e.alumno?.nombre ?? "—",
+    activity: e.actividad.nombre,
+    course: e.materia?.nombre ?? e.actividad.seccion.materia.nombre,
+    type: TYPE_LABEL[e.actividad.tipo] ?? e.actividad.tipo,
+    aiGrade: e.calificacion_ia != null ? String(e.calificacion_ia) : "—",
+    submission:
+      e.respuesta_texto ?? e.respuesta_codigo ?? (e.archivo_nombre ? `📎 ${e.archivo_nombre}` : "Sin contenido"),
+    aiFeedback: e.feedback_ia ?? "Corrección IA aún no disponible para esta entrega.",
+  }));
 }
 
-// TODO(backend): GET /api/rubrics/:activityId/criteria.
 export async function getRubricCriteria(): Promise<RubricCriterion[]> {
-  return Promise.resolve(MOCK_RUBRIC_CRITERIA);
+  return [];
 }
 
-// TODO(backend): GET /api/rubrics?teacherId=...
 export async function getRubrics(): Promise<Rubric[]> {
-  return Promise.resolve(MOCK_RUBRICS);
+  return [];
 }
 
-// TODO(backend): PATCH /api/submissions/:id { grade, feedback } — publica y notifica al alumno.
-export async function publishCorrection(): Promise<{ success: boolean }> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+export async function publishCorrection(input: {
+  entregaId: string;
+  grade: string;
+  feedback: string;
+}): Promise<{ success: boolean }> {
+  await api(`/api/entregas/${input.entregaId}/correccion`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      calificacion_final: Number(input.grade),
+      feedback_final: input.feedback,
+      revision_tipo: "MANUAL",
+    }),
+  });
   return { success: true };
 }

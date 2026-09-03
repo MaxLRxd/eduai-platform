@@ -40,7 +40,11 @@ export function TeacherCorrectionsPage(): React.ReactElement {
   }, [selected?.id]);
 
   const handlePublish = (): void => {
-    publish.mutate(undefined, { onSuccess: () => setPublished(true) });
+    if (!selectedId) return;
+    publish.mutate(
+      { entregaId: selectedId, grade, feedback },
+      { onSuccess: () => setPublished(true) }
+    );
   };
 
   return (

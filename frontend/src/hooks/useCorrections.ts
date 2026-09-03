@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCorrectionQueue, getRubricCriteria, getRubrics, publishCorrection } from "../services/corrections.service";
 
 export function useCorrectionQueue() {
@@ -14,5 +14,11 @@ export function useRubrics() {
 }
 
 export function usePublishCorrection() {
-  return useMutation({ mutationFn: publishCorrection });
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: publishCorrection,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["corrections", "queue"] });
+    },
+  });
 }
