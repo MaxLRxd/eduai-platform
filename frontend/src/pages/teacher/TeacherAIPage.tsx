@@ -15,14 +15,15 @@ const QUICK_ACTIONS = [
 
 export function TeacherAIPage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
-  const { data: planning } = usePlanning();
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const activeCourse = courseId ?? courses?.[0]?.id ?? null;
+  const courseLabel = courses?.find((c) => c.id === activeCourse)?.label ?? "la materia seleccionada";
+
+  const { data: planning } = usePlanning(activeCourse, courseLabel);
   const { output, pending, ask } = useTeacherAssistant();
 
-  const [courseId, setCourseId] = useState("prog2");
   const [classDate, setClassDate] = useState(planning?.[0]?.date ?? "");
   const [prompt, setPrompt] = useState("");
-
-  const courseLabel = courses?.find((c) => c.id === courseId)?.label ?? "la materia seleccionada";
 
   const runPrompt = (text: string): void => {
     setPrompt(text);
@@ -47,7 +48,7 @@ export function TeacherAIPage(): React.ReactElement {
             </label>
             <select
               id="teacher-ai-course"
-              value={courseId}
+              value={activeCourse ?? ""}
               onChange={(e) => setCourseId(e.target.value)}
               className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
             >

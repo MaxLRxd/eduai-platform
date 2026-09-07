@@ -1,10 +1,18 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPlanning, savePlanning } from "../services/planning.service";
 
-export function usePlanning() {
-  return useQuery({ queryKey: ["planning"], queryFn: getPlanning });
+export function usePlanning(courseId: string | null, courseName: string) {
+  return useQuery({
+    queryKey: ["planning", courseId],
+    queryFn: () => getPlanning(courseId as string, courseName),
+    enabled: Boolean(courseId),
+  });
 }
 
 export function useSavePlanning() {
-  return useMutation({ mutationFn: savePlanning });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: savePlanning,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning"] }),
+  });
 }
