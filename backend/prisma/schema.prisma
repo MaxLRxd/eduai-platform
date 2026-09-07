@@ -551,7 +551,7 @@ model MensajeBroadcast {
 model Institution {
   id               String   @id @default(uuid()) @db.Uuid
   nombre           String   @db.VarChar(200)
-  logo_url         String?  @db.VarChar(500)
+  logo_url         String?  @db.Text
   color_primario   String?  @db.VarChar(20)
   color_secundario String?  @db.VarChar(20)
   updated_at       DateTime @updatedAt

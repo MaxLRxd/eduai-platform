@@ -42,7 +42,7 @@ export interface GradeDetail {
   grade: number;
 }
 
-export type AttendanceStatus = "Presente" | "Ausente" | "Tardanza";
+export type AttendanceStatus = "Presente" | "Ausente" | "Tardanza" | "Justificado";
 
 export interface AttendanceRecord {
   date: string;

@@ -6,7 +6,7 @@ const colorSchema = z
 
 export const brandingSchema = z.object({
   nombre: z.string().min(2).max(200).optional(),
-  logo_url: z.string().max(500).nullish(),
+  logo_url: z.string().max(5_000_000).nullish(),
   color_primario: colorSchema.optional(),
   color_secundario: colorSchema.optional(),
 });

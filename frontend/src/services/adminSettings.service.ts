@@ -40,9 +40,10 @@ export interface SaveBrandingInput {
   nombre: string;
   colorPrimario: string;
   colorSecundario: string;
+  logoUrl?: string | null;
 }
 
-// PUT /api/admin/branding { nombre, color_primario, color_secundario }.
+// PUT /api/admin/branding { nombre, color_primario, color_secundario, logo_url }.
 export async function saveBranding(input: SaveBrandingInput): Promise<InstitutionBranding> {
   const data = await api<{ branding: BrandingApi }>("/api/admin/branding", {
     method: "PUT",
@@ -50,6 +51,7 @@ export async function saveBranding(input: SaveBrandingInput): Promise<Institutio
       nombre: input.nombre,
       color_primario: input.colorPrimario,
       color_secundario: input.colorSecundario,
+      logo_url: input.logoUrl,
     }),
   });
   return toBranding(data.branding);

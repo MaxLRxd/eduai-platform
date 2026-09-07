@@ -57,6 +57,17 @@ export async function listarPreguntas(
   res.json({ preguntas: data });
 }
 
+export async function progreso(req: Request, res: Response): Promise<void> {
+  const user = requireUser(req);
+
+  if (user.rol !== "ALUMNO") {
+    throw new AppError(403, "Solo los alumnos tienen progreso academico");
+  }
+
+  const data = await analyticsService.progresoAlumno(user.id);
+  res.json(data);
+}
+
 export async function crearPregunta(
   req: Request<{ materiaId: string }, unknown, CrearPreguntaFrecuenteInput>,
   res: Response

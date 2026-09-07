@@ -1,4 +1,10 @@
-import type { Rol, TipoErrorDuda, TipoAlerta, NivelSeveridad } from "@prisma/client";
+import type {
+  EstadoAsistencia,
+  NivelSeveridad,
+  Rol,
+  TipoAlerta,
+  TipoErrorDuda,
+} from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { obtenerInscripcion, obtenerProfesorAsignado } from "../materias/materias.service";
@@ -239,6 +245,112 @@ export async function registrarConsultaTutor(
       },
     });
   }
+}
+
+export async function progresoAlumno(alumnoId: string) {
+  const [inscripciones, notas, asistencias, entregas, totalActividades] = await Promise.all([
+    prisma.inscripcion.findMany({
+      where: { alumno_id: alumnoId },
+      include: { materia: { select: { id: true, nombre: true } } },
+      orderBy: { inscripto_en: "desc" },
+    }),
+    prisma.nota.findMany({
+      where: { alumno_id: alumnoId },
+      include: { materia: { select: { id: true, nombre: true } } },
+      orderBy: { registrado_en: "desc" },
+    }),
+    prisma.asistencia.findMany({
+      where: { alumno_id: alumnoId },
+      include: { materia: { select: { id: true, nombre: true } } },
+      orderBy: { fecha_clase: "desc" },
+    }),
+    prisma.entrega.findMany({
+      where: { alumno_id: alumnoId },
+      select: { id: true },
+    }),
+    prisma.actividad.count({
+      where: { seccion: { materia: { inscripciones: { some: { alumno_id: alumnoId } } } } },
+    }),
+  ]);
+
+  const notasPorMateria = new Map<string, number[]>();
+  for (const n of notas) {
+    const arr = notasPorMateria.get(n.materia_id) ?? [];
+    arr.push(n.calificacion.toNumber());
+    notasPorMateria.set(n.materia_id, arr);
+  }
+
+  const asistenciasPorMateria = new Map<string, EstadoAsistencia[]>();
+  for (const a of asistencias) {
+    const arr = asistenciasPorMateria.get(a.materia_id) ?? [];
+    arr.push(a.estado);
+    asistenciasPorMateria.set(a.materia_id, arr);
+  }
+
+  const esAsistido = (estado: EstadoAsistencia) =>
+    estado === "PRESENTE" || estado === "TARDANZA";
+
+  const resumen = inscripciones.map((insc) => {
+    const valores = notasPorMateria.get(insc.materia_id) ?? [];
+    const promedio =
+      valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+
+    const estados = asistenciasPorMateria.get(insc.materia_id) ?? [];
+    const porcentajeAsistencia =
+      estados.length > 0
+        ? (estados.filter(esAsistido).length / estados.length) * 100
+        : 0;
+
+    return {
+      materia_id: insc.materia.id,
+      materia: insc.materia.nombre,
+      promedio: promedio !== null ? Math.round(promedio * 100) / 100 : null,
+      asistencia: Math.round(porcentajeAsistencia),
+    };
+  });
+
+  const promedios = resumen
+    .map((r) => r.promedio)
+    .filter((p): p is number => p !== null);
+
+  const promedioGeneral =
+    promedios.length > 0
+      ? Math.round((promedios.reduce((a, b) => a + b, 0) / promedios.length) * 100) / 100
+      : 0;
+
+  const notasTotales = notas.map((n) => n.calificacion.toNumber());
+  const mejorNota = notasTotales.length > 0 ? Math.max(...notasTotales) : 0;
+
+  const estadosTotales = asistencias.map((a) => a.estado);
+  const asistenciaGlobal =
+    estadosTotales.length > 0
+      ? Math.round(
+          (estadosTotales.filter(esAsistido).length / estadosTotales.length) * 100
+        )
+      : 0;
+
+  return {
+    resumen,
+    promedio_general: promedioGeneral,
+    mejor_nota: mejorNota,
+    actividades: {
+      entregadas: entregas.length,
+      total: totalActividades,
+    },
+    asistencia_global: asistenciaGlobal,
+    detalle: notas.map((n) => ({
+      evaluacion: n.observaciones ?? `Periodo ${n.periodo}`,
+      materia: n.materia.nombre,
+      periodo: n.periodo,
+      fecha: n.registrado_en.toISOString().slice(0, 10),
+      nota: n.calificacion.toNumber(),
+    })),
+    asistencia: asistencias.map((a) => ({
+      fecha: a.fecha_clase.toISOString().slice(0, 10),
+      materia: a.materia.nombre,
+      estado: a.estado,
+    })),
+  };
 }
 
 export async function crearAlertaRiesgo(

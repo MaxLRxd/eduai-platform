@@ -5,15 +5,37 @@ import { ProgressBar } from "../../components/ui/ProgressBar";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag } from "../../components/ui/Tag";
 
-const SUMMARY_TILES = [
-  { icon: "📊", label: "Promedio general", value: "8.4", color: "#003d7a" },
-  { icon: "📅", label: "Asistencia global", value: "93%", color: "#059669" },
-  { icon: "✅", label: "Actividades entregadas", value: "11/13", color: "#2563eb" },
-  { icon: "🏆", label: "Mejor nota", value: "9.5", color: "#d97706" },
-];
-
 export function StudentProgressPage(): React.ReactElement {
-  const { summary, grades, attendance } = useProgress();
+  const { summary, grades, attendance, overview } = useProgress();
+
+  const tiles = [
+    {
+      icon: "📊",
+      label: "Promedio general",
+      value: overview.data ? overview.data.promedioGeneral.toFixed(1) : "—",
+      color: "#003d7a",
+    },
+    {
+      icon: "📅",
+      label: "Asistencia global",
+      value: overview.data ? `${overview.data.asistenciaGlobal}%` : "—",
+      color: "#059669",
+    },
+    {
+      icon: "✅",
+      label: "Actividades entregadas",
+      value: overview.data
+        ? `${overview.data.actividades.entregadas}/${overview.data.actividades.total}`
+        : "—",
+      color: "#2563eb",
+    },
+    {
+      icon: "🏆",
+      label: "Mejor nota",
+      value: overview.data ? overview.data.mejorNota.toFixed(1) : "—",
+      color: "#d97706",
+    },
+  ];
 
   return (
     <div>
@@ -23,7 +45,7 @@ export function StudentProgressPage(): React.ReactElement {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        {SUMMARY_TILES.map((t) => (
+        {tiles.map((t) => (
           <Card key={t.label} className="text-center py-4 px-3">
             <div className="text-2xl mb-1">{t.icon}</div>
             <div className="text-[11px] text-text-3 uppercase tracking-wide mb-1.5">{t.label}</div>
@@ -118,7 +140,7 @@ export function StudentProgressPage(): React.ReactElement {
                   <Td className="font-mono text-xs">{a.date}</Td>
                   <Td>{a.course}</Td>
                   <Td>
-                    <Tag color={a.status === "Presente" ? "green" : a.status === "Tardanza" ? "amber" : "red"}>{a.status}</Tag>
+                    <Tag color={a.status === "Presente" ? "green" : a.status === "Tardanza" ? "amber" : a.status === "Justificado" ? "gray" : "red"}>{a.status}</Tag>
                   </Td>
                 </tr>
               ))}

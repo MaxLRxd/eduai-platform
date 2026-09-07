@@ -33,20 +33,23 @@ ADMIN — CONECTADO AL BACKEND REAL
   * Presets de color siguen siendo estáticos de la UI (no viven en backend)
 - Admin Reportes: GET /api/admin/reports — 6 reportes con datos reales (asistencia, notas, tutor IA, retención, MAU, resumen ejecutivo)
   * Exportación CSV real por reporte: GET /api/admin/reports/:type/export
+- Admin Logo/escudo: subida por data URL (migración logo_url → TEXT), preview y "quitar logo"
+
+ALUMNO GENÉRICO:
+- Tutor IA: chat del alumno conectado al backend real
+  * POST /materias/:materiaId/tutor/sesiones (crea sesión) + POST /tutor/sesiones/:id/mensajes
+  * El backend ya llamaba al ai-service (chatTutor/streamTutor); el flujo completo ahora funciona
 
 FALTA / PENDIENTE
 -----------------
 ADMIN:
 - Licencias: sin backend (depende de proveedor de billing, no definido)
-- Subida de logo/escudo: el `logo_url` está en el modelo, pero no hay upload de archivos todavía
 - Reportes: la exportación es CSV; un export PDF real requeriría un generador de PDF
 
-ALUMNO:
-- Progress / Analytics del alumno: service mock, depende del Analytics Engine
-
 IA:
-- Tutor (ask_tutor) y herramientas del docente (generate_teaching_material) mockeados — apuntan a ai-service
-- ai-services: correct_submission no conectada (TODO en aiClient.ts)
+- Asistente docente (generate_teaching_material): no existe en ai-services (no hay router ni use_case) → mock sigue
+- Corrección de entregas (correct_submission): stub en aiClient.ts; depende del ai-service
+- Configuración para correr el tutor de verdad: requiere AI_SERVICE_URL + Pinecone/Gemini del lado de ai-services
 
 PRÓXIMOS PASOS SUGERIDOS
 ------------------------

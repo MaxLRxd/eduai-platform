@@ -1,12 +1,56 @@
-import type { Course } from "../types/domain";
+import { api } from "./api";
 
-// TODO(backend): reemplazar por POST al ai-service (`ask_tutor` en
-// ai-services/src/use_cases/ask_tutor.py, rama develop) vía el backend Node
-// una vez que ai-service/ y ai-services/ se unifiquen. Mientras tanto,
-// devuelve una respuesta simulada para poder probar la UI del chat.
-export async function askTutor(course: Course, question: string): Promise<string> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return `[Mock] Sobre "${course.name}": todavía no estoy conectado al tutor real (RAG + LLM). ` +
-    `Cuando el ai-service esté integrado, esta respuesta va a basarse en ${course.tutorFocus}. ` +
-    `Tu pregunta fue: "${question}".`;
+export type ModoTutor = "NORMAL" | "SOCRATIC" | "HINTS";
+
+interface SesionApi {
+  id: string;
+  materia_id: string;
+  modo: string;
+  iniciada_en: string;
+  cerrada_en: string | null;
+  mensajes: number;
+}
+
+// POST /api/materias/:materiaId/tutor/sesiones — inicia una sesión de tutor.
+export async function createTutorSession(materiaId: string, modo: ModoTutor = "NORMAL"): Promise<string> {
+  const data = await api<{ sesion: SesionApi }>(`/api/materias/${materiaId}/tutor/sesiones`, {
+    method: "POST",
+    body: JSON.stringify({ modo }),
+  });
+  return data.sesion.id;
+}
+
+export interface TutorMensaje {
+  id: string;
+  rol: "USER" | "ASSISTANT";
+  contenido: string;
+  creado_en: string;
+}
+
+export interface AskTutorResult {
+  pregunta: TutorMensaje;
+  respuesta: {
+    contenido: string;
+    sources: { material_id: string; chunk_index: number; content: string; score: number }[];
+    prompt_depurado: string | null;
+    cached: boolean;
+  };
+}
+
+// POST /api/tutor/sesiones/:sesionId/mensajes — envía una pregunta y devuelve la respuesta.
+export async function askTutor(sesionId: string, question: string): Promise<AskTutorResult> {
+  const data = await api<AskTutorResult>(
+    `/api/tutor/sesiones/${sesionId}/mensajes`,
+    {
+      method: "POST",
+      body: JSON.stringify({ contenido: question }),
+    }
+  );
+  return data;
+}
+
+// GET /api/tutor/sesiones/:sesionId/mensajes — historial de la sesión.
+export async function getTutorMessages(sesionId: string): Promise<TutorMensaje[]> {
+  const data = await api<{ mensajes: TutorMensaje[] }>(`/api/tutor/sesiones/${sesionId}/mensajes`);
+  return data.mensajes ?? [];
 }

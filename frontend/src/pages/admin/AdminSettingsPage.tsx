@@ -12,6 +12,8 @@ export function AdminSettingsPage(): React.ReactElement {
   const [primary, setPrimary] = useState("#003d7a");
   const [secondary, setSecondary] = useState("#005fa3");
   const [lighter, setLighter] = useState("#dbeafe");
+  const [logo, setLogo] = useState<string | null>(null);
+  const [logoDirty, setLogoDirty] = useState(false);
 
   React.useEffect(() => {
     const b = branding.data;
@@ -19,7 +21,18 @@ export function AdminSettingsPage(): React.ReactElement {
     if (b.nombre) setName(b.nombre);
     if (b.colorPrimario) setPrimary(b.colorPrimario);
     if (b.colorSecundario) setSecondary(b.colorSecundario);
+    setLogo(b.logoUrl);
+    setLogoDirty(false);
   }, [branding.data]);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoDirty(true);
+    const reader = new FileReader();
+    reader.onload = (): void => setLogo(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const applyPreset = (id: string): void => {
     const preset = presets.data?.find((p) => p.id === id);
@@ -40,9 +53,13 @@ export function AdminSettingsPage(): React.ReactElement {
       <Card className="mb-5">
         <CardHeader title="🏫 Identidad institucional" />
         <div className="flex gap-5 items-start flex-wrap">
-          <div className="w-[72px] h-[72px] rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center text-2xl bg-surface-2 shrink-0">
-            🏫
-          </div>
+          {logo ? (
+            <img src={logo} alt="Logo de la institución" className="w-[72px] h-[72px] rounded-lg border border-border object-contain bg-surface-2 shrink-0" />
+          ) : (
+            <div className="w-[72px] h-[72px] rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center text-2xl bg-surface-2 shrink-0">
+              🏫
+            </div>
+          )}
           <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
             <div>
               <label htmlFor="inst-name" className="block text-xs font-semibold text-text-1 mb-1.5">
@@ -60,10 +77,10 @@ export function AdminSettingsPage(): React.ReactElement {
               <label htmlFor="inst-logo" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Escudo o logo
               </label>
-              <input id="inst-logo" type="file" accept="image/*" className="w-full text-sm" />
+              <input id="inst-logo" type="file" accept="image/*" onChange={handleLogoChange} className="w-full text-sm" />
             </div>
             <div>
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary" size="sm" onClick={() => { setLogo(null); setLogoDirty(true); }}>
                 Quitar logo
               </Button>
             </div>
@@ -147,7 +164,7 @@ export function AdminSettingsPage(): React.ReactElement {
       </Card>
 
       <div className="flex items-center gap-2">
-        <Button onClick={() => saveBranding.mutate({ nombre: name, colorPrimario: primary, colorSecundario: secondary })} disabled={saveBranding.isPending}>
+        <Button onClick={() => saveBranding.mutate({ nombre: name, colorPrimario: primary, colorSecundario: secondary, logoUrl: logoDirty ? logo : undefined })} disabled={saveBranding.isPending}>
           {saveBranding.isPending ? "Aplicando…" : "Aplicar apariencia"}
         </Button>
         <Button variant="secondary" onClick={() => applyPreset("p-blue")}>

@@ -10,6 +10,11 @@ import * as analyticsController from "./analytics.controller";
 const router = Router();
 
 router.get(
+  "/analytics/progreso",
+  requireAuth,
+  analyticsController.progreso
+);
+router.get(
   "/materias/:materiaId/analytics/comprension",
   requireAuth,
   requireRole("PROFESOR"),
