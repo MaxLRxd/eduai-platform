@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAdminSubjects } from "../../hooks/useAdminSubjects";
-import { useAdminKeys, useGenerateAdminKey } from "../../hooks/useAdminKeys";
+import { useAdminKeys, useGenerateAdminKey, useRevokeAdminKey } from "../../hooks/useAdminKeys";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag } from "../../components/ui/Tag";
@@ -11,6 +11,7 @@ export function AdminClavesPage(): React.ReactElement {
   const { data: subjects } = useAdminSubjects();
   const { data: keys, isLoading } = useAdminKeys();
   const generate = useGenerateAdminKey();
+  const revoke = useRevokeAdminKey();
 
   const [materiaFilter, setMateriaFilter] = useState("");
   const [newKeyMateria, setNewKeyMateria] = useState("");
@@ -101,7 +102,7 @@ export function AdminClavesPage(): React.ReactElement {
                           Ver inscriptos
                         </Button>
                         {k.estado === "activa" && (
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => revoke.mutate(k.id)} disabled={revoke.isPending}>
                             Revocar
                           </Button>
                         )}

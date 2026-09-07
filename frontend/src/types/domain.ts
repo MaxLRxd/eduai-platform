@@ -186,7 +186,7 @@ export interface AdminUser {
 }
 
 export interface EnrollmentKeyAdmin {
-  id: number;
+  id: string;
   materiaId: string;
   materiaNombre: string;
   codigo: string;

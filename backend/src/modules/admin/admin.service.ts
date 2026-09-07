@@ -9,7 +9,9 @@ import type {
   CambiarRolInput,
   CrearMateriaAdminInput,
   CrearUsuarioInput,
+  GenerarClaveAdminInput,
 } from "./admin.schemas";
+import { generarClaveUnica } from "../materias/materias.service";
 
 function toUsuarioDto(u: {
   id: string;
@@ -272,4 +274,90 @@ export async function asignarProfesor(materiaId: string, input: AsignarProfesorI
     profesor_id: input.profesor_id,
     activo: asignacion.activo,
   };
+}
+
+function toClaveDto(clave: {
+  id: string;
+  materia_id: string;
+  clave: string;
+  activa: boolean;
+  vencimiento: Date | null;
+  max_usos: number | null;
+  usos_actuales: number;
+  revocada_en: Date | null;
+  materia?: { id: string; nombre: string };
+  inscripciones?: { alumno: { nombre: string } }[];
+}) {
+  return {
+    id: clave.id,
+    materia_id: clave.materia_id,
+    materia_nombre: clave.materia?.nombre ?? "",
+    codigo: clave.clave,
+    estado: clave.activa && clave.revocada_en === null ? "activa" : "revocada",
+    vencimiento: clave.vencimiento,
+    max_usos: clave.max_usos,
+    usos: clave.usos_actuales,
+    inscriptos: (clave.inscripciones ?? []).map((i) => i.alumno.nombre),
+  };
+}
+
+// GET /admin/enrollment-keys — listado de claves (filtro por materia opcional).
+export async function listarClavesAdmin(materiaId?: string) {
+  const claves = await prisma.claveMatriculacion.findMany({
+    where: materiaId ? { materia_id: materiaId } : undefined,
+    include: {
+      materia: { select: { id: true, nombre: true } },
+      inscripciones: {
+        select: { alumno: { select: { nombre: true } } },
+        orderBy: { inscripto_en: "desc" },
+      },
+    },
+    orderBy: { created_at: "desc" },
+    take: 200,
+  });
+  return claves.map(toClaveDto);
+}
+
+// POST /admin/enrollment-keys — genera una clave para una materia.
+export async function generarClaveAdmin(input: GenerarClaveAdminInput) {
+  const materia = await prisma.materia.findUnique({ where: { id: input.materia_id } });
+
+  if (!materia) {
+    throw new AppError(404, "Materia no encontrada");
+  }
+
+  if (!materia.activa) {
+    throw new AppError(400, "La materia no está activa");
+  }
+
+  const clave = await prisma.claveMatriculacion.create({
+    data: {
+      materia_id: input.materia_id,
+      clave: generarClaveUnica(),
+      max_usos: input.max_usos,
+      vencimiento: input.vencimiento,
+    },
+    include: { materia: { select: { id: true, nombre: true } } },
+  });
+
+  return toClaveDto(clave);
+}
+
+// PATCH /admin/enrollment-keys/:claveId/revocar — revoca una clave activa.
+export async function revocarClaveAdmin(claveId: string) {
+  assertUuid(claveId, "Clave no encontrada");
+
+  const existente = await prisma.claveMatriculacion.findUnique({ where: { id: claveId } });
+
+  if (!existente) {
+    throw new AppError(404, "Clave no encontrada");
+  }
+
+  const clave = await prisma.claveMatriculacion.update({
+    where: { id: claveId },
+    data: { activa: false, revocada_en: new Date() },
+    include: { materia: { select: { id: true, nombre: true } } },
+  });
+
+  return toClaveDto(clave);
 }

@@ -7,6 +7,7 @@ import type {
   CambiarRolInput,
   CrearMateriaAdminInput,
   CrearUsuarioInput,
+  GenerarClaveAdminInput,
 } from "./admin.schemas";
 import { AppError } from "../../middlewares/error";
 
@@ -97,4 +98,31 @@ export async function asignarProfesor(
   requireUser(req);
   const asignacion = await adminService.asignarProfesor(req.params.materiaId, req.body);
   res.status(201).json({ asignacion });
+}
+
+export async function listarClaves(
+  req: Request<unknown, unknown, unknown, { materiaId?: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  const items = await adminService.listarClavesAdmin(req.query.materiaId);
+  res.json({ items });
+}
+
+export async function generarClave(
+  req: Request<unknown, unknown, GenerarClaveAdminInput>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  const clave = await adminService.generarClaveAdmin(req.body);
+  res.status(201).json({ clave });
+}
+
+export async function revocarClave(
+  req: Request<{ claveId: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  const clave = await adminService.revocarClaveAdmin(req.params.claveId);
+  res.json({ clave });
 }

@@ -38,9 +38,16 @@ export const asignarProfesorSchema = z.object({
   activo: z.boolean().default(true),
 });
 
+export const generarClaveAdminSchema = z.object({
+  materia_id: z.string().uuid("id de materia invalido"),
+  max_usos: z.number().int().positive().max(10000).optional(),
+  vencimiento: z.coerce.date().optional(),
+});
+
 export type CrearUsuarioInput = z.infer<typeof crearUsuarioSchema>;
 export type ActualizarEstadoInput = z.infer<typeof actualizarEstadoSchema>;
 export type CambiarRolInput = z.infer<typeof cambiarRolSchema>;
 export type CrearMateriaAdminInput = z.infer<typeof crearMateriaAdminSchema>;
 export type ActualizarMateriaAdminInput = z.infer<typeof actualizarMateriaAdminSchema>;
 export type AsignarProfesorInput = z.infer<typeof asignarProfesorSchema>;
+export type GenerarClaveAdminInput = z.infer<typeof generarClaveAdminSchema>;

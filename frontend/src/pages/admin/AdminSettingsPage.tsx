@@ -4,7 +4,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 
 export function AdminSettingsPage(): React.ReactElement {
-  const { presets, institutionName } = useAdminSettings();
+  const { presets, branding } = useAdminSettings();
   const saveBranding = useSaveBranding();
 
   const [name, setName] = useState("");
@@ -14,8 +14,12 @@ export function AdminSettingsPage(): React.ReactElement {
   const [lighter, setLighter] = useState("#dbeafe");
 
   React.useEffect(() => {
-    if (institutionName.data) setName(institutionName.data);
-  }, [institutionName.data]);
+    const b = branding.data;
+    if (!b) return;
+    if (b.nombre) setName(b.nombre);
+    if (b.colorPrimario) setPrimary(b.colorPrimario);
+    if (b.colorSecundario) setSecondary(b.colorSecundario);
+  }, [branding.data]);
 
   const applyPreset = (id: string): void => {
     const preset = presets.data?.find((p) => p.id === id);
@@ -143,7 +147,7 @@ export function AdminSettingsPage(): React.ReactElement {
       </Card>
 
       <div className="flex items-center gap-2">
-        <Button onClick={() => saveBranding.mutate()} disabled={saveBranding.isPending}>
+        <Button onClick={() => saveBranding.mutate({ nombre: name, colorPrimario: primary, colorSecundario: secondary })} disabled={saveBranding.isPending}>
           {saveBranding.isPending ? "Aplicando…" : "Aplicar apariencia"}
         </Button>
         <Button variant="secondary" onClick={() => applyPreset("p-blue")}>

@@ -1,12 +1,16 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getColorPresets, getInstitutionName, saveBranding } from "../services/adminSettings.service";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getBranding, getColorPresets, saveBranding } from "../services/adminSettings.service";
 
 export function useAdminSettings() {
   const presets = useQuery({ queryKey: ["admin", "settings", "presets"], queryFn: getColorPresets });
-  const institutionName = useQuery({ queryKey: ["admin", "settings", "name"], queryFn: getInstitutionName });
-  return { presets, institutionName };
+  const branding = useQuery({ queryKey: ["admin", "settings", "branding"], queryFn: getBranding });
+  return { presets, branding };
 }
 
 export function useSaveBranding() {
-  return useMutation({ mutationFn: saveBranding });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: saveBranding,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "settings", "branding"] }),
+  });
 }

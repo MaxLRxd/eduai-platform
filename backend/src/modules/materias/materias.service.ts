@@ -7,7 +7,7 @@ import type { CreateMateriaInput, CrearClaveInput, UnirseInput } from "./materia
 // Sin caracteres ambiguos (0/O, 1/I/L) para dictado oral
 const CLAVE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
-function generarClaveUnica(): string {
+export function generarClaveUnica(): string {
   const bytes = randomBytes(8);
   let clave = "";
   for (let i = 0; i < 8; i++) {

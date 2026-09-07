@@ -8,6 +8,7 @@ import {
   cambiarRolSchema,
   crearMateriaAdminSchema,
   crearUsuarioSchema,
+  generarClaveAdminSchema,
 } from "./admin.schemas";
 import * as adminController from "./admin.controller";
 
@@ -57,6 +58,21 @@ router.post(
   requireRole("ADMIN"),
   validateBody(asignarProfesorSchema),
   adminController.asignarProfesor
+);
+
+router.get("/admin/enrollment-keys", requireAuth, requireRole("ADMIN"), adminController.listarClaves);
+router.post(
+  "/admin/enrollment-keys",
+  requireAuth,
+  requireRole("ADMIN"),
+  validateBody(generarClaveAdminSchema),
+  adminController.generarClave
+);
+router.patch(
+  "/admin/enrollment-keys/:claveId/revocar",
+  requireAuth,
+  requireRole("ADMIN"),
+  adminController.revocarClave
 );
 
 export default router;

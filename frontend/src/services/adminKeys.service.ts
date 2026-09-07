@@ -1,9 +1,36 @@
+import { api } from "./api";
 import type { EnrollmentKeyAdmin } from "../types/domain";
-import { MOCK_ADMIN_KEYS } from "../data/mock/adminKeys.mock";
 
-// TODO(backend): GET /api/admin/enrollment-keys?subjectId=... (CU-AD04).
+interface EnrollmentKeyApi {
+  id: string;
+  materia_id: string;
+  materia_nombre: string;
+  codigo: string;
+  estado: "activa" | "revocada";
+  vencimiento: string | null;
+  max_usos: number | null;
+  usos: number;
+  inscriptos: string[];
+}
+
+function toEnrollmentKey(k: EnrollmentKeyApi): EnrollmentKeyAdmin {
+  return {
+    id: k.id,
+    materiaId: k.materia_id,
+    materiaNombre: k.materia_nombre,
+    codigo: k.codigo,
+    estado: k.estado,
+    vencimiento: k.vencimiento ? k.vencimiento.slice(0, 10) : null,
+    maxUsos: k.max_usos,
+    usos: k.usos,
+    inscriptos: k.inscriptos,
+  };
+}
+
+// GET /api/admin/enrollment-keys — listado de claves (filtro por materia opcional).
 export async function getAdminKeys(): Promise<EnrollmentKeyAdmin[]> {
-  return Promise.resolve(MOCK_ADMIN_KEYS);
+  const data = await api<{ items: EnrollmentKeyApi[] }>("/api/admin/enrollment-keys");
+  return (data.items ?? []).map(toEnrollmentKey);
 }
 
 export interface NewKeyInput {
@@ -13,22 +40,23 @@ export interface NewKeyInput {
   maxUsos: number | null;
 }
 
-// TODO(backend): POST /api/admin/enrollment-keys.
+// POST /api/admin/enrollment-keys — genera una clave para una materia.
 export async function generateAdminKey(input: NewKeyInput): Promise<EnrollmentKeyAdmin> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const codigoBase = input.materiaNombre
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 8);
-  return {
-    id: Date.now(),
-    materiaId: input.materiaId,
-    materiaNombre: input.materiaNombre,
-    codigo: `${codigoBase}-${new Date().getFullYear()}`,
-    estado: "activa",
-    vencimiento: input.vencimiento,
-    maxUsos: input.maxUsos,
-    usos: 0,
-    inscriptos: [],
-  };
+  const data = await api<{ clave: EnrollmentKeyApi }>("/api/admin/enrollment-keys", {
+    method: "POST",
+    body: JSON.stringify({
+      materia_id: input.materiaId,
+      max_usos: input.maxUsos ?? undefined,
+      vencimiento: input.vencimiento ? new Date(input.vencimiento).toISOString() : undefined,
+    }),
+  });
+  return toEnrollmentKey(data.clave);
+}
+
+// PATCH /api/admin/enrollment-keys/:claveId/revocar — revoca una clave activa.
+export async function revokeAdminKey(claveId: string): Promise<EnrollmentKeyAdmin> {
+  const data = await api<{ clave: EnrollmentKeyApi }>(`/api/admin/enrollment-keys/${claveId}/revocar`, {
+    method: "PATCH",
+  });
+  return toEnrollmentKey(data.clave);
 }

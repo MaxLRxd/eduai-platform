@@ -22,20 +22,22 @@ ESTADO: CONECTADO AL BACKEND REAL
 - Docente: plan de materia
 - Analytics: conexión con backend
 
-ADMIN — CONECTADO ESTA SESIÓN (SIN COMMITEAR)
----------------------------------------------
+ADMIN — CONECTADO AL BACKEND REAL
+---------------------------------
 - Admin Usuarios: listado, alta, activar/desactivar, cambio de rol — endpoints /api/admin/users (GET/POST/PATCH)
-  * Fix: se agregó profesor_id al DTO de usuario (la asignación de materias usa la tabla Profesor, no el id de usuario)
-- Admin Materias: listado, alta, edición, asignación de docente — endpoints /api/admin/materias (GET/POST/PUT) y /:id/profesores
-- Frontend: services + hooks + páginas reescritos, typecheck OK en frontend y backend
+- Admin Materias: listado, alta, edición, asignación de docente — /api/admin/materias (GET/POST/PUT) y /:id/profesores
+  * Fix: se agregó profesor_id al DTO de usuario (la asignación usa la tabla Profesor, no el id de usuario)
+- Admin Claves de matriculación: listado con inscriptos, generación y revocación
+  * Endpoints nuevos: GET/POST /api/admin/enrollment-keys + PATCH /:id/revocar
+- Admin Ajustes/Branding: GET/PUT /api/admin/branding — nombre y colores de la institución
+  * Presets de color siguen siendo estáticos de la UI (no viven en backend)
 
 FALTA / PENDIENTE
 -----------------
 ADMIN:
-- Claves de matriculación: la página muestra mock. El backend ya expone materias/:id/claves -> falta conectar
-- Ajustes / Branding: el backend tiene /api/admin/branding pero el frontend sigue mockeado
 - Licencias: sin backend (depende de proveedor de billing, no definido)
 - Reportes: sin backend (saldría del Analytics Engine, Sprint 5)
+- Subida de logo/escudo: el `logo_url` está en el modelo, pero no hay upload de archivos todavía
 
 ALUMNO:
 - Progress / Analytics del alumno: service mock, depende del Analytics Engine
@@ -46,10 +48,10 @@ IA:
 
 PRÓXIMOS PASOS SUGERIDOS
 ------------------------
-1. Commitear lo de Admin (usuarios y materias) — archivos ya listos en staging
-2. Conectar Claves de matriculación (backend ya existe)
-3. Conectar Ajustes/Branding
-4. Integrar ai-service: tutor, generación de material, corrección
+1. Commitear Claves + Branding (archivos listos)
+2. Subida de logo/escudo para la institución
+3. Integrar ai-service: tutor, generación de material, corrección
+4. Evaluar módulo de Reportes y Licencias
 
 CÓMO CORRER
 -----------
