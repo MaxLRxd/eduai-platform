@@ -121,7 +121,7 @@ export interface TopicUnderstanding {
   level: "Dominado" | "En proceso" | "Crítico";
 }
 
-export type RiskLevel = "Alto" | "Medio";
+export type RiskLevel = "Alto" | "Medio" | "Bajo";
 
 export interface RiskAlert {
   name: string;
