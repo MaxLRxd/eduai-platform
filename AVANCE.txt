@@ -1,0 +1,58 @@
+EDUAI PLATFORM — AVANCE DEL PROYECTO
+=====================================
+Fecha: 2026-09-06
+
+STACK
+-----
+- Frontend: React 18 + TypeScript + Vite + Tailwind + @tanstack/react-query
+- Backend: Node + Express + TypeScript + Prisma (PostgreSQL) + JWT (access/refresh)
+- Servicios IA: carpeta ai-services (Python) — integración parcial
+
+ESTADO: CONECTADO AL BACKEND REAL
+---------------------------------
+- Autenticación + refresh token + seed de datos (admin/docente/alumno)
+- Dashboard (alumno, docente, admin)
+- Docente: cursos, estudiantes, calificaciones
+- Docente: mensajes
+- Docente: asistencias
+- Docente: correcciones
+- Alumno: entregas
+- Alumno: contenido de las materias
+- Alumno: enrolamiento a materias (claves)
+- Docente: plan de materia
+- Analytics: conexión con backend
+
+ADMIN — CONECTADO ESTA SESIÓN (SIN COMMITEAR)
+---------------------------------------------
+- Admin Usuarios: listado, alta, activar/desactivar, cambio de rol — endpoints /api/admin/users (GET/POST/PATCH)
+  * Fix: se agregó profesor_id al DTO de usuario (la asignación de materias usa la tabla Profesor, no el id de usuario)
+- Admin Materias: listado, alta, edición, asignación de docente — endpoints /api/admin/materias (GET/POST/PUT) y /:id/profesores
+- Frontend: services + hooks + páginas reescritos, typecheck OK en frontend y backend
+
+FALTA / PENDIENTE
+-----------------
+ADMIN:
+- Claves de matriculación: la página muestra mock. El backend ya expone materias/:id/claves -> falta conectar
+- Ajustes / Branding: el backend tiene /api/admin/branding pero el frontend sigue mockeado
+- Licencias: sin backend (depende de proveedor de billing, no definido)
+- Reportes: sin backend (saldría del Analytics Engine, Sprint 5)
+
+ALUMNO:
+- Progress / Analytics del alumno: service mock, depende del Analytics Engine
+
+IA:
+- Tutor (ask_tutor) y herramientas del docente (generate_teaching_material) mockeados — apuntan a ai-service
+- ai-services: correct_submission no conectada (TODO en aiClient.ts)
+
+PRÓXIMOS PASOS SUGERIDOS
+------------------------
+1. Commitear lo de Admin (usuarios y materias) — archivos ya listos en staging
+2. Conectar Claves de matriculación (backend ya existe)
+3. Conectar Ajustes/Branding
+4. Integrar ai-service: tutor, generación de material, corrección
+
+CÓMO CORRER
+-----------
+- Backend: cd backend && npm run dev (puerto 3000, requiere Postgres con prisma migrate/seed)
+- Frontend: cd frontend && npm run dev (VITE_API_URL por defecto http://localhost:3000)
+- Verificación de tipos: frontend npm run typecheck | backend npx tsc --noEmit

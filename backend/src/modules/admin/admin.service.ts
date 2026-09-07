@@ -28,6 +28,7 @@ function toUsuarioDto(u: {
     rol: u.rol,
     activo: u.activo,
     tipo_profesor: u.perfilProfesor?.tipo_profesor ?? null,
+    profesor_id: u.perfilProfesor?.id ?? null,
     inscripciones: u._count?.inscripciones ?? 0,
     created_at: u.created_at,
   };

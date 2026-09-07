@@ -178,6 +178,7 @@ export type UserRole = "Alumno" | "Docente" | "Admin";
 export type UserStatus = "Activo" | "Inactivo" | "Pendiente";
 
 export interface AdminUser {
+  id: string;
   name: string;
   email: string;
   role: UserRole;
