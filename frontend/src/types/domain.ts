@@ -204,10 +204,19 @@ export interface LicensePlan {
   current: boolean;
 }
 
+export interface ReportStat {
+  label: string;
+  value: string;
+}
+
 export interface ReportCard {
+  type: string;
   title: string;
   description: string;
   actionLabel: string;
+  headline: string;
+  stats: ReportStat[];
+  footnote: string;
 }
 
 export interface ColorPreset {

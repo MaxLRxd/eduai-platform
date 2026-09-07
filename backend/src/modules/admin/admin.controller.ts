@@ -126,3 +126,18 @@ export async function revocarClave(
   const clave = await adminService.revocarClaveAdmin(req.params.claveId);
   res.json({ clave });
 }
+
+export async function listarReportes(req: Request, res: Response): Promise<void> {
+  requireUser(req);
+  const reports = await adminService.reportesAdmin();
+  res.json({ reports });
+}
+
+export async function exportarReporte(
+  req: Request<{ type: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  const resultado = await adminService.exportarReporteCsv(req.params.type);
+  res.json(resultado);
+}

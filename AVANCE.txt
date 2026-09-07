@@ -31,13 +31,15 @@ ADMIN — CONECTADO AL BACKEND REAL
   * Endpoints nuevos: GET/POST /api/admin/enrollment-keys + PATCH /:id/revocar
 - Admin Ajustes/Branding: GET/PUT /api/admin/branding — nombre y colores de la institución
   * Presets de color siguen siendo estáticos de la UI (no viven en backend)
+- Admin Reportes: GET /api/admin/reports — 6 reportes con datos reales (asistencia, notas, tutor IA, retención, MAU, resumen ejecutivo)
+  * Exportación CSV real por reporte: GET /api/admin/reports/:type/export
 
 FALTA / PENDIENTE
 -----------------
 ADMIN:
 - Licencias: sin backend (depende de proveedor de billing, no definido)
-- Reportes: sin backend (saldría del Analytics Engine, Sprint 5)
 - Subida de logo/escudo: el `logo_url` está en el modelo, pero no hay upload de archivos todavía
+- Reportes: la exportación es CSV; un export PDF real requeriría un generador de PDF
 
 ALUMNO:
 - Progress / Analytics del alumno: service mock, depende del Analytics Engine
@@ -48,10 +50,10 @@ IA:
 
 PRÓXIMOS PASOS SUGERIDOS
 ------------------------
-1. Commitear Claves + Branding (archivos listos)
+1. Commitear Reportes (backend + frontend listos)
 2. Subida de logo/escudo para la institución
 3. Integrar ai-service: tutor, generación de material, corrección
-4. Evaluar módulo de Reportes y Licencias
+4. Evaluar módulo de Licencias
 
 CÓMO CORRER
 -----------

@@ -361,3 +361,189 @@ export async function revocarClaveAdmin(claveId: string) {
 
   return toClaveDto(clave);
 }
+
+interface StatItem {
+  label: string;
+  value: string;
+}
+
+interface Reporte {
+  type: string;
+  title: string;
+  description: string;
+  headline: string;
+  stats: StatItem[];
+  footnote: string;
+}
+
+const REPORTES_METADATA: { type: string; title: string; description: string }[] = [
+  { type: "asistencia", title: "📊 Asistencia general", description: "Asistencia promedio por materia y período" },
+  { type: "notas", title: "📈 Notas y rendimiento", description: "Promedio global y distribución de calificaciones" },
+  { type: "tutor", title: "🤖 Uso Tutor IA", description: "Consultas, materias más consultadas y sesiones activas" },
+  { type: "retencion", title: "👥 Retención de alumnos", description: "Alumnos activos, inscriptos y en riesgo" },
+  { type: "mau", title: "🔑 Consumo MAU", description: "Alumnos activos e inscripciones por período" },
+  { type: "ejecutivo", title: "📋 Resumen ejecutivo", description: "Informe completo para dirección institucional" },
+];
+
+export async function reportesAdmin() {
+  const [usuarios, inscripcionesCount, materiasCount, notas, asistencia, sesionesCount, mensajesCount, alertas, claves, sesionesTop] =
+    await Promise.all([
+      prisma.usuario.groupBy({ by: ["rol"], _count: { _all: true } }),
+      prisma.inscripcion.count(),
+      prisma.materia.count(),
+      prisma.nota.findMany({
+        select: { calificacion: true, materia_id: true },
+      }),
+      prisma.asistencia.groupBy({ by: ["estado"], _count: { _all: true } }),
+      prisma.sesionIA.count(),
+      prisma.mensajeIA.count(),
+      prisma.alertaRiesgoAcademico.groupBy({ by: ["nivel_severidad"], where: { activa: true }, _count: { _all: true } }),
+      prisma.claveMatriculacion.aggregate({ _sum: { usos_actuales: true } }),
+      prisma.sesionIA.groupBy({ by: ["materia_id"], _count: { _all: true }, orderBy: { _count: { materia_id: "desc" } }, take: 5 }),
+    ]);
+
+  const contarRol = (rol: string) => usuarios.find((u) => u.rol === rol)?._count._all ?? 0;
+  const alumnos = contarRol("ALUMNO");
+  const docentes = contarRol("PROFESOR");
+
+  const notasCount = notas.length;
+  const promedioGlobal = notasCount > 0 ? notas.reduce((a, b) => a + b.calificacion.toNumber(), 0) / notasCount : 0;
+  const aprobadas = notas.filter((n) => n.calificacion.toNumber() >= 6).length;
+  const tasaAprobacion = notasCount > 0 ? Math.round((aprobadas / notasCount) * 100) : 0;
+
+  const sumaAsistencia = asistencia.reduce((a, b) => a + b._count._all, 0);
+  const presentes = asistencia.filter((a) => a.estado === "PRESENTE" || a.estado === "JUSTIFICADO").reduce((a, b) => a + b._count._all, 0);
+  const ausentes = asistencia.filter((a) => a.estado === "AUSENTE").reduce((a, b) => a + b._count._all, 0);
+  const tardanzas = asistencia.filter((a) => a.estado === "TARDANZA").reduce((a, b) => a + b._count._all, 0);
+  const tasaAsistencia = sumaAsistencia > 0 ? Math.round((presentes / sumaAsistencia) * 100) : 0;
+
+  const topMaterias = await prisma.materia.findMany({
+    where: { id: { in: sesionesTop.map((s) => s.materia_id) } },
+    select: { id: true, nombre: true },
+  });
+  const nombreMateria = new Map(topMaterias.map((m) => [m.id, m.nombre]));
+
+  const alumnosInscriptos = await prisma.inscripcion.groupBy({ by: ["alumno_id"], _count: { _all: true } });
+  const tasaRetencion = alumnos > 0 ? Math.round((alumnosInscriptos.length / alumnos) * 100) : 0;
+
+  const alertasCount = alertas.reduce((a, b) => a + b._count._all, 0);
+  const alertasAlta = alertas.find((x) => x.nivel_severidad === "ALTA")?._count._all ?? 0;
+  const usosClaves = claves._sum.usos_actuales ?? 0;
+
+  const reports: Record<string, Reporte> = {
+    asistencia: {
+      type: "asistencia",
+      title: "📊 Asistencia general",
+      description: "Asistencia promedio por materia y período",
+      headline: `${tasaAsistencia}% de asistencia`,
+      stats: [
+        { label: "Registros totales", value: String(sumaAsistencia) },
+        { label: "Presentes", value: String(presentes) },
+        { label: "Ausencias", value: String(ausentes) },
+        { label: "Tardanzas", value: String(tardanzas) },
+      ],
+      footnote: "Sobre la totalidad de asistencias registradas en el sistema.",
+    },
+    notas: {
+      type: "notas",
+      title: "📈 Notas y rendimiento",
+      description: "Promedio global y distribución de calificaciones",
+      headline: `Promedio ${promedioGlobal.toFixed(2)}`,
+      stats: [
+        { label: "Calificaciones cargadas", value: String(notasCount) },
+        { label: "Aprobadas (≥6)", value: `${aprobadas} (${tasaAprobacion}%)` },
+        { label: "Docentes", value: String(docentes) },
+      ],
+      footnote: `Tasa de aprobación del ${tasaAprobacion}% sobre las notas registradas.`,
+    },
+    tutor: {
+      type: "tutor",
+      title: "🤖 Uso Tutor IA",
+      description: "Consultas, materias más consultadas y sesiones activas",
+      headline: `${sesionesCount} sesiones de tutor`,
+      stats: [
+        { label: "Sesiones IA", value: String(sesionesCount) },
+        { label: "Mensajes intercambiados", value: String(mensajesCount) },
+        ...sesionesTop.slice(0, 3).map((s) => ({
+          label: nombreMateria.get(s.materia_id) ?? "Materia",
+          value: `${s._count._all} consultas`,
+        })),
+      ],
+      footnote: "Top de materias por cantidad de sesiones del tutor.",
+    },
+    retencion: {
+      type: "retencion",
+      title: "👥 Retención de alumnos",
+      description: "Alumnos activos, inscriptos y en riesgo",
+      headline: `${tasaRetencion}% de retención`,
+      stats: [
+        { label: "Alumnos registrados", value: String(alumnos) },
+        { label: "Alumnos inscriptos a ≥1 materia", value: String(alumnosInscriptos.length) },
+        { label: "Alertas académicas activas", value: String(alertasCount) },
+        { label: "Alertas de severidad ALTA", value: String(alertasAlta) },
+      ],
+      footnote: "La retención mide alumnos con al menos una inscripción activa.",
+    },
+    mau: {
+      type: "mau",
+      title: "🔑 Consumo MAU",
+      description: "Alumnos activos e inscripciones por período",
+      headline: `${alumnosInscriptos.length} alumnos activos`,
+      stats: [
+        { label: "Alumnos con actividad", value: String(alumnosInscriptos.length) },
+        { label: "Inscripciones totales", value: String(inscripcionesCount) },
+        { label: "Materias registradas", value: String(materiasCount) },
+        { label: "Usos de claves de acceso", value: String(usosClaves) },
+      ],
+      footnote: "Alumno activo = cuenta con al menos una inscripción a materias.",
+    },
+    ejecutivo: {
+      type: "ejecutivo",
+      title: "📋 Resumen ejecutivo",
+      description: "Informe completo para dirección institucional",
+      headline: `${alumnos} alumnos · ${docentes} docentes · ${materiasCount} materias`,
+      stats: [
+        { label: "Inscripciones totales", value: String(inscripcionesCount) },
+        { label: "Asistencia promedio", value: `${tasaAsistencia}%` },
+        { label: "Promedio de notas", value: promedioGlobal.toFixed(2) },
+        { label: "Tasa de aprobación", value: `${tasaAprobacion}%` },
+        { label: "Retención de alumnos", value: `${tasaRetencion}%` },
+        { label: "Alertas activas", value: String(alertasCount) },
+      ],
+      footnote: "Datos globales de la institución al momento de la consulta.",
+    },
+  };
+
+  return REPORTES_METADATA.map((meta) => ({ ...meta, ...reports[meta.type] }));
+}
+
+function escapeCsvCell(cell: string): string {
+  return `"${cell.replace(/"/g, '""')}"`;
+}
+
+function csvFromReporte(r: Reporte): string {
+  const lines: string[][] = [
+    [r.title],
+    [r.description],
+    [],
+    ["Métrica", "Valor"],
+    ...r.stats.map((s) => [s.label, s.value]),
+    [],
+    [r.footnote],
+  ];
+  return lines.map((line) => line.map(escapeCsvCell).join(",")).join("\n");
+}
+
+export async function exportarReporteCsv(type: string) {
+  const reportes = await reportesAdmin();
+  const reporte = reportes.find((r) => r.type === type);
+
+  if (!reporte) {
+    throw new AppError(404, "Reporte no encontrado");
+  }
+
+  return {
+    filename: `reporte-${type}.csv`,
+    csv: csvFromReporte(reporte),
+  };
+}

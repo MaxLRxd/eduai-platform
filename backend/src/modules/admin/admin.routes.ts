@@ -75,4 +75,7 @@ router.patch(
   adminController.revocarClave
 );
 
+router.get("/admin/reports", requireAuth, requireRole("ADMIN"), adminController.listarReportes);
+router.get("/admin/reports/:type/export", requireAuth, requireRole("ADMIN"), adminController.exportarReporte);
+
 export default router;
