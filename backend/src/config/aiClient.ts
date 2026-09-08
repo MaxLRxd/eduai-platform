@@ -127,6 +127,7 @@ export interface CorreccionIAResult {
 }
 
 export async function corregirEntregaIA(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _input: CorreccionIARequest
 ): Promise<CorreccionIAResult | null> {
   // TODO: conectar con el endpoint de correccion del ai-service (correct_submission)

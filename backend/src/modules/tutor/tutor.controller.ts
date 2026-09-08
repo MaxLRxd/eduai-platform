@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import * as tutorService from "./tutor.service";
 import { streamTutor } from "../../config/aiClient";
@@ -47,6 +47,23 @@ export async function enviarMensaje(
   res.json(resultado);
 }
 
+function extraerTextoSse(sse: string): string {
+  let texto = "";
+  for (const linea of sse.split("\n")) {
+    const line = linea.trim();
+    if (!line.startsWith("data:")) continue;
+    try {
+      const payload = JSON.parse(line.slice(5).trim()) as { type?: string; text?: string };
+      if (payload.type === "token" && payload.text) {
+        texto += payload.text;
+      }
+    } catch {
+      // ignora lineas de datos no parseables
+    }
+  }
+  return texto;
+}
+
 export async function stream(
   req: Request<{ sesionId: string }, unknown, EnviarMensajeInput>,
   res: Response
@@ -60,6 +77,8 @@ export async function stream(
     req.body.contenido,
     req.user.id
   );
+
+  await tutorService.registrarMensajeUsuario(req.params.sesionId, req.body.contenido, req.user.id);
 
   const upstream = await streamTutor(materiaId, req.body.contenido, modo, history);
 
@@ -78,9 +97,34 @@ export async function stream(
 
   const upstreamStream: Readable = Readable.fromWeb(upstream.body as import("node:stream/web").ReadableStream);
 
+  const inicio = Date.now();
+  const fragmentosSse: string[] = [];
+
+  const acumulador = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      fragmentosSse.push(chunk.toString("utf8"));
+      callback(null, chunk);
+    },
+  });
+
   try {
-    await pipeline(upstreamStream, res);
+    await pipeline(upstreamStream, acumulador, res);
   } catch {
     res.end();
+  }
+
+  const respuestaTexto = extraerTextoSse(fragmentosSse.join(""));
+
+  if (respuestaTexto.trim()) {
+    try {
+      await tutorService.registrarRespuestaStream(
+        req.params.sesionId,
+        respuestaTexto,
+        Date.now() - inicio,
+        req.user.id
+      );
+    } catch {
+      // si no se pudo persistir, el cliente ya recibió el streaming
+    }
   }
 }

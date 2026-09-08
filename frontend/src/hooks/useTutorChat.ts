@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Course, TutorMessage } from "../types/domain";
-import { askTutor, createTutorSession, type ModoTutor } from "../services/tutor.service";
+import { askTutorStream, createTutorSession, type ModoTutor } from "../services/tutor.service";
 
 export function useTutorChat(course: Course | undefined) {
   const [messages, setMessages] = useState<TutorMessage[]>([]);
@@ -21,17 +21,34 @@ export function useTutorChat(course: Course | undefined) {
 
   async function ask(question: string, modo: ModoTutor = "NORMAL"): Promise<void> {
     if (!course || !question.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
+
+    const sesionId = await obtenerSesion(course.id, modo);
+    setMessages((prev) => [...prev, { role: "user", content: question }, { role: "tutor", content: "" }]);
     setPending(true);
+
     try {
-      const sesionId = await obtenerSesion(course.id, modo);
-      const result = await askTutor(sesionId, question);
-      setMessages((prev) => [...prev, { role: "tutor", content: result.respuesta.contenido }]);
+      await askTutorStream(sesionId, question, (token) => {
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.role === "tutor") {
+            next[next.length - 1] = { role: "tutor", content: last.content + token };
+          }
+          return next;
+        });
+      });
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "tutor", content: "No se pudo obtener respuesta del tutor en este momento. Intentalo de nuevo." },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last && last.role === "tutor" && !last.content) {
+          next[next.length - 1] = {
+            role: "tutor",
+            content: "No se pudo obtener respuesta del tutor en este momento. Intentalo de nuevo.",
+          };
+        }
+        return next;
+      });
     } finally {
       setPending(false);
     }

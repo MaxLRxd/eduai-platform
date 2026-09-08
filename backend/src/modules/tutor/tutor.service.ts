@@ -215,3 +215,54 @@ export async function prepararStream(
 
   return { materiaId: sesion.materia_id, modo: modoAMin(sesion.modo), history };
 }
+
+export async function registrarMensajeUsuario(sesionId: string, contenido: string, alumnoId: string) {
+  const sesion = await obtenerSesionDeAlumno(sesionId, alumnoId);
+
+  const usuario = await prisma.mensajeIA.create({
+    data: {
+      sesion_id: sesionId,
+      rol: "USER",
+      contenido,
+      prompt_original: contenido,
+    },
+  });
+
+  try {
+    await registrarConsultaTutor(sesion.materia_id, contenido, false);
+  } catch {
+    // los analytics no deben interrumpir el flujo del chat
+  }
+
+  return {
+    id: usuario.id,
+    rol: usuario.rol,
+    contenido: usuario.contenido,
+    creado_en: usuario.creado_en,
+  };
+}
+
+export async function registrarRespuestaStream(
+  sesionId: string,
+  contenido: string,
+  tiempoMs: number,
+  alumnoId: string
+) {
+  await obtenerSesionDeAlumno(sesionId, alumnoId);
+
+  const respuesta = await prisma.mensajeIA.create({
+    data: {
+      sesion_id: sesionId,
+      rol: "ASSISTANT",
+      contenido,
+      tiempo_respuesta_ms: tiempoMs,
+    },
+  });
+
+  return {
+    id: respuesta.id,
+    rol: respuesta.rol,
+    contenido: respuesta.contenido,
+    creado_en: respuesta.creado_en,
+  };
+}

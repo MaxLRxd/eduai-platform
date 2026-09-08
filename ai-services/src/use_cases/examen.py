@@ -32,7 +32,7 @@ class GenerarExamenUseCase:
 
         user_content = (
             f"Generá un simulacro de examen con {req.n_questions} preguntas "
-            f"de dificultad {req.dificultad}.\n\n"
+            f"de dificultad {req.difficulty}.\n\n"
             f"CONTEXTO (material de la cátedra):\n"
             f"{context or '(no hay material indexado disponible para esta materia)'}\n\n"
             f"Devolvé únicamente el JSON."
