@@ -547,3 +547,39 @@ export async function exportarReporteCsv(type: string) {
     csv: csvFromReporte(reporte),
   };
 }
+
+const PLANES_LICENCIA: {
+  name: string;
+  maxMau: number;
+  range: string;
+  features: string;
+}[] = [
+  { name: "Starter", maxMau: 100, range: "≤ 100 MAU", features: "LMS + IA básico" },
+  { name: "Growth", maxMau: 500, range: "101 – 500 MAU", features: "+ Corrección + Analítica" },
+  { name: "Scale", maxMau: 2000, range: "501 – 2K MAU", features: "+ SSO + Integración" },
+  { name: "Enterprise", maxMau: Number.POSITIVE_INFINITY, range: "2K+ MAU", features: "Personalizado" },
+];
+
+const LIMITE_MAU = 5000;
+
+export async function obtenerEstadoLicencia() {
+  const maus = await prisma.usuario.count({
+    where: { rol: "ALUMNO", activo: true },
+  });
+
+  const planActual = PLANES_LICENCIA.find((p) => maus <= p.maxMau) ?? PLANES_LICENCIA[PLANES_LICENCIA.length - 1];
+  const limite = Number.isFinite(planActual.maxMau) ? planActual.maxMau : LIMITE_MAU;
+
+  return {
+    uso: {
+      current: maus,
+      limit: limite,
+    },
+    planes: PLANES_LICENCIA.map((p) => ({
+      name: p.name,
+      range: p.range,
+      features: p.features,
+      current: p.name === planActual.name,
+    })),
+  };
+}

@@ -11,7 +11,7 @@ import type {
 } from "./admin.schemas";
 import { AppError } from "../../middlewares/error";
 
-function requireUser(req: Request<any, any, any, any>) {
+function requireUser(req: Pick<Request, "user">) {
   if (!req.user) {
     throw new AppError(401, "No autenticado");
   }
@@ -140,4 +140,10 @@ export async function exportarReporte(
   requireUser(req);
   const resultado = await adminService.exportarReporteCsv(req.params.type);
   res.json(resultado);
+}
+
+export async function estadoLicencia(req: Request, res: Response): Promise<void> {
+  requireUser(req);
+  const estado = await adminService.obtenerEstadoLicencia();
+  res.json(estado);
 }

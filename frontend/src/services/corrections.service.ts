@@ -26,8 +26,7 @@ const TYPE_LABEL: Record<EntregaPendiente["actividad"]["tipo"], string> = {
 };
 
 export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
-  const uuid = "00000000-0000-4000-8000-000000000000";
-  const data = await api<{ entregas: EntregaPendiente[] }>(`/api/actividades/${uuid}/entregas/pendientes`);
+  const data = await api<{ entregas: EntregaPendiente[] }>(`/api/entregas/pendientes`);
   return (data.entregas ?? []).map((e) => ({
     id: e.id,
     student: e.alumno?.nombre ?? "—",

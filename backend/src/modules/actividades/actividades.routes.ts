@@ -40,6 +40,12 @@ router.get(
   requireRole("PROFESOR"),
   actividadesController.listarPendientes
 );
+router.get(
+  "/entregas/pendientes",
+  requireAuth,
+  requireRole("PROFESOR"),
+  actividadesController.listarPendientes
+);
 router.post(
   "/actividades/:actividadId/entrega",
   requireAuth,

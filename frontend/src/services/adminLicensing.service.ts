@@ -1,11 +1,29 @@
 import type { LicensePlan } from "../types/domain";
-import { MOCK_LICENSE_PLANS, MOCK_MAU } from "../data/mock/adminLicensing.mock";
+import { api } from "./api";
 
-// TODO(backend): GET /api/admin/license — depende de un proveedor de billing todavía no definido en implementacion.docx.
+interface EstadoLicenciaApi {
+  uso: { current: number; limit: number };
+  planes: LicensePlan[];
+}
+
+let cache: Promise<EstadoLicenciaApi> | null = null;
+
+function getEstadoLicencia(): Promise<EstadoLicenciaApi> {
+  if (!cache) {
+    cache = api<EstadoLicenciaApi>("/api/admin/license").catch((error) => {
+      cache = null;
+      throw error;
+    });
+  }
+  return cache;
+}
+
 export async function getLicenseUsage(): Promise<{ current: number; limit: number }> {
-  return Promise.resolve(MOCK_MAU);
+  const data = await getEstadoLicencia();
+  return data.uso;
 }
 
 export async function getLicensePlans(): Promise<LicensePlan[]> {
-  return Promise.resolve(MOCK_LICENSE_PLANS);
+  const data = await getEstadoLicencia();
+  return data.planes;
 }

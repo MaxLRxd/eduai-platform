@@ -33,7 +33,7 @@ export function TeacherCorrectionsPage(): React.ReactElement {
 
   useEffect(() => {
     if (selected) {
-      setGrade(selected.aiGrade);
+      setGrade(selected.aiGrade !== "—" ? selected.aiGrade : "");
       setFeedback(selected.aiFeedback);
       setPublished(false);
     }
@@ -147,7 +147,7 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               </div>
 
               <div className="flex gap-2 mt-1">
-                <Button fullWidth className="justify-center" onClick={handlePublish} disabled={publish.isPending}>
+                <Button fullWidth className="justify-center" onClick={handlePublish} disabled={publish.isPending || !grade.trim() || Number.isNaN(Number(grade))}>
                   {publish.isPending ? "Publicando…" : "Publicar feedback"}
                 </Button>
                 <Button variant="ghost" size="sm">
