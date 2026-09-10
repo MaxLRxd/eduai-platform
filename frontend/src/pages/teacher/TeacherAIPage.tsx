@@ -27,7 +27,7 @@ export function TeacherAIPage(): React.ReactElement {
 
   const runPrompt = (text: string): void => {
     setPrompt(text);
-    void ask(text, courseLabel);
+    void ask(text, activeCourse, classDate || undefined);
   };
 
   return (
@@ -93,10 +93,20 @@ export function TeacherAIPage(): React.ReactElement {
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => void ask(prompt, courseLabel)} disabled={!prompt.trim() || pending}>
+            <Button onClick={() => void ask(prompt, activeCourse, classDate || undefined)} disabled={!prompt.trim() || pending}>
               {pending ? "Generando…" : "Generar respuesta"}
             </Button>
-            <Button variant="secondary">Usar materiales del día</Button>
+            <Button
+              variant="secondary"
+              disabled={pending}
+              onClick={() =>
+                runPrompt(
+                  "Prepará la clase del día con el material de la materia: actividades, momentos de la clase, consignas y cierre."
+                )
+              }
+            >
+              Usar materiales del día
+            </Button>
           </div>
 
           <div className="mt-4 p-3.5 border border-border rounded bg-surface-2 text-[13px] text-text-2">

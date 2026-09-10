@@ -10,6 +10,8 @@ from src.schemas.tutor import (
     DepurarPromptResponse,
     ExamRequest,
     ExamResponse,
+    MaterialRequest,
+    MaterialResponse,
     SummaryRequest,
     SummaryResponse,
     TutorRequest,
@@ -70,6 +72,19 @@ async def examen(req: ExamRequest, request: Request) -> ExamResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}") from exc
+
+
+@router.post("/generar-material", response_model=MaterialResponse)
+async def generar_material(req: MaterialRequest, request: Request) -> MaterialResponse:
+    try:
+        result = await request.app.state.generar_material_use_case.execute(
+            req.subject_id, req.prompt
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}") from exc
+    return MaterialResponse(**result)
 
 
 @router.post("/depurar", response_model=DepurarPromptResponse)

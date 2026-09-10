@@ -114,6 +114,40 @@ export async function indexMaterial(
   }
 }
 
+export interface MaterialDocenteResult {
+  material: string;
+  sources: { material_id: string; chunk_index: number; content: string; score: number }[];
+}
+
+export async function generarMaterialDocente(
+  subjectId: string,
+  prompt: string
+): Promise<MaterialDocenteResult | null> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; no se pudo generar material docente");
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl()}/tutor/generar-material`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_id: subjectId, prompt }),
+      signal: AbortSignal.timeout(120_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al generar material en ai-service");
+      return null;
+    }
+
+    return (await res.json()) as MaterialDocenteResult;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para generar material");
+    return null;
+  }
+}
+
 export interface CorreccionIARequest {
   subject_id: string;
   material_id: string | null;

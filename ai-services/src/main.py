@@ -14,6 +14,7 @@ from src.services.vector_store import build_retrieval_service
 from src.use_cases.ask_tutor import AskTutorUseCase
 from src.use_cases.depurar_prompt import DepurarPromptUseCase
 from src.use_cases.examen import GenerarExamenUseCase
+from src.use_cases.generar_material import GenerarMaterialUseCase
 from src.use_cases.index_material import IndexMaterialUseCase
 from src.use_cases.resumir_documento import ResumirDocumentoUseCase
 
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI):
     app.state.index_material_use_case = IndexMaterialUseCase(chunking, embeddings, retrieval)
     app.state.resumir_use_case = ResumirDocumentoUseCase(llm, chunking)
     app.state.examen_use_case = GenerarExamenUseCase(llm, embeddings, retrieval)
+    app.state.generar_material_use_case = GenerarMaterialUseCase(llm, embeddings, retrieval)
     app.state.depurar_prompt_use_case = DepurarPromptUseCase()
 
     yield

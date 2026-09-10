@@ -10,6 +10,7 @@ import tutorRoutes from "./modules/tutor/tutor.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import correccionRoutes from "./modules/correccion/correccion.routes";
+import asistenteRoutes from "./modules/asistente/asistente.routes";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 import planningRoutes from "./modules/planning/planning.routes";
 import messagesRoutes from "./modules/messages/messages.routes";
@@ -26,6 +27,7 @@ import healthRoutes from "./routes/health.routes";  export function createApp():
   app.use("/api", analyticsRoutes);
   app.use("/api", adminRoutes);
   app.use("/api", correccionRoutes);
+  app.use("/api", asistenteRoutes);
   app.use("/api", dashboardRoutes);
   app.use("/api", planningRoutes);
   app.use("/api", messagesRoutes);

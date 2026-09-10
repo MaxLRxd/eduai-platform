@@ -83,6 +83,16 @@ class IndexMaterialResponse(BaseModel):
     indexed: bool = True
 
 
+class MaterialRequest(BaseModel):
+    subject_id: str = Field(..., min_length=1)
+    prompt: str = Field(..., min_length=1, max_length=4000)
+
+
+class MaterialResponse(BaseModel):
+    material: str
+    sources: list[Source] = Field(default_factory=list)
+
+
 class DepurarPromptRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
 
