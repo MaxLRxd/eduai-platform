@@ -151,6 +151,7 @@ export async function generarMaterialDocente(
 export interface CorreccionIARequest {
   subject_id: string;
   material_id: string | null;
+  consigna: string;
   entrega: string;
   rubrica: unknown;
 }
@@ -160,11 +161,34 @@ export interface CorreccionIAResult {
   calificacion: number;
 }
 
-export async function corregirEntregaIA(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _input: CorreccionIARequest
-): Promise<CorreccionIAResult | null> {
-  // TODO: conectar con el endpoint de correccion del ai-service (correct_submission)
-  // cuando exista. Por ahora es un stub: el flujo queda preparado sin llamar al LLM.
-  return null;
+export async function corregirEntregaIA(input: CorreccionIARequest): Promise<CorreccionIAResult | null> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; no se pudo corregir la entrega con IA");
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl()}/tutor/corregir-entrega`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject_id: input.subject_id,
+        material_id: input.material_id,
+        consigna: input.consigna,
+        entrega: input.entrega,
+        rubrica: Array.isArray(input.rubrica) ? input.rubrica : [],
+      }),
+      signal: AbortSignal.timeout(120_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al corregir la entrega en ai-service");
+      return null;
+    }
+
+    return (await res.json()) as CorreccionIAResult;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para corregir");
+    return null;
+  }
 }

@@ -44,6 +44,7 @@ export async function generarCorreccionIA(entregaId: string, usuarioId: string) 
   const resultado = await corregirEntregaIA({
     subject_id: materiaId,
     material_id: null,
+    consigna: entrega.actividad.consigna,
     entrega: textoEntrega,
     rubrica: entrega.actividad.rubrica?.criterios ?? null,
   });

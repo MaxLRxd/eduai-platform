@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from src.schemas.tutor import (
+    CorrectSubmissionRequest,
+    CorrectSubmissionResponse,
     DepurarPromptRequest,
     DepurarPromptResponse,
     ExamRequest,
@@ -85,6 +87,19 @@ async def generar_material(req: MaterialRequest, request: Request) -> MaterialRe
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}") from exc
     return MaterialResponse(**result)
+
+
+@router.post("/corregir-entrega", response_model=CorrectSubmissionResponse)
+async def corregir_entrega(
+    req: CorrectSubmissionRequest, request: Request
+) -> CorrectSubmissionResponse:
+    try:
+        result = await request.app.state.correccion_use_case.execute(req)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}") from exc
+    return CorrectSubmissionResponse(**result)
 
 
 @router.post("/depurar", response_model=DepurarPromptResponse)

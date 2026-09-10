@@ -38,6 +38,15 @@ class FakeRetrieval:
         return None
 
 
+class FakeCorreccionLLM:
+    async def generate(self, system_instruction, messages, temperature=None, max_tokens=None):
+        return (
+            '{"feedback": "Buen trabajo.\\n- Criterio 1: logrado.", '
+            '"calificacion": 8.5, "detalle_por_criterio": '
+            '[{"nombre": "Criterio 1", "puntaje": 8.5, "comentario": "ok"}]}'
+        )
+
+
 class FakeCache(CacheService):
     def __init__(self):
         self._store: dict[str, str] = {}

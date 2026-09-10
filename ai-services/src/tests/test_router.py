@@ -3,8 +3,9 @@ from fastapi.testclient import TestClient
 
 from src.routers import rag_router, tutor_router
 from src.services.chunking_service import ChunkingService
-from src.tests.fakes import FakeCache, FakeEmbeddings, FakeLLM, FakeRetrieval
+from src.tests.fakes import FakeCache, FakeCorreccionLLM, FakeEmbeddings, FakeLLM, FakeRetrieval
 from src.use_cases.ask_tutor import AskTutorUseCase
+from src.use_cases.correct_submission import CorreccionEntregaUseCase
 from src.use_cases.depurar_prompt import DepurarPromptUseCase
 from src.use_cases.examen import GenerarExamenUseCase
 from src.use_cases.index_material import IndexMaterialUseCase
@@ -27,6 +28,9 @@ def _build_app():
     app.state.resumir_use_case = ResumirDocumentoUseCase(llm, chunking)
     app.state.examen_use_case = GenerarExamenUseCase(llm, embeddings, retrieval)
     app.state.depurar_prompt_use_case = DepurarPromptUseCase()
+    app.state.correccion_use_case = CorreccionEntregaUseCase(
+        FakeCorreccionLLM(), embeddings, retrieval
+    )
     app.state.retrieval_service = retrieval
 
     @app.get("/healthz")
@@ -84,3 +88,15 @@ def test_depurar_endpoint():
     body = response.json()
     assert body["prompt_depurado"]
     assert body["tokens_ahorrados"] >= 0
+
+
+def test_corregir_entrega_endpoint():
+    client = TestClient(_build_app())
+    response = client.post(
+        "/tutor/corregir-entrega",
+        json={"subject_id": "sub-1", "consigna": "Consigna", "entrega": "Entrega del alumno"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["feedback"]
+    assert body["calificacion"] == 8.5

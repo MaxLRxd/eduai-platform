@@ -93,6 +93,24 @@ class MaterialResponse(BaseModel):
     sources: list[Source] = Field(default_factory=list)
 
 
+class CriterioRubrica(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    peso: float = Field(..., ge=0.0, le=100.0)
+
+
+class CorrectSubmissionRequest(BaseModel):
+    subject_id: str = Field(..., min_length=1)
+    material_id: str | None = None
+    consigna: str = Field(default="", max_length=10000)
+    entrega: str = Field(..., min_length=1, max_length=20000)
+    rubrica: list[CriterioRubrica] = Field(default_factory=list)
+
+
+class CorrectSubmissionResponse(BaseModel):
+    feedback: str
+    calificacion: float
+
+
 class DepurarPromptRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
 
