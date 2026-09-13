@@ -21,10 +21,10 @@ export function AdminDashboardPage(): React.ReactElement {
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard icon="materias" label="Materias activas" value={d?.resumen.materias ?? "—"} meta="Registradas en el sistema" accent="#003d7a" accentLight="#dbeafe" />
-        <StatCard icon="usuarios" label="Docentes" value={docentes || "—"} meta="Cuentas activas" accent="#059669" accentLight="#d1fae5" />
-        <StatCard icon="students" label="Alumnos totales" value={alumnos || "—"} meta="Inscriptos" accent="#2563eb" accentLight="#dbeafe" />
-        <StatCard icon="grades" label="Por calificar" value={d?.resumen.entregasPendientes ?? "—"} meta="Entregas sin corregir" accent="#d97706" accentLight="#fef3c7" />
+        <StatCard icon="materias" label="Materias activas" value={d?.resumen.materias ?? 0} meta="Registradas en el sistema" accent="#003d7a" accentLight="#dbeafe" />
+        <StatCard icon="usuarios" label="Docentes" value={docentes || 0} meta="Cuentas activas" accent="#059669" accentLight="#d1fae5" />
+        <StatCard icon="students" label="Alumnos totales" value={alumnos || 0} meta="Inscriptos" accent="#2563eb" accentLight="#dbeafe" />
+        <StatCard icon="grades" label="Por calificar" value={d?.resumen.entregasPendientes ?? 0} meta="Entregas sin corregir" accent="#d97706" accentLight="#fef3c7" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
@@ -43,8 +43,8 @@ export function AdminDashboardPage(): React.ReactElement {
               </div>
             ))}
             <div className="mt-1 pt-3.5 border-t border-border flex flex-col gap-2 text-[12.5px]">
-              <div className="flex justify-between"><span className="text-text-2">Inscripciones totales</span><strong className="text-text-1">{d?.resumen.inscripciones ?? "—"}</strong></div>
-              <div className="flex justify-between"><span className="text-text-2">Alertas activas</span><strong className="text-text-1">{d?.resumen.alertasActivas ?? "—"}</strong></div>
+              <div className="flex justify-between"><span className="text-text-2">Inscripciones totales</span><strong className="text-text-1">{d?.resumen.inscripciones ?? 0}</strong></div>
+              <div className="flex justify-between"><span className="text-text-2">Alertas activas</span><strong className="text-text-1">{d?.resumen.alertasActivas ?? 0}</strong></div>
             </div>
           </div>
         </Card>
@@ -54,7 +54,7 @@ export function AdminDashboardPage(): React.ReactElement {
           <div className="mb-3.5">
             <div className="text-xs text-text-2 mb-1">Entregas pendientes</div>
             <div className="font-display text-3xl font-extrabold text-success">
-              {d?.resumen.entregasPendientes ?? "—"}
+              {d?.resumen.entregasPendientes ?? 0}
             </div>
             <div className="mt-2 text-[11px] text-text-3">Suma de entregas sin corregir en todas las materias</div>
           </div>
@@ -62,15 +62,15 @@ export function AdminDashboardPage(): React.ReactElement {
           <div className="flex justify-between gap-4">
             <div>
               <div className="text-[11px] text-text-2 mb-1">Materias</div>
-              <div className="font-display text-xl font-extrabold text-success">{d?.resumen.materias ?? "—"}</div>
+              <div className="font-display text-xl font-extrabold text-success">{d?.resumen.materias ?? 0}</div>
             </div>
             <div>
               <div className="text-[11px] text-text-2 mb-1">Docentes</div>
-              <div className="font-display text-xl font-extrabold text-text-3">{docentes || "—"}</div>
+              <div className="font-display text-xl font-extrabold text-text-3">{docentes || 0}</div>
             </div>
             <div>
               <div className="text-[11px] text-text-2 mb-1">Alumnos</div>
-              <div className="font-display text-xl font-extrabold text-info">{alumnos || "—"}</div>
+              <div className="font-display text-xl font-extrabold text-info">{alumnos || 0}</div>
             </div>
           </div>
         </Card>

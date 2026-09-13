@@ -61,7 +61,7 @@ export function StudentProfilePage(): React.ReactElement {
             <FormField id="name" label="Nombre" defaultValue={user?.name} />
             <FormField id="lastName" label="Apellido" defaultValue={user?.lastName} />
           </div>
-          <FormField id="email" label="Email institucional" type="email" defaultValue={`${user?.username}@ies.edu.ar`} />
+          <FormField id="email" label="Email institucional" type="email" defaultValue={user?.username} />
           <FormField id="phone" label="Teléfono de contacto" type="tel" defaultValue="+54 9 342 555-0123" />
           <FormField id="legajo" label="Legajo (solo lectura)" defaultValue="P-2024-001" readOnly className="bg-surface-2 text-text-2" />
           <Button size="sm">Guardar cambios</Button>

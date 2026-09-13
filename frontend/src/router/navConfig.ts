@@ -14,10 +14,8 @@ export interface NavSection {
   items: NavItem[];
 }
 
-// Espeja ROLES.nav de la maqueta (maqueta-corregida.html). Los paths de
-// Docente/Admin ya quedan armados aunque hoy rendericen un placeholder:
-// cuando se construya cada página solo hay que crear el componente y
-// enchufarlo en AppRoutes, el nav no cambia.
+// Espeja ROLES.nav de la maqueta (maqueta-corregida.html). Los badges ya no
+// se precargan: quedan para uso dinámico cuando haya una fuente de notificaciones.
 export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   ALUMNO: [
     {
@@ -25,7 +23,7 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         { icon: "dashboard", label: "Inicio", path: "/student" },
         { icon: "courses", label: "Mis cursos", path: "/student/courses" },
-        { icon: "assignments", label: "Entregas", path: "/student/assignments", badge: "3" },
+        { icon: "assignments", label: "Entregas", path: "/student/assignments" },
         { icon: "progress", label: "Mis estadísticas", path: "/student/progress" },
         { icon: "licencias", label: "Inscribirse a materia", path: "/student/enroll" },
       ],
@@ -42,14 +40,14 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { icon: "panel", label: "Inicio", path: "/teacher" },
         { icon: "courses", label: "Mis materias", path: "/teacher/courses" },
         { icon: "students", label: "Mis estudiantes", path: "/teacher/students" },
-        { icon: "grades", label: "Calificaciones", path: "/teacher/grades", badge: "12", badgeColor: "amber" },
+        { icon: "grades", label: "Calificaciones", path: "/teacher/grades" },
         { icon: "attendance", label: "Asistencia", path: "/teacher/attendance" },
         { icon: "planning", label: "Planificación", path: "/teacher/planning" },
-        { icon: "corrections", label: "Correcciones", path: "/teacher/corrections", badge: "7", badgeColor: "danger" },
+        { icon: "corrections", label: "Correcciones", path: "/teacher/corrections" },
         { icon: "analytics", label: "Analytics", path: "/teacher/analytics" },
         { icon: "ai", label: "Asistente IA", path: "/teacher/ai" },
-        { icon: "content", label: "Contenidos", path: "/teacher/content", badge: "RAG", badgeColor: "green" },
-        { icon: "messages", label: "Mensajes", path: "/teacher/messages", badge: "5" },
+        { icon: "content", label: "Contenidos", path: "/teacher/content" },
+        { icon: "messages", label: "Mensajes", path: "/teacher/messages" },
       ],
     },
     {

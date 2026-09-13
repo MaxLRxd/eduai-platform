@@ -10,7 +10,7 @@ FROM base AS dev
 RUN npm install
 COPY . .
 EXPOSE 3000
-CMD ["sh", "-c", "npm install && npm run dev"]
+CMD ["sh", "-c", "npm install && npx prisma generate && npx prisma migrate deploy && npm run dev"]
 
 # --- Dependencias de producción ---
 FROM base AS prod-deps

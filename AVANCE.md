@@ -106,10 +106,16 @@ Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, in
 ```bash
 # 1. Completar .env (raíz): GEMINI_API_KEY obligatoria para el ai-service
 # 2. Levantar todo
-docker compose up --build (db, redis, backend, ai-service, frontend)
+docker compose up --build -d #el -d es para que se levanten en segundo plano y no quede la consola ahí, opcional
 # 3. Migraciones + seed (el CMD dev no los corre solo)
-docker compose exec backend npx prisma migrate deploy
+
 docker compose exec backend npx prisma db seed
+#4. Verificar estado
+docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+
+#5. Para limpiar docker
+docker compose down -v --rmi all --remove-orphans
+docker builder prune -a -f
 ```
 
 Credenciales de prueba (`seed.ts`): `admin@ies.edu` (ADMIN) · `profe1@ies.edu` (PROFESOR) · `alumno1@ies.edu` (ALUMNO) — password `Clave1234`.

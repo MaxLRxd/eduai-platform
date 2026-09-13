@@ -1,21 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useCorrectionQueue, usePublishCorrection, useRubricCriteria, useRubrics } from "../../hooks/useCorrections";
+import { useCorrectionQueue, usePublishCorrection, useRubrics } from "../../hooks/useCorrections";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
-import type { RubricCriterion } from "../../types/domain";
-
-const LEVEL_COLOR: Record<RubricCriterion["level"], "green" | "blue" | "amber"> = {
-  Excelente: "green",
-  Bueno: "blue",
-  Regular: "amber",
-};
 
 export function TeacherCorrectionsPage(): React.ReactElement {
   const { data: queue, isLoading } = useCorrectionQueue();
-  const { data: criteria } = useRubricCriteria();
-  const { data: rubrics } = useRubrics();
   const publish = usePublishCorrection();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -30,6 +21,10 @@ export function TeacherCorrectionsPage(): React.ReactElement {
   }, [queue, selectedId]);
 
   const selected = queue?.find((q) => q.id === selectedId);
+  const selectedMateriaId = selected?.materiaId;
+  const { data: rubrics } = useRubrics(selectedMateriaId);
+  const primaryRubric = rubrics?.[0];
+  const criteria = primaryRubric?.criterios ?? [];
 
   useEffect(() => {
     if (selected) {
@@ -93,6 +88,11 @@ export function TeacherCorrectionsPage(): React.ReactElement {
                 </div>
               </div>
             ))}
+            {!isLoading && (queue ?? []).length === 0 && (
+              <div className="py-8 text-center text-[12px] text-text-3 bg-surface-2 rounded">
+                No hay entregas pendientes de corregir. Cuando un alumno envíe una actividad, aparecerá acá.
+              </div>
+            )}
           </div>
         </Card>
 
@@ -156,18 +156,22 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               </div>
               {published && <InfoBox variant="info">✅ Corrección publicada. El alumno fue notificado.</InfoBox>}
 
-              {criteria && criteria.length > 0 && (
+              {primaryRubric && (
                 <div className="border-t border-border mt-4.5 pt-4">
-                  <div className="font-bold text-[13px] text-text-1 mb-2.5">📋 Rúbrica asociada: "TP Programación"</div>
+                  <div className="font-bold text-[13px] text-text-1 mb-2.5">📋 Rúbrica asociada: {primaryRubric.name}</div>
                   {criteria.map((c) => (
                     <div key={c.name} className="flex justify-between items-center py-1.5 border-b border-border last:border-0">
                       <div>
                         <div className="text-xs font-semibold text-text-1">{c.name}</div>
                         <div className="text-[11px] text-text-3">Peso: {c.weight}</div>
                       </div>
-                      <Tag color={LEVEL_COLOR[c.level]}>{c.level}</Tag>
                     </div>
                   ))}
+                </div>
+              )}
+              {rubrics !== undefined && rubrics.length === 0 && (
+                <div className="border-t border-border mt-4.5 pt-4">
+                  <div className="text-[12px] text-text-3">Esta materia no tiene rúbrica asignada todavía.</div>
                 </div>
               )}
             </Card>
@@ -177,7 +181,7 @@ export function TeacherCorrectionsPage(): React.ReactElement {
             <CardHeader title={<span className="text-primary">📋 Gestionar rúbricas</span>} />
             <div className="flex flex-col gap-2">
               {(rubrics ?? []).map((r) => (
-                <div key={r.name} className="flex justify-between items-center p-2 bg-surface-2 rounded-sm">
+                <div key={r.id} className="flex justify-between items-center p-2 bg-surface-2 rounded-sm">
                   <div>
                     <div className="text-[13px] font-semibold text-text-1">{r.name}</div>
                     <div className="text-[11px] text-text-3">
@@ -189,6 +193,11 @@ export function TeacherCorrectionsPage(): React.ReactElement {
                   </Button>
                 </div>
               ))}
+              {rubrics !== undefined && rubrics.length === 0 && (
+                <div className="py-4 text-center text-[12px] text-text-3">
+                  {selected ? "Esta materia no tiene rúbricas todavía." : "Seleccioná una entrega para ver sus rúbricas."}
+                </div>
+              )}
               <Button className="justify-center mt-1">+ Nueva rúbrica</Button>
             </div>
           </Card>

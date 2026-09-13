@@ -80,6 +80,9 @@ export function StudentCourseDetailPage(): React.ReactElement {
                 </div>
               </div>
             ))}
+            {course.units.length === 0 && (
+              <div className="py-6 text-center text-[12px] text-text-3">El profesor todavía no cargó unidades en esta materia.</div>
+            )}
           </div>
         </Card>
 
@@ -209,6 +212,9 @@ export function StudentCourseDetailPage(): React.ReactElement {
                   </div>
                 </div>
               ))}
+              {course.latest.length === 0 && (
+                <div className="py-4 text-center text-[12px] text-text-3">Todavía no hay materiales indexados para el tutor.</div>
+              )}
             </div>
           </Card>
         </aside>

@@ -60,6 +60,13 @@ export function TeacherStudentsPage(): React.ReactElement {
                 </Td>
               </tr>
             ))}
+            {!isLoading && (students ?? []).length === 0 && (
+              <tr>
+                <Td colSpan={6} className="text-center text-[12px] text-text-3 py-4">
+                  No hay alumnos inscriptos en esta materia todavía.
+                </Td>
+              </tr>
+            )}
           </tbody>
         </Table>
       </TableWrap>

@@ -15,6 +15,9 @@ const STATUS_COLOR: Record<AssignmentStatus, TagColor> = {
 export function StudentAssignmentsPage(): React.ReactElement {
   const { data: assignments, isLoading } = useAssignments();
 
+  const pendientes = (assignments ?? []).filter((a) => a.status === "Pendiente");
+  const entregadas = (assignments ?? []).filter((a) => a.status === "Entregado");
+
   return (
     <div>
       <div className="mb-6">
@@ -22,7 +25,12 @@ export function StudentAssignmentsPage(): React.ReactElement {
         <p className="text-[13px] text-text-2">Trabajos prácticos y evaluaciones · Semestre 2024</p>
       </div>
 
-      <InfoBox variant="warning">⚠️ Tenés entregas próximas. Revisá los vencimientos antes de que sea tarde.</InfoBox>
+      {pendientes.length > 0 && (
+        <InfoBox variant="warning">⚠️ Tenés {pendientes.length} entrega{pendientes.length === 1 ? "" : "s"} pendiente{pendientes.length === 1 ? "" : "s"}. Revisá los vencimientos antes de que sea tarde.</InfoBox>
+      )}
+      {assignments !== undefined && assignments.length > 0 && pendientes.length === 0 && (
+        <InfoBox variant="info">✅ No tenés entregas pendientes. {entregadas.length} ya entregada{entregadas.length === 1 ? "" : "s"}.</InfoBox>
+      )}
 
       {isLoading && <p className="text-sm text-text-2">Cargando entregas…</p>}
 
@@ -53,6 +61,13 @@ export function StudentAssignmentsPage(): React.ReactElement {
                 </Td>
               </tr>
             ))}
+            {!isLoading && (assignments ?? []).length === 0 && (
+              <tr>
+                <Td colSpan={5} className="text-center text-[12px] text-text-3 py-4">
+                  No hay actividades cargadas todavía.
+                </Td>
+              </tr>
+            )}
           </tbody>
         </Table>
       </TableWrap>

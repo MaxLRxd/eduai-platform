@@ -12,27 +12,25 @@ export function StudentProgressPage(): React.ReactElement {
     {
       icon: "📊",
       label: "Promedio general",
-      value: overview.data ? overview.data.promedioGeneral.toFixed(1) : "—",
+      value: (overview.data?.promedioGeneral ?? 0).toFixed(1),
       color: "#003d7a",
     },
     {
       icon: "📅",
       label: "Asistencia global",
-      value: overview.data ? `${overview.data.asistenciaGlobal}%` : "—",
+      value: `${overview.data?.asistenciaGlobal ?? 0}%`,
       color: "#059669",
     },
     {
       icon: "✅",
       label: "Actividades entregadas",
-      value: overview.data
-        ? `${overview.data.actividades.entregadas}/${overview.data.actividades.total}`
-        : "—",
+      value: `${overview.data?.actividades.entregadas ?? 0}/${overview.data?.actividades.total ?? 0}`,
       color: "#2563eb",
     },
     {
       icon: "🏆",
       label: "Mejor nota",
-      value: overview.data ? overview.data.mejorNota.toFixed(1) : "—",
+      value: (overview.data?.mejorNota ?? 0).toFixed(1),
       color: "#d97706",
     },
   ];
@@ -89,6 +87,11 @@ export function StudentProgressPage(): React.ReactElement {
             </div>
           </Card>
         ))}
+        {(summary.data ?? []).length === 0 && (
+          <Card className="md:col-span-2">
+            <div className="py-6 text-[12px] text-text-3 text-center">Todavía no hay notas cargadas en tus materias.</div>
+          </Card>
+        )}
       </div>
 
       <Card className="mb-4.5">
@@ -118,6 +121,13 @@ export function StudentProgressPage(): React.ReactElement {
                   </Td>
                 </tr>
               ))}
+              {(grades.data ?? []).length === 0 && (
+                <tr>
+                  <Td colSpan={5} className="text-center text-[12px] text-text-3 py-4">
+                    No hay calificaciones registradas todavía.
+                  </Td>
+                </tr>
+              )}
             </tbody>
           </Table>
         </TableWrap>
@@ -144,6 +154,13 @@ export function StudentProgressPage(): React.ReactElement {
                   </Td>
                 </tr>
               ))}
+              {(attendance.data ?? []).length === 0 && (
+                <tr>
+                  <Td colSpan={3} className="text-center text-[12px] text-text-3 py-4">
+                    No hay registros de asistencia todavía.
+                  </Td>
+                </tr>
+              )}
             </tbody>
           </Table>
         </TableWrap>

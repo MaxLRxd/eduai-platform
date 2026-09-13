@@ -46,6 +46,11 @@ export function TeacherCoursesPage(): React.ReactElement {
             <div className="mt-2.5 text-xs text-primary font-semibold">Gestionar secciones →</div>
           </button>
         ))}
+        {!isLoading && (courses ?? []).length === 0 && (
+          <div className="md:col-span-2 xl:col-span-3 bg-surface border border-border rounded-lg py-8 text-center text-[12px] text-text-3">
+            No tenés materias asignadas todavía.
+          </div>
+        )}
       </div>
 
       <Card>
@@ -70,8 +75,8 @@ export function TeacherCoursesPage(): React.ReactElement {
                     <Td className="font-semibold text-text-1">{c.label}</Td>
                     <Td>{c.curso}</Td>
                     <Td>{resumen?.inscriptos ?? c.alumnos}</Td>
-                    <Td>{resumen?.secciones ?? "—"}</Td>
-                    <Td>{resumen?.actividades ?? "—"}</Td>
+                    <Td>{resumen?.secciones ?? 0}</Td>
+                    <Td>{resumen?.actividades ?? 0}</Td>
                     <Td>
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students?course=${c.id}`)}>
                         Gestionar secciones
@@ -80,6 +85,13 @@ export function TeacherCoursesPage(): React.ReactElement {
                   </tr>
                 );
               })}
+              {!isLoading && (courses ?? []).length === 0 && (
+                <tr>
+                  <Td colSpan={6} className="text-center text-[12px] text-text-3 py-4">
+                    Sin materias asignadas.
+                  </Td>
+                </tr>
+              )}
             </tbody>
           </Table>
         </TableWrap>

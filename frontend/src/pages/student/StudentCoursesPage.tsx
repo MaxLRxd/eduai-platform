@@ -55,6 +55,11 @@ export function StudentCoursesPage(): React.ReactElement {
             </div>
           </button>
         ))}
+        {!isLoading && (courses ?? []).length === 0 && (
+          <div className="md:col-span-2 xl:col-span-3 bg-surface border border-border rounded-lg py-8 text-center text-[12px] text-text-3">
+            Todavía no tenés materias asignadas. Cuando el profesor te inscriba, aparecerán acá.
+          </div>
+        )}
       </div>
     </div>
   );

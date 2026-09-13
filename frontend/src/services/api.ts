@@ -1,6 +1,6 @@
 import { getAccessToken, setAccessToken } from "./authToken";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 async function refreshAccessToken(): Promise<string | null> {
   const res = await fetch(`${API_URL}/api/auth/refresh`, {

@@ -18,10 +18,10 @@ export function TeacherDashboardPage(): React.ReactElement {
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard icon="students" label="Estudiantes" value={d?.resumen.alumnos ?? "—"} meta="Total inscriptos" accent="#003d7a" accentLight="#dbeafe" />
-        <StatCard icon="assignments" label="Actividades" value={d?.resumen.actividades ?? "—"} meta="Publicadas" accent="#059669" accentLight="#d1fae5" />
-        <StatCard icon="corrections" label="Por calificar" value={d?.resumen.entregasPendientes ?? "—"} meta="Entregas sin corregir" accent="#d97706" accentLight="#fef3c7" />
-        <StatCard icon="grades" label="Alertas activas" value={d?.resumen.alertasActivas ?? "—"} meta="Atención académica" accent="#2563eb" accentLight="#dbeafe" />
+        <StatCard icon="students" label="Estudiantes" value={d?.resumen.alumnos ?? 0} meta="Total inscriptos" accent="#003d7a" accentLight="#dbeafe" />
+        <StatCard icon="assignments" label="Actividades" value={d?.resumen.actividades ?? 0} meta="Publicadas" accent="#059669" accentLight="#d1fae5" />
+        <StatCard icon="corrections" label="Por calificar" value={d?.resumen.entregasPendientes ?? 0} meta="Entregas sin corregir" accent="#d97706" accentLight="#fef3c7" />
+        <StatCard icon="grades" label="Alertas activas" value={d?.resumen.alertasActivas ?? 0} meta="Atención académica" accent="#2563eb" accentLight="#dbeafe" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">

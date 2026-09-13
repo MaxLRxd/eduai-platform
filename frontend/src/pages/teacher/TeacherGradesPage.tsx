@@ -57,6 +57,13 @@ export function TeacherGradesPage(): React.ReactElement {
                 </Td>
               </tr>
             ))}
+            {!isLoading && (grades ?? []).length === 0 && (
+              <tr>
+                <Td colSpan={7} className="text-center text-[12px] text-text-3 py-4">
+                  No hay alumnos inscriptos o calificaciones cargadas para esta materia.
+                </Td>
+              </tr>
+            )}
           </tbody>
         </Table>
       </TableWrap>

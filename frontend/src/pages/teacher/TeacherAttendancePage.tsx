@@ -108,6 +108,12 @@ export function TeacherAttendancePage(): React.ReactElement {
 
       {isLoading && <p className="text-sm text-text-2">Cargando asistencia…</p>}
 
+      {!isLoading && all.length === 0 && (
+        <div className="bg-surface border border-border rounded-lg py-8 text-center text-[12px] text-text-3 mb-4">
+          No hay alumnos inscriptos en esta materia todavía.
+        </div>
+      )}
+
       <TableWrap>
         <Table ariaLabel="Registro de asistencia">
           <Thead>

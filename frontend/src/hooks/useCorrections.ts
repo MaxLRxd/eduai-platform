@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCorrectionQueue, getRubricCriteria, getRubrics, publishCorrection } from "../services/corrections.service";
+import { getCorrectionQueue, getRubrics, publishCorrection } from "../services/corrections.service";
 
 export function useCorrectionQueue() {
   return useQuery({ queryKey: ["corrections", "queue"], queryFn: getCorrectionQueue });
 }
 
-export function useRubricCriteria() {
-  return useQuery({ queryKey: ["corrections", "rubric-criteria"], queryFn: getRubricCriteria });
-}
-
-export function useRubrics() {
-  return useQuery({ queryKey: ["corrections", "rubrics"], queryFn: getRubrics });
+export function useRubrics(materiaId?: string) {
+  return useQuery({
+    queryKey: ["corrections", "rubrics", materiaId ?? "none"],
+    queryFn: () => getRubrics(materiaId ?? ""),
+    enabled: Boolean(materiaId),
+  });
 }
 
 export function usePublishCorrection() {

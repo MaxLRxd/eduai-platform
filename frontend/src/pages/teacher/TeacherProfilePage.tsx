@@ -62,7 +62,7 @@ export function TeacherProfilePage(): React.ReactElement {
             <FormField id="name" label="Nombre" defaultValue={user?.name} />
             <FormField id="lastName" label="Apellido" defaultValue={user?.lastName} />
           </div>
-          <FormField id="email" label="Email institucional" type="email" defaultValue={`${user?.username}@ies.edu.ar`} />
+          <FormField id="email" label="Email institucional" type="email" defaultValue={user?.username} />
           <FormField id="phone" label="Teléfono de contacto" type="tel" defaultValue="+54 9 342 555-0199" />
           <FormField id="legajo" label="Legajo docente (solo lectura)" defaultValue="D-0042" readOnly className="bg-surface-2 text-text-2" />
           <FormField id="materia" label="Materia principal (solo lectura)" defaultValue="Programación II" readOnly className="bg-surface-2 text-text-2" />

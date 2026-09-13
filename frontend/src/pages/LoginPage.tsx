@@ -76,6 +76,7 @@ export function LoginPage(): React.ReactElement {
           </button>
         </form>
 
+        {import.meta.env.DEV && (
         <div className="mt-5 bg-sky-50 border border-sky-200 rounded px-4 py-3.5">
           <div className="text-[11px] font-bold text-sky-700 uppercase tracking-wide mb-2">Credenciales de prueba</div>
           <div className="space-y-1.5 text-[11px]">
@@ -93,6 +94,7 @@ export function LoginPage(): React.ReactElement {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { CorrectionQueueItem, Rubric, RubricCriterion } from "../types/domain";
+import type { CorrectionQueueItem, Rubric } from "../types/domain";
 
 interface EntregaPendiente {
   id: string;
@@ -25,6 +25,14 @@ const TYPE_LABEL: Record<EntregaPendiente["actividad"]["tipo"], string> = {
   CODIGO: "Código",
 };
 
+interface RubricaApi {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  criterios: { nombre: string; peso: number }[];
+  actividades: number;
+}
+
 export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
   const data = await api<{ entregas: EntregaPendiente[] }>(`/api/entregas/pendientes`);
   return (data.entregas ?? []).map((e) => ({
@@ -37,15 +45,21 @@ export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
     submission:
       e.respuesta_texto ?? e.respuesta_codigo ?? (e.archivo_nombre ? `📎 ${e.archivo_nombre}` : "Sin contenido"),
     aiFeedback: e.feedback_ia ?? "Corrección IA aún no disponible para esta entrega.",
+    materiaId: e.materia?.id ?? e.actividad.seccion.materia.id,
   }));
 }
 
-export async function getRubricCriteria(): Promise<RubricCriterion[]> {
-  return [];
-}
-
-export async function getRubrics(): Promise<Rubric[]> {
-  return [];
+export async function getRubrics(materiaId: string): Promise<Rubric[]> {
+  if (!materiaId) return [];
+  const data = await api<{ rubricas: RubricaApi[] }>(`/api/materias/${materiaId}/rubricas`);
+  return (data.rubricas ?? []).map((r) => ({
+    id: r.id,
+    name: r.nombre,
+    description: r.descripcion,
+    criteriaCount: (r.criterios ?? []).length,
+    activitiesCount: r.actividades,
+    criterios: (r.criterios ?? []).map((c) => ({ name: c.nombre, weight: `${c.peso}%` })),
+  }));
 }
 
 export async function publishCorrection(input: {

@@ -1,9 +1,7 @@
-import { api } from "./api";
+import { api, API_URL } from "./api";
 import { getAccessToken } from "./authToken";
 
 export type ModoTutor = "NORMAL" | "SOCRATIC" | "HINTS";
-
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 interface SesionApi {
   id: string;

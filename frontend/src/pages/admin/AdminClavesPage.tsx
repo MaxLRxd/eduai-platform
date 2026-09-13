@@ -110,6 +110,13 @@ export function AdminClavesPage(): React.ReactElement {
                     </Td>
                   </tr>
                 ))}
+                {!isLoading && filteredKeys.length === 0 && (
+                  <tr>
+                    <Td colSpan={6} className="text-center text-[12px] text-text-3 py-4">
+                      No hay claves{keys !== undefined && keys.length > 0 ? " para la materia seleccionada" : " generadas todavía"}.
+                    </Td>
+                  </tr>
+                )}
               </tbody>
             </Table>
           </TableWrap>

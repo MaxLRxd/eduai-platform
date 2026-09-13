@@ -102,18 +102,21 @@ export interface CorrectionQueueItem {
   aiGrade: string;
   submission: string;
   aiFeedback: string;
+  materiaId: string;
 }
 
 export interface RubricCriterion {
   name: string;
   weight: string;
-  level: "Excelente" | "Bueno" | "Regular";
 }
 
 export interface Rubric {
+  id: string;
   name: string;
+  description: string | null;
   criteriaCount: number;
   activitiesCount: number;
+  criterios: RubricCriterion[];
 }
 
 export interface TopicUnderstanding {

@@ -26,6 +26,18 @@ export function Th({ children }: { children: React.ReactNode }): React.ReactElem
   );
 }
 
-export function Td({ children, className = "" }: { children: React.ReactNode; className?: string }): React.ReactElement {
-  return <td className={`px-4 py-2.5 border-b border-border text-text-2 ${className}`}>{children}</td>;
+export function Td({
+  children,
+  className = "",
+  colSpan,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  colSpan?: number;
+}): React.ReactElement {
+  return (
+    <td colSpan={colSpan} className={`px-4 py-2.5 border-b border-border text-text-2 ${className}`}>
+      {children}
+    </td>
+  );
 }
