@@ -1,0 +1,131 @@
+# EduAI Platform — Avance del Proyecto
+
+> Snapshot: 2026-09-13 · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+
+## Stack
+
+- **Frontend:** React 18 + TypeScript + Vite + Tailwind + @tanstack/react-query
+- **Backend:** Node + Express + TypeScript + Prisma (PostgreSQL) + JWT (access/refresh)
+- **Servicios IA:** `ai-services` (Python/FastAPI) — RAG + Gemini, integrado
+- **Infra:** Docker Compose (db pgvector, redis, backend, ai-service, frontend) · GitHub Actions CI
+
+## Estado: conectado al backend real
+
+- Autenticación + refresh token + seed de datos (admin/docente/alumno)
+- Dashboard (alumno, docente, admin)
+- Docente: cursos, estudiantes, calificaciones
+- Docente: mensajes
+- Docente: asistencias
+- Docente: correcciones
+- Docente: plan de materia
+- Docente: contenido de las materias (solo texto, ver pendientes)
+- Alumno: entregas, enrolamiento a materias (claves), perfil, progreso
+- Alumno: contenido de las materias + chat del Tutor IA contextual por materia
+- Analytics: conexión con backend
+
+## Admin — conectado al backend real
+
+- **Usuarios:** listado, alta, activar/desactivar, cambio de rol — `/api/admin/users` (GET/POST/PATCH)
+- **Materias:** listado, alta, edición, asignación de docente — `/api/admin/materias` (GET/POST/PUT) y `/:id/profesores`
+  - Fix: `profesor_id` agregado al DTO de usuario (la asignación usa la tabla `Profesor`, no el id de usuario)
+- **Claves de matriculación:** listado con inscriptos, generación y revocación — `GET/POST /api/admin/enrollment-keys` + `PATCH /:id/revocar`
+- **Ajustes/Branding:** `GET/PUT /api/admin/branding` — nombre y colores de la institución
+  - Los presets de color siguen siendo estáticos de la UI (`MOCK_COLOR_PRESETS`), no viven en backend
+- **Reportes:** `GET /api/admin/reports` — 6 reportes con datos reales (asistencia, notas, tutor IA, retención, MAU, resumen ejecutivo)
+  - Exportación CSV real por reporte: `GET /api/admin/reports/:type/export`
+- **Logo/escudo:** subida por data URL (migración `logo_url` → TEXT), preview y "quitar logo"
+
+## Servicio de IA (ai-service) — integrado
+
+Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `rag_router`):
+
+| Feature | Endpoint | Estado |
+|---|---|---|
+| Tutor chat (CU-A04) | `POST /tutor/chat` + `POST /tutor/chat/stream` (SSE) | OK |
+| Resumen de documento (CU-A05) | `POST /tutor/resumen` | OK (endpoint; sin UI dedicada) |
+| Simulacro de examen (CU-A08) | `POST /tutor/examen` | OK (acceso vía botón en chat alumno) |
+| Modo estudio socrático (CU-A09) / pistas (CU-A06) | modos del `ask_tutor` (`MODE_PROMPTS`) | Parcial: hay prompts y backend lo soporta, sin UI dedicada |
+| Generar material docente (CU-P10) | `POST /tutor/generar-material` | OK — frontend `TeacherAIPage` |
+| Corrección de entregas (CU-P05) | `POST /tutor/corregir-entrega` | OK — frontend `TeacherCorrectionsPage` |
+| Depurar prompt (CU-SYS01) | `POST /tutor/depurar` | OK |
+| Indexar/borrar material RAG | `POST /rag/material` + `DELETE` | OK (solo texto, ver pendientes) |
+
+Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, indexMaterial, generarMaterialDocente, corregirEntregaIA) — todos con degradación elegante si `AI_SERVICE_URL` no está configurado.
+
+## FALTA / PENDIENTE
+
+### 1. Subida y almacenamiento de archivos (el pendiente principal)
+
+- **No hay endpoint multipart** en backend (sin `multer`/`busboy`); los endpoints de contenido solo aceptan JSON (`express.json`, `limit: 1mb`, `app.ts`). La subida de un binario no existe como feature.
+- `contenido.archivo_*` (`archivo_url`, `archivo_nombre`, `archivo_formato`, `archivo_tamano_kb`) es **solo metadata** que espera una URL externa; nada la puebla con un archivo real.
+- **UI docente:** `TeacherContentPage.tsx:29-34` muestra el alert *"La subida de archivos aún se encuentra pendiente…"*. Solo funciona el editor de texto.
+- **Seed:** usa URLs falsas `/materiales/<n>/guia.pdf` (`seed.ts:139`) — no hay ruta que las sirva → 404.
+- **Decisión pendiente:** destino del binario → Cloudflare R2 (credenciales ya en `.env` pero **sin consumidor** en `backend/src`), disco local con volumen, o S3-compatible.
+- **Ruta de descarga/visualización** para `archivo_url` no existe.
+
+### 2. RAG para archivos (no solo texto)
+
+- `contenidos.service.ts:144` solo indexa `tipo === "TEXTO"` con `texto_contenido`. Los tipos `PDF/DOCX/PPTX/IMAGEN/VIDEO` nunca se indexan.
+- `ai-services` ya tiene `DocumentService` (extrae texto de PDF/DOCX/PPTX/TXT) pero **no está cableado** al flujo de contenidos del backend.
+- Depende del item 1 (para tener el binario a procesar).
+
+### 3. Configuración / infra / deploy
+
+- **Deploy cloud sin definir** (quedó del Sprint 0): Railway/Render para backend+ai-service y RDS/DB; ver `README.md` y `.github/workflows/ci.yml`.
+- **Bug en `backend/Dockerfile` (target `prod`):** `CMD` llama `npm run db:deploy` que **no existe** en `backend/package.json` (solo `db:migrate`/`db:generate`). El target dev anda; el prod rompe.
+- **`ai-service` exige `GEMINI_API_KEY` al arrancar** (`settings.py:7`, pydantic sin default) — el contenedor no bootea sin ella. Para entornos sin IA habría que relajarla (default vacío + fallo lazy por endpoint).
+- **`pinecone_service.py`:** usa el cliente síncrono de Pinecone dentro de métodos `async` (bloquea el event loop). Aceptable para probar, revisar si se apuesta a Pinecone en prod.
+- **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
+- **CI:** `.github/workflows/ci.yml` tiene jobs de backend/frontend/ai-service (lint + tests + build). Verificar que pase en el repo; opcional: job de `docker compose build`.
+
+### 4. IA — modos y flujo
+
+- **UI del alumno:** el chat usa modo normal (+ botón "Simulacro de examen" por prompt, `StudentCourseDetailPage.tsx:150-153`). No hay UI dedicada para resumen (CU-A05), pistas (CU-A06) ni modo socrático (CU-A09) aunque backend/ai-service los soportan.
+- **Registro de sesiones IA:** modelos `sesionIA`/`mensajeIA` existen y el backend registra el stream (`tutor.service.ts`); revisar que los modos socrático/pistas queden bien persistidos.
+
+### 5. Licencias, email y extras
+
+- **Licencias:** sin backend (depende de proveedor de billing, no definido). Página admin existe con mock.
+- **Export PDF** de reportes: falta (la exportación CSV ya es real).
+- **Email:** `EMAIL_API_KEY`/`EMAIL_FROM` en `.env` sin consumidor; el módulo `notificaciones` del backend es solo in-app. Falta el canal email.
+
+## PRÓXIMOS PASOS SUGERIDOS
+
+1. Implementar subida de archivos (multipart + destino local o R2) y ruta de descarga.
+2. Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO.
+3. Arreglar `db:deploy` en el Dockerfile prod y validar `docker compose up --build` completo.
+4. Correr el CI y verificar lint/test/build de los tres módulos.
+5. Definir el deploy cloud (Railway/Render + R2 + DB).
+6. Exponer modos del tutor en la UI del alumno (resumen, pistas, socrático).
+7. Evaluar Licencias, email y export PDF.
+
+## CÓMO CORRER
+
+### Docker (recomendado)
+
+```bash
+# 1. Completar .env (raíz): GEMINI_API_KEY obligatoria para el ai-service
+# 2. Levantar todo
+docker compose up --build (db, redis, backend, ai-service, frontend)
+# 3. Migraciones + seed (el CMD dev no los corre solo)
+docker compose exec backend npx prisma migrate deploy
+docker compose exec backend npx prisma db seed
+```
+
+Credenciales de prueba (`seed.ts`): `admin@ies.edu` (ADMIN) · `profe1@ies.edu` (PROFESOR) · `alumno1@ies.edu` (ALUMNO) — password `Clave1234`.
+
+Servicios: frontend `http://localhost:5173` · backend `http://localhost:3000` · ai-service `http://localhost:8000` (`/docs`) · Postgres `localhost:5433` · Redis `localhost:6379`.
+
+### Local (sin contenedores de app)
+
+```bash
+npm install                # workspaces raíz
+npm run ai:setup           # venv + pip install en ai-services
+docker compose up -d db redis
+npm run db:migrate && npm run db:seed   # (con backend/.env propio)
+npm run dev:local          # backend + ai + frontend con concurrently
+```
+
+### Verificación
+
+- `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (istan las suites de backend, ai-services y frontend)
