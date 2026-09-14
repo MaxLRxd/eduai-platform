@@ -1,0 +1,445 @@
+{
+  "nodes": [
+    {
+      "id": "avance",
+      "label": "AVANCE.md — Project Progress Snapshot",
+      "file_type": "document",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "eduai_platform",
+      "label": "EduAI Platform",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ai_services",
+      "label": "ai-services (Python/FastAPI, RAG + Gemini)",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "rag_pipeline",
+      "label": "RAG pipeline (ai-service)",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "document_service",
+      "label": "DocumentService (extracts text from PDF/DOCX/PPTX/TXT)",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_upload_feature",
+      "label": "File upload feature (multipart, pending)",
+      "file_type": "rationale",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cloudflare_r2",
+      "label": "Cloudflare R2 storage (candidate binary destination)",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vector_store_switch",
+      "label": "Vector store switch caution (pgvector/Pinecone, re-indexing)",
+      "file_type": "rationale",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "pgvector",
+      "label": "pgvector (ai_materials index)",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "pinecone",
+      "label": "Pinecone (vector store)",
+      "file_type": "concept",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities",
+      "label": "Query: Why does AppError bridge 21 communities?",
+      "file_type": "document",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-09-13T21:17:20.866952+00:00",
+      "author": null,
+      "contributor": "graphify"
+    },
+    {
+      "id": "backend_src_middlewares_error",
+      "label": "error.ts (backend middleware)",
+      "file_type": "code",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": "backend/src/middlewares/error.ts",
+      "source_url": null,
+      "captured_at": "2026-09-13T21:17:20.866952+00:00",
+      "author": null,
+      "contributor": "graphify"
+    },
+    {
+      "id": "backend_src_middlewares_error_apperror",
+      "label": "AppError",
+      "file_type": "code",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": "backend/src/middlewares/error.ts L3",
+      "source_url": null,
+      "captured_at": "2026-09-13T21:17:20.866952+00:00",
+      "author": null,
+      "contributor": "graphify"
+    },
+    {
+      "id": "backend_src_middlewares_error_errorhandler",
+      "label": "errorHandler",
+      "file_type": "code",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": "backend/src/middlewares/error.ts L16-29",
+      "source_url": null,
+      "captured_at": "2026-09-13T21:17:20.866952+00:00",
+      "author": null,
+      "contributor": "graphify"
+    },
+    {
+      "id": "backend_src_middlewares_error_notfound",
+      "label": "notFound",
+      "file_type": "code",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-09-13T21:17:20.866952+00:00",
+      "author": null,
+      "contributor": "graphify"
+    },
+    {
+      "id": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities_centralized_error_abstraction",
+      "label": "Centralized error abstraction (star topology, load-bearing seam)",
+      "file_type": "rationale",
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-09-13T21:17:20.866952+00:00",
+      "author": null,
+      "contributor": "graphify"
+    }
+  ],
+  "edges": [
+    {
+      "source": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities",
+      "target": "backend_src_middlewares_error_apperror",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities",
+      "target": "backend_src_middlewares_error_errorhandler",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities",
+      "target": "backend_src_middlewares_error_notfound",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities",
+      "target": "backend_src_middlewares_error",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_middlewares_error_errorhandler",
+      "target": "backend_src_middlewares_error_apperror",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_middlewares_error_apperror",
+      "target": "backend_src_middlewares_error",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_middlewares_error_errorhandler",
+      "target": "backend_src_middlewares_error",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities_centralized_error_abstraction",
+      "target": "backend_src_middlewares_error_apperror",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_middlewares_error_errorhandler",
+      "target": "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities_centralized_error_abstraction",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_middlewares_error_notfound",
+      "target": "backend_src_middlewares_error_errorhandler",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "avance",
+      "target": "eduai_platform",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "avance",
+      "target": "file_upload_feature",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "avance",
+      "target": "ai_services",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "avance",
+      "target": "vector_store_switch",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ai_services",
+      "target": "rag_pipeline",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ai_services",
+      "target": "document_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "rag_pipeline",
+      "target": "document_service",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "document_service",
+      "target": "file_upload_feature",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_upload_feature",
+      "target": "cloudflare_r2",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "rag_pipeline",
+      "target": "pgvector",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "pgvector",
+      "target": "pinecone",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vector_store_switch",
+      "target": "pgvector",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vector_store_switch",
+      "target": "pinecone",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "centralized_error_handling_pattern",
+      "label": "Centralized error-handling pattern (AppError star topology)",
+      "nodes": [
+        "backend_src_middlewares_error_apperror",
+        "backend_src_middlewares_error_errorhandler",
+        "backend_src_middlewares_error_notfound",
+        "backend_src_middlewares_error",
+        "graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities_centralized_error_abstraction"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\graphify-out\\memory\\query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md"
+    },
+    {
+      "id": "pending_file_rag_upload_pipeline",
+      "label": "Pending file-upload + RAG-for-files pipeline",
+      "nodes": [
+        "file_upload_feature",
+        "cloudflare_r2",
+        "document_service",
+        "rag_pipeline"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "C:\\Users\\masi\\Desktop\\eduai-platform\\AVANCE.md"
+    }
+  ],
+  "input_tokens": 1200,
+  "output_tokens": 1100
+}
