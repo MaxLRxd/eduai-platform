@@ -72,8 +72,8 @@ Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, in
 ### 3. Configuración / infra / deploy
 
 - **Deploy cloud sin definir** (quedó del Sprint 0): Railway/Render para backend+ai-service y RDS/DB; ver `README.md` y `.github/workflows/ci.yml`.
-- **Bug en `backend/Dockerfile` (target `prod`):** `CMD` llama `npm run db:deploy` que **no existe** en `backend/package.json` (solo `db:migrate`/`db:generate`). El target dev anda; el prod rompe.
-- **`ai-service` exige `GEMINI_API_KEY` al arrancar** (`settings.py:7`, pydantic sin default) — el contenedor no bootea sin ella. Para entornos sin IA habría que relajarla (default vacío + fallo lazy por endpoint).
+- **Bug en `backend/Dockerfile` (target `prod`):** ~~`CMD` llama `npm run db:deploy` que **no existe**~~ → ✅ **resuelto (2026-09-17):** se agregó el script `db:deploy` = `prisma migrate deploy`, el CMD pasó a `sh -c "npm run db:deploy && node dist/index.js"` (el exec-form con `&&` no funciona sin shell) y el CLI `prisma` se movió de `devDependencies` a `dependencies` para que `npm ci --omit=dev` lo incluya en la imagen prod.
+- **`ai-service` exige `GEMINI_API_KEY` al arrancar** → ✅ **resuelto (2026-09-17):** `gemini_api_key` ahora tiene default `""` y el cliente se crea **de forma perezosa** (`genai.get_genai_client` + propiedad `client` en `LLMService`/`EmbeddingsService`). Sin clave el servicio bootea, `/healthz` y `/tutor/depurar` funcionan, y el primer uso del LLM/embeddings falla con `502` y mensaje claro (`GEMINI_API_KEY no configurada…`).
 - **`pinecone_service.py`:** usa el cliente síncrono de Pinecone dentro de métodos `async` (bloquea el event loop). Aceptable para probar, revisar si se apuesta a Pinecone en prod.
 - **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
 - **CI:** `.github/workflows/ci.yml` tiene jobs de backend/frontend/ai-service (lint + tests + build). Verificar que pase en el repo; opcional: job de `docker compose build`.
@@ -93,7 +93,7 @@ Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, in
 
 1. Implementar subida de archivos (multipart + destino local o R2) y ruta de descarga.
 2. Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO.
-3. Arreglar `db:deploy` en el Dockerfile prod y validar `docker compose up --build` completo.
+3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**); queda validar `docker compose up --build` completo.
 4. Correr el CI y verificar lint/test/build de los tres módulos.
 5. Definir el deploy cloud (Railway/Render + R2 + DB).
 6. Exponer modos del tutor en la UI del alumno (resumen, pistas, socrático).

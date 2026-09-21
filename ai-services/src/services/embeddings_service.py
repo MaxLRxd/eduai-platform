@@ -2,14 +2,22 @@
 
 from google.genai import types
 
-from src.config.genai import get_genai_client
 from src.config.settings import settings
 
 
 class EmbeddingsService:
     def __init__(self):
-        self.client = get_genai_client(settings.gemini_api_key)
+        self._api_key = settings.gemini_api_key
         self.model = settings.gemini_embedding_model
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            from src.config.genai import get_genai_client
+
+            self._client = get_genai_client(self._api_key)
+        return self._client
 
     async def _embed(self, texts: list[str], task_type: str) -> list[list[float]]:
         response = await self.client.aio.models.embed_content(

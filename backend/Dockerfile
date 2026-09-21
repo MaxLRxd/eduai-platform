@@ -31,4 +31,4 @@ COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 COPY package.json ./
 EXPOSE 3000
-CMD ["npm", "run", "db:deploy", "&&", "node", "dist/index.js"]
+CMD ["sh", "-c", "npm run db:deploy && node dist/index.js"]
