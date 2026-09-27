@@ -1,5 +1,15 @@
 # Graph Report - eduai-platform  (2026-09-13)
 
+> **Leé primero [`README.md`](./README.md)** de esta carpeta. Ahí está la guía
+> de orientación para el equipo: qué es graphify, cómo leer este reporte, la
+> arquitectura real, los god nodes y por qué no hay que tocarlos a la ligera, y
+> el inventario de lo que falta (verificado contra el código, no contra la doc).
+>
+> Este archivo es **auto-generado** y se pisa en cada corrida de graphify. La
+> fecha de arriba es la del snapshot: 2026-09-13. Si tocaste mucho código desde
+> entonces, el reporte está desactualizado (por ejemplo todavía lista el file
+> upload y el RAG de archivos como pendientes, y ya estaban hechos el 2026-09-25).
+
 ## Corpus Check
 - 28 files · ~62,959 words
 - Verdict: corpus is large enough that graph structure adds value.

@@ -6,4 +6,10 @@ export default tseslint.config({
   languageOptions: {
     parser: tseslint.parser,
   },
+  rules: {
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+    ],
+  },
 });

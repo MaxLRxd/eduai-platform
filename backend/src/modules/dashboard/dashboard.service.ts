@@ -177,7 +177,7 @@ export async function dashboard(usuarioId: string, rol: Rol) {
   return dashboardAdmin(usuarioId);
 }
 
-export async function dashboardAdmin(usuarioId: string) {
+export async function dashboardAdmin(_usuarioId: string) {
   const [usuarios, materias, inscripciones, entregas, alertas] = await Promise.all([
     prisma.usuario.groupBy({
       by: ["rol"],

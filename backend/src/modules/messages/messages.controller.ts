@@ -3,7 +3,7 @@ import * as messagesService from "./messages.service";
 import type { BroadcastInput, EnviarMensajeInput } from "./messages.schemas";
 import { AppError } from "../../middlewares/error";
 
-function requireUser(req: Request<any, any, any, any>) {
+function requireUser(req: Pick<Request, "user">) {
   if (!req.user) {
     throw new AppError(401, "No autenticado");
   }

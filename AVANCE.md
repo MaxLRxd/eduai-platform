@@ -1,6 +1,8 @@
 # EduAI Platform — Avance del Proyecto
 
-> Snapshot: 2026-09-25 · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+> Snapshot: 2026-09-27 · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+>
+> **Mapa de arquitectura para el equipo:** `graphify-out/README.md` (arquitectura real, god nodes, puntos de extensión e inventario de pendientes **verificado contra el código**).
 
 ## Stack
 
@@ -42,15 +44,18 @@ Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `r
 | Feature | Endpoint | Estado |
 |---|---|---|
 | Tutor chat (CU-A04) | `POST /tutor/chat` + `POST /tutor/chat/stream` (SSE) | OK |
-| Resumen de documento (CU-A05) | `POST /tutor/resumen` | OK (endpoint; sin UI dedicada) |
-| Simulacro de examen (CU-A08) | `POST /tutor/examen` | OK (acceso vía botón en chat alumno) |
-| Modo estudio socrático (CU-A09) / pistas (CU-A06) | modos del `ask_tutor` (`MODE_PROMPTS`) | Parcial: hay prompts y backend lo soporta, sin UI dedicada |
+| Resumen de documento (CU-A05) | `POST /tutor/resumen` | ⚠️ **Solo en ai-service**: el backend no lo proxea y no hay UI |
+| Simulacro de examen (CU-A08) | `POST /tutor/examen` | ⚠️ **Solo en ai-service**: el frontend manda un prompt de texto al chat, no al endpoint |
+| Modo estudio socrático (CU-A09) / pistas (CU-A06) | modos del `ask_tutor` (`MODE_PROMPTS`) | ✅ **UI dedicada desde 2026-09-27** — selector de modo en el chat del alumno (`StudentCourseDetailPage.tsx`), el `modo` viaja en el body del POST y del stream |
 | Generar material docente (CU-P10) | `POST /tutor/generar-material` | OK — frontend `TeacherAIPage` |
 | Corrección de entregas (CU-P05) | `POST /tutor/corregir-entrega` | OK — frontend `TeacherCorrectionsPage` |
 | Depurar prompt (CU-SYS01) | `POST /tutor/depurar` | OK |
 | Indexar/borrar material RAG | `POST /rag/material` + `DELETE` + `POST /rag/material/archivo` | OK — texto y archivos (PDF/DOCX/PPTX/TXT) desde 2026-09-25 |
+| OCR de imágenes (CU-P02) | — | ❌ **No existe** (`ocr_service.py` está en `IMPLEMENTATION.md` pero nunca se implementó). Las imágenes se suben pero no se indexan |
 
-Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, indexMaterial, generarMaterialDocente, corregirEntregaIA) — todos con degradación elegante si `AI_SERVICE_URL` no está configurado.
+Backend cableado en `backend/src/config/aiClient.ts` — llama 6 rutas: `chatTutor`, `streamTutor`, `indexMaterial`, `indexArchivo`, `generarMaterialDocente`, `corregirEntregaIA`. Todas con degradación elegante si `AI_SERVICE_URL` no está configurado (devuelven `null` → 501 con mensaje claro).
+
+> `/tutor/resumen` y `/tutor/examen` **no están en esa lista**: funcionan en Python pero están muertos desde Node. Para cablearlos falta la función en `aiClient.ts` + un módulo backend con guard + el service en frontend. La parte difícil (RAG + prompt) ya está hecha.
 
 ## FALTA / PENDIENTE
 
@@ -78,28 +83,36 @@ Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, in
 - **`ai-service` exige `GEMINI_API_KEY` al arrancar** → ✅ **resuelto (2026-09-17):** `gemini_api_key` ahora tiene default `""` y el cliente se crea **de forma perezosa** (`genai.get_genai_client` + propiedad `client` en `LLMService`/`EmbeddingsService`). Sin clave el servicio bootea, `/healthz` y `/tutor/depurar` funcionan, y el primer uso del LLM/embeddings falla con `502` y mensaje claro (`GEMINI_API_KEY no configurada…`).
 - **`pinecone_service.py`:** usa el cliente síncrono de Pinecone dentro de métodos `async` (bloquea el event loop). Aceptable para probar, revisar si se apuesta a Pinecone en prod.
 - **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
-- **CI:** `.github/workflows/ci.yml` tiene jobs de backend/frontend/ai-service (lint + tests + build). Verificar que pase en el repo; opcional: job de `docker compose build`.
+- **CI:** ✅ **arreglado (2026-09-27).** El pipeline estaba roto en 2 de 3 jobs: `backend` corría `npm run lint` sin que ese script existiera (ni `eslint`/`typescript-eslint` en devDeps), y `ai-service` corría `ruff check src tests` sobre un directorio inexistente. Agregado el `lint` del backend, sus devDeps, y corregido el path de ruff. Ahora `npm run lint` y `npm test` de la raíz funcionan. Opcional: agregar un job de `docker compose build`.
+- **Scripts Windows-only:** `dev:local` y `ai:setup` hardcodean `.venv\Scripts\`. En Linux/Mac no levantan — bloquea a cualquier compañero que no esté en Windows.
+- **Tests del backend: 1 solo archivo** (`health.test.ts`) para 17 módulos. Es la deuda de cobertura más grande del proyecto.
 
 ### 4. IA — modos y flujo
 
-- **UI del alumno:** el chat usa modo normal (+ botón "Simulacro de examen" por prompt, `StudentCourseDetailPage.tsx:150-153`). No hay UI dedicada para resumen (CU-A05), pistas (CU-A06) ni modo socrático (CU-A09) aunque backend/ai-service los soportan.
-- **Registro de sesiones IA:** modelos `sesionIA`/`mensajeIA` existen y el backend registra el stream (`tutor.service.ts`); revisar que los modos socrático/pistas queden bien persistidos.
+- **UI del alumno:** ✅ **modo socrático y pistas tienen UI dedicada (2026-09-27).** El selector de modo vive en `StudentCourseDetailPage.tsx` y el `modo` viaja en el body de `POST /mensajes` y del stream. Falta cablear el **resumen de documentos (CU-A05)**: el endpoint existe en ai-service pero no hay proxy en el backend ni UI.
+- **Simulacro de examen (CU-A08):** el botón "📝 Simulacro" sigue mandando un prompt de texto al chat general en vez de llamar a `POST /tutor/examen`. El endpoint existe en ai-service.
+- **OCR de imágenes (CU-P02):** no implementado. `ocr_service.py` aparece en `IMPLEMENTATION.md` pero nunca existió. El tipo `IMAGEN` existe en el dominio y los archivos se suben, pero **no se indexan** al vector store.
+- **Registro de sesiones IA:** el `modo` ahora viaja por request, pero `useTutorChat.ts:16` cachea el `sesionId` en un ref → **la sesión se crea con el modo del primer mensaje y nunca se actualiza**. Si el alumno cambia de NORMAL a SOCRATIC a mitad de chat, `sesionIA.modo` queda desalineado del modo real. Los `mensajeIA` tampoco guardan el modo con el que se respondió.
 
 ### 5. Licencias, email y extras
 
-- **Licencias:** sin backend (depende de proveedor de billing, no definido). Página admin existe con mock.
-- **Export PDF** de reportes: falta (la exportación CSV ya es real).
+- **Licencias:** sin proveedor de billing. `PLANES_LICENCIA` está hardcodeado en `admin.service.ts:551` con `LIMITE_MAU = 5000`; el único dato real es el count de alumnos activos.
+- **Export PDF** de reportes: falta (la exportación CSV ya es real, `admin.service.ts:520`).
 - **Email:** `EMAIL_API_KEY`/`EMAIL_FROM` en `.env` sin consumidor; el módulo `notificaciones` del backend es solo in-app. Falta el canal email.
+- **ChromaDB:** `CHROMA_URL` sigue en el `.env` sin uso — solo hay pgvector (default) y Pinecone. Decidir y borrar la variable.
 
 ## PRÓXIMOS PASOS SUGERIDOS
 
 1. ✅ Implementar subida de archivos (multipart + destino local) y ruta de descarga (**hecho, 2026-09-25**). Resta reemplazar disco local por R2 cuando se defina el deploy.
 2. ✅ Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO (**hecho, 2026-09-25**).
 3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**); queda validar `docker compose up --build` completo.
-4. Correr el CI y verificar lint/test/build de los tres módulos.
-5. Definir el deploy cloud (Railway/Render + R2 + DB).
-6. Exponer modos del tutor en la UI del alumno (resumen, pistas, socrático).
-7. Evaluar Licencias, email y export PDF.
+4. ✅ Arreglar el CI y verificar lint/test/build de los tres módulos (**hecho, 2026-09-27**).
+5. ✅ Exponer los modos socrático y pistas en la UI del alumno (**hecho, 2026-09-27**).
+6. **Definir el deploy cloud** (Railway/Render + R2 + DB) — es lo que bloquea la entrega.
+7. **Cablear los endpoints muertos:** resumen (CU-A05) y examen (CU-A08) tienen la parte de Python hecha; falta `aiClient.ts` + módulo backend + service frontend.
+8. **Cubrir el backend con tests** — 1 archivo para 17 módulos.
+9. Arreglar los scripts Windows-only de la raíz.
+10. Evaluar Licencias, email, export PDF y OCR.
 
 ## CÓMO CORRER
 
