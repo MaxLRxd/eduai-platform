@@ -1,6 +1,6 @@
 # EduAI Platform — Avance del Proyecto
 
-> Snapshot: 2026-09-13 · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+> Snapshot: 2026-09-25 · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
 
 ## Stack
 
@@ -48,26 +48,28 @@ Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `r
 | Generar material docente (CU-P10) | `POST /tutor/generar-material` | OK — frontend `TeacherAIPage` |
 | Corrección de entregas (CU-P05) | `POST /tutor/corregir-entrega` | OK — frontend `TeacherCorrectionsPage` |
 | Depurar prompt (CU-SYS01) | `POST /tutor/depurar` | OK |
-| Indexar/borrar material RAG | `POST /rag/material` + `DELETE` | OK (solo texto, ver pendientes) |
+| Indexar/borrar material RAG | `POST /rag/material` + `DELETE` + `POST /rag/material/archivo` | OK — texto y archivos (PDF/DOCX/PPTX/TXT) desde 2026-09-25 |
 
 Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, indexMaterial, generarMaterialDocente, corregirEntregaIA) — todos con degradación elegante si `AI_SERVICE_URL` no está configurado.
 
 ## FALTA / PENDIENTE
 
-### 1. Subida y almacenamiento de archivos (el pendiente principal)
+### 1. Subida y almacenamiento de archivos (✅ hecho 2026-09-25)
 
-- **No hay endpoint multipart** en backend (sin `multer`/`busboy`); los endpoints de contenido solo aceptan JSON (`express.json`, `limit: 1mb`, `app.ts`). La subida de un binario no existe como feature.
-- `contenido.archivo_*` (`archivo_url`, `archivo_nombre`, `archivo_formato`, `archivo_tamano_kb`) es **solo metadata** que espera una URL externa; nada la puebla con un archivo real.
-- **UI docente:** `TeacherContentPage.tsx:29-34` muestra el alert *"La subida de archivos aún se encuentra pendiente…"*. Solo funciona el editor de texto.
-- **Seed:** usa URLs falsas `/materiales/<n>/guia.pdf` (`seed.ts:139`) — no hay ruta que las sirva → 404.
-- **Decisión pendiente:** destino del binario → Cloudflare R2 (credenciales ya en `.env` pero **sin consumidor** en `backend/src`), disco local con volumen, o S3-compatible.
-- **Ruta de descarga/visualización** para `archivo_url` no existe.
+- **Endpoint multipart real en backend:** `POST /api/secciones/:seccionId/contenidos/archivo` con `multer` (memoryStorage, límite `MAX_FILE_SIZE_MB`=50 por defecto) y `requireRole("PROFESOR")` — `contenidos.routes.ts`.
+- **Destino:** disco local en `UPLOAD_DIR` (default `data/uploads`, gitignoreado; en compose `/data/uploads` con volumen `uploads`) — `config/storage.ts` (sanitiza nombre, `archivo_url` = `/uploads/<nombre>`).
+- **Descarga/visualización:** `app.use("/uploads", express.static(...))` → los `archivo_url` ahora sirven contenido real. El frontend muestra el material como link descargable.
+- **Tipos soportados:** PDF, DOCX/PPTX, TXT/MD, imágenes (JPG/PNG/GIF/WEBP/SVG) y video (MP4/MOV/WEBM); inferidos por extensión (`inferirTipo`). Formato no soportado → 400.
+- **Errores de multer** (archivo muy grande) resueltos como 413/400 claros vía `errorHandler`.
+- **Seed:** ya no usa URLs falsas `/materiales/<n>/guia.pdf` (404); ahora crea contenidos TEXTO reales indexables.
+- **R2:** sigue sin consumidor; la decisión queda para el paso de deploy cloud (el interfaz `storage.ts` está listo para intercambiarlo por un cliente S3-compatible).
 
-### 2. RAG para archivos (no solo texto)
+### 2. RAG para archivos (✅ hecho 2026-09-25)
 
-- `contenidos.service.ts:144` solo indexa `tipo === "TEXTO"` con `texto_contenido`. Los tipos `PDF/DOCX/PPTX/IMAGEN/VIDEO` nunca se indexan.
-- `ai-services` ya tiene `DocumentService` (extrae texto de PDF/DOCX/PPTX/TXT) pero **no está cableado** al flujo de contenidos del backend.
-- Depende del item 1 (para tener el binario a procesar).
+- **Nuevo endpoint en ai-service:** `POST /rag/material/archivo` (multipart: `subject_id`, `material_id`, `archivo`) que extrae texto con `DocumentService` (ya cableado en app.state) y lo indexa con `IndexMaterialUseCase` — `rag_router.py`.
+- **Backend:** `aiClient.indexArchivo` envía el binario como FormData; `contenidos.service.crearArchivo` crea el contenido e intenta indexar (degradación elegante si `AI_SERVICE_URL` no está configurado). Imágenes/video se guardan pero no se indexan.
+- **UI docente:** `TeacherContentPage` sube archivos de verdad (FormData vía `useUploadMaterialFile`), muestra estado "⏳ RAG/🤖 RAG/— RAG" y permitir descargar el material. Se eliminó el alert "pendiente".
+- **Tests:** `test_router.py` cubre el endpoint de archivo (indexación + archivo vacío).
 
 ### 3. Configuración / infra / deploy
 
@@ -91,8 +93,8 @@ Backend cableado en `backend/src/config/aiClient.ts` (chatTutor, streamTutor, in
 
 ## PRÓXIMOS PASOS SUGERIDOS
 
-1. Implementar subida de archivos (multipart + destino local o R2) y ruta de descarga.
-2. Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO.
+1. ✅ Implementar subida de archivos (multipart + destino local) y ruta de descarga (**hecho, 2026-09-25**). Resta reemplazar disco local por R2 cuando se defina el deploy.
+2. ✅ Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO (**hecho, 2026-09-25**).
 3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**); queda validar `docker compose up --build` completo.
 4. Correr el CI y verificar lint/test/build de los tres módulos.
 5. Definir el deploy cloud (Railway/Render + R2 + DB).

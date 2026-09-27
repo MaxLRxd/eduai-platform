@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, API_URL } from "./api";
 import type { UploadedMaterial } from "../types/domain";
 
 export interface ContentSection {
@@ -13,6 +13,7 @@ interface ContenidoApi {
   tipo: "TEXTO" | "PDF" | "DOCX" | "PPTX" | "IMAGEN" | "VIDEO";
   titulo: string;
   texto_contenido: string | null;
+  archivo_url: string | null;
   archivo_nombre: string | null;
   archivo_formato: string | null;
   archivo_tamano_kb: number | null;
@@ -30,6 +31,8 @@ function tipoToFileType(tipo: ContenidoApi["tipo"]): UploadedMaterial["fileType"
       return "docx";
     case "IMAGEN":
       return "img";
+    case "VIDEO":
+      return "video";
     default:
       return "txt";
   }
@@ -48,6 +51,17 @@ function formatDate(iso: string): string {
     : f.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
 }
 
+function toUploadedMaterial(c: ContenidoApi): UploadedMaterial {
+  return {
+    name: c.archivo_nombre ?? c.titulo,
+    fileType: tipoToFileType(c.tipo),
+    sizeLabel: sizeLabel(c.archivo_tamano_kb),
+    ragStatus: c.rag_indexado ? "Indexado" : "Sin indexar",
+    date: formatDate(c.created_at),
+    url: c.archivo_url ? `${API_URL}${c.archivo_url}` : undefined,
+  };
+}
+
 export async function getCourseSections(courseId: string): Promise<ContentSection[]> {
   const data = await api<{ secciones: ContentSection[] }>(`/api/materias/${courseId}/secciones`);
   return data.secciones ?? [];
@@ -55,13 +69,7 @@ export async function getCourseSections(courseId: string): Promise<ContentSectio
 
 export async function getUploadedMaterials(sectionId: string): Promise<UploadedMaterial[]> {
   const data = await api<{ contenidos: ContenidoApi[] }>(`/api/secciones/${sectionId}/contenidos`);
-  return (data.contenidos ?? []).map((c) => ({
-    name: c.archivo_nombre ?? c.titulo,
-    fileType: tipoToFileType(c.tipo),
-    sizeLabel: sizeLabel(c.archivo_tamano_kb),
-    ragStatus: c.rag_indexado ? "Indexado" : "Sin indexar",
-    date: formatDate(c.created_at),
-  }));
+  return (data.contenidos ?? []).map(toUploadedMaterial);
 }
 
 export async function uploadMaterial(input: {
@@ -77,12 +85,20 @@ export async function uploadMaterial(input: {
       texto_contenido: input.body,
     }),
   });
-  const c = data.contenido;
-  return {
-    name: c.titulo,
-    fileType: "txt",
-    sizeLabel: c.texto_contenido ? `${Math.round(c.texto_contenido.length / 1024)} KB` : "—",
-    ragStatus: c.rag_indexado ? "Indexado" : "Sin indexar",
-    date: formatDate(c.created_at),
-  };
+  return toUploadedMaterial(data.contenido);
+}
+
+export async function uploadMaterialFile(input: {
+  sectionId: string;
+  file: File;
+  title?: string;
+}): Promise<UploadedMaterial> {
+  const form = new FormData();
+  form.append("archivo", input.file);
+  form.append("titulo", input.title?.trim() || input.file.name);
+  const data = await api<{ contenido: ContenidoApi }>(`/api/secciones/${input.sectionId}/contenidos/archivo`, {
+    method: "POST",
+    body: form,
+  });
+  return toUploadedMaterial(data.contenido);
 }

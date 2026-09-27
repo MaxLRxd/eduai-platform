@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useCourseSections, useUploadedMaterials, useUploadMaterial } from "../../hooks/useContent";
+import { useCourseSections, useUploadedMaterials, useUploadMaterial, useUploadMaterialFile } from "../../hooks/useContent";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import type { RagStatus, UploadedMaterial } from "../../types/domain";
 
-const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "📄", pptx: "📊", docx: "📝", txt: "🗒️", img: "🖼️" };
+const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "📄", pptx: "📊", docx: "📝", txt: "🗒️", img: "🖼️", video: "🎬" };
 const RAG_COLOR: Record<RagStatus, TagColor> = { Indexado: "green", "Indexando…": "blue", "Sin indexar": "gray" };
 const RAG_LABEL: Record<RagStatus, string> = { Indexado: "🤖 RAG", "Indexando…": "⏳ RAG", "Sin indexar": "— RAG" };
 
@@ -21,16 +21,28 @@ export function TeacherContentPage(): React.ReactElement {
 
   const { data: materials, isLoading } = useUploadedMaterials(activeSection);
   const upload = useUploadMaterial();
+  const uploadFile = useUploadMaterialFile();
 
   const [resourceTitle, setResourceTitle] = useState("");
   const [resourceBody, setResourceBody] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
 
   const handleUpload = (file: File): void => {
-    window.alert(
-      "La subida de archivos aún se encuentra pendiente. Añadí el contenido usando el editor de texto (será indexado por el RAG Pipeline)."
+    if (!activeSection) {
+      setSavedMsg("⚠️ Seleccioná una materia y una sección destino.");
+      return;
+    }
+    setSavedMsg("");
+    uploadFile.mutate(
+      { sectionId: activeSection, file },
+      {
+        onSuccess: () => setSavedMsg("✅ Archivo guardado e indexado por el RAG Pipeline"),
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : "";
+          setSavedMsg(`⚠️ No se pudo subir el archivo. ${msg}`);
+        },
+      }
     );
-    void file;
   };
 
   const handleSaveText = (): void => {
@@ -114,14 +126,17 @@ export function TeacherContentPage(): React.ReactElement {
                 id="content-file-input"
                 type="file"
                 className="hidden"
-                multiple
-                accept=".pdf,.pptx,.docx,.jpg,.png,.txt"
+                multiple={false}
+                accept=".pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp,.svg,.txt,.md,.mp4,.mov,.webm"
+                disabled={uploadFile.isPending}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleUpload(file);
+                  e.target.value = "";
                 }}
               />
             </label>
+            {uploadFile.isPending && <p className="text-xs text-text-2 mt-2">⏳ Subiendo e indexando…</p>}
           </Card>
 
           <Card>
@@ -167,7 +182,18 @@ export function TeacherContentPage(): React.ReactElement {
                 <div key={f.name} className="flex items-center gap-2.5 py-2.5 border-b border-border last:border-0">
                   <div className="w-8 h-8 rounded-sm bg-surface-2 flex items-center justify-center text-sm shrink-0">{FILE_ICON[f.fileType]}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-text-1 truncate">{f.name}</div>
+                    {f.url ? (
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-text-1 truncate block hover:text-primary hover:underline"
+                      >
+                        {f.name}
+                      </a>
+                    ) : (
+                      <div className="text-xs font-semibold text-text-1 truncate">{f.name}</div>
+                    )}
                     <div className="text-[11px] text-text-3">
                       {f.sizeLabel} · {f.date}
                     </div>

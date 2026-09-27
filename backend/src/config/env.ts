@@ -7,6 +7,8 @@ const envSchema = z.object({
   AI_SERVICE_URL: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
+  UPLOAD_DIR: z.string().default("data/uploads"),
+  MAX_FILE_SIZE_MB: z.coerce.number().default(50),
   JWT_SECRET: z.string().min(16),
   PORT: z.coerce.number().default(3000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),

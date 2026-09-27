@@ -15,6 +15,42 @@ export interface IndexMaterialResult {
   indexed: boolean;
 }
 
+export async function indexArchivo(
+  subjectId: string,
+  materialId: string,
+  buffer: Buffer,
+  filename: string
+): Promise<IndexMaterialResult | null> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; archivo no indexado para RAG");
+    return null;
+  }
+
+  try {
+    const form = new FormData();
+    form.append("subject_id", subjectId);
+    form.append("material_id", materialId);
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    form.append("archivo", new Blob([arrayBuffer]), filename);
+
+    const res = await fetch(`${baseUrl()}/rag/material/archivo`, {
+      method: "POST",
+      body: form,
+      signal: AbortSignal.timeout(90_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al indexar archivo en ai-service");
+      return null;
+    }
+
+    return (await res.json()) as IndexMaterialResult;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para indexar archivo");
+    return null;
+  }
+}
+
 export interface ChatMessageInput {
   role: "user" | "assistant";
   content: string;

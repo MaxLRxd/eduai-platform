@@ -1,4 +1,4 @@
-import cookieParser from "cookie-parser"; import cors from "cors"; import express from "express"; import pinoHttp from "pino-http"; import { env } from "./config/env"; import { logger } from "./config/logger"; import { errorHandler, notFound } from "./middlewares/error"; import authRoutes from "./modules/auth/auth.routes";
+import cookieParser from "cookie-parser"; import cors from "cors"; import express from "express"; import pinoHttp from "pino-http"; import { env } from "./config/env"; import { logger } from "./config/logger"; import { asegurarDirectorioUploads, UPLOADS_DIR } from "./config/storage"; import { errorHandler, notFound } from "./middlewares/error"; import authRoutes from "./modules/auth/auth.routes";
 import materiasRoutes from "./modules/materias/materias.routes";
 import notasRoutes from "./modules/notas/notas.routes";
 import asistenciasRoutes from "./modules/asistencias/asistencias.routes";
@@ -15,7 +15,9 @@ import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 import planningRoutes from "./modules/planning/planning.routes";
 import messagesRoutes from "./modules/messages/messages.routes";
 import configRoutes from "./modules/config/config.routes";
-import healthRoutes from "./routes/health.routes";  export function createApp(): express.Express {   const app = express();    app.use(pinoHttp({ logger }));   app.use(     cors({       origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),       credentials: true,     })   );   app.use(express.json({ limit: "1mb" }));   app.use(cookieParser());    app.get("/", (_req, res) => {     res.json({ service: "eduai-backend", status: "ok" });   });    app.use("/api/auth", authRoutes);
+import healthRoutes from "./routes/health.routes";  export function createApp(): express.Express {   const app = express();    app.use(pinoHttp({ logger }));   app.use(     cors({       origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),       credentials: true,     })   );   app.use(express.json({ limit: "1mb" }));   app.use(cookieParser());
+  asegurarDirectorioUploads();
+  app.use("/uploads", express.static(UPLOADS_DIR, { fallthrough: true }));    app.get("/", (_req, res) => {     res.json({ service: "eduai-backend", status: "ok" });   });    app.use("/api/auth", authRoutes);
   app.use("/api/materias", materiasRoutes);
   app.use("/api", notasRoutes);
   app.use("/api", asistenciasRoutes);

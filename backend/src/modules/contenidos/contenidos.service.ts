@@ -1,7 +1,8 @@
 import type { Rol, TipoContenido } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { indexMaterial } from "../../config/aiClient";
+import { indexArchivo, indexMaterial } from "../../config/aiClient";
+import { eliminarArchivo, guardarArchivo } from "../../config/storage";
 import {
   obtenerInscripcion,
   obtenerProfesorAsignado,
@@ -10,6 +11,35 @@ import type {
   ActualizarContenidoInput,
   CrearContenidoInput,
 } from "./contenidos.schemas";
+
+const EXTENSIONES: Record<string, TipoContenido> = {
+  pdf: "PDF",
+  docx: "DOCX",
+  doc: "DOCX",
+  pptx: "PPTX",
+  ppt: "PPTX",
+  txt: "TEXTO",
+  md: "TEXTO",
+  jpg: "IMAGEN",
+  jpeg: "IMAGEN",
+  png: "IMAGEN",
+  gif: "IMAGEN",
+  webp: "IMAGEN",
+  svg: "IMAGEN",
+  mp4: "VIDEO",
+  mov: "VIDEO",
+  avi: "VIDEO",
+  webm: "VIDEO",
+};
+
+export function inferirTipo(nombreArchivo: string): TipoContenido {
+  const ext = nombreArchivo.toLowerCase().split(".").pop() ?? "";
+  const tipo = EXTENSIONES[ext];
+  if (!tipo) {
+    throw new AppError(400, `Formato de archivo no soportado (.${ext}). Permitidos: ${Object.keys(EXTENSIONES).join(", ")}`);
+  }
+  return tipo;
+}
 
 function toContenidoDto(contenido: {
   id: string;
@@ -156,6 +186,48 @@ export async function crear(
   return toContenidoDto({ ...contenido, rag_indexado: contenido.rag_indexado || ragIndexado });
 }
 
+export async function crearArchivo(
+  seccionId: string,
+  usuarioId: string,
+  archivo: { buffer: Buffer; nombreOriginal: string; titulo: string }
+) {
+  const seccion = await obtenerSeccionYVerificarEscritura(seccionId, usuarioId);
+  const tipo = inferirTipo(archivo.nombreOriginal);
+  const guardado = guardarArchivo(archivo.buffer, archivo.nombreOriginal);
+
+  const contenido = await prisma.contenido.create({
+    data: {
+      seccion_id: seccionId,
+      tipo,
+      titulo: archivo.titulo,
+      archivo_url: guardado.url,
+      archivo_nombre: guardado.nombre,
+      archivo_formato: guardado.formato,
+      archivo_tamano_kb: guardado.tamanoKb,
+    },
+  });
+
+  let ragIndexado = false;
+  if (tipo !== "IMAGEN" && tipo !== "VIDEO") {
+    const resultado = await indexArchivo(
+      seccion.materia_id,
+      contenido.id,
+      archivo.buffer,
+      archivo.nombreOriginal
+    );
+    ragIndexado = resultado?.indexed ?? false;
+
+    if (ragIndexado) {
+      await prisma.contenido.update({
+        where: { id: contenido.id },
+        data: { rag_indexado: true },
+      });
+    }
+  }
+
+  return toContenidoDto({ ...contenido, rag_indexado: contenido.rag_indexado || ragIndexado });
+}
+
 export async function actualizar(
   contenidoId: string,
   input: ActualizarContenidoInput,
@@ -201,9 +273,11 @@ export async function actualizar(
 }
 
 export async function eliminar(contenidoId: string, usuarioId: string) {
-  await obtenerContenidoYVerificarEscritura(contenidoId, usuarioId);
+  const contenido = await obtenerContenidoYVerificarEscritura(contenidoId, usuarioId);
 
   await prisma.contenido.delete({ where: { id: contenidoId } });
+
+  eliminarArchivo(contenido.archivo_url);
 
   return { ok: true };
 }

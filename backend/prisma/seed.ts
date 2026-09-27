@@ -136,7 +136,7 @@ async function main(): Promise<void> {
     await prisma.contenido.createMany({
       data: [
         { seccion_id: seccionTeorica.id, tipo: "TEXTO", titulo: `Introducción a ${def.nombre}`, texto_contenido: `Material teórico de ${def.nombre}: fundamentos y conceptos principales.`, rag_indexado: true },
-        { seccion_id: seccionTeorica.id, tipo: "PDF", titulo: `Guía de ${def.nombre}`, archivo_url: `/materiales/${m + 1}/guia.pdf`, archivo_nombre: "guia.pdf", archivo_formato: "pdf", archivo_tamano_kb: 512, rag_indexado: false },
+        { seccion_id: seccionTeorica.id, tipo: "TEXTO", titulo: `Guía de ${def.nombre}`, texto_contenido: `Guía de estudio de ${def.nombre}: unidades, bibliografía y criterios de aprobación. El material completo se publica en clase o por el aula virtual.`, rag_indexado: true },
         { seccion_id: seccionPractica.id, tipo: "TEXTO", titulo: `Ejercicios prácticos de ${def.nombre}`, texto_contenido: `Banco de ejercicios para resolver en clase y en casa.`, rag_indexado: true },
       ],
     });

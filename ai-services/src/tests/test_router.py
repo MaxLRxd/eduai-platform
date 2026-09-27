@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from src.routers import rag_router, tutor_router
 from src.services.chunking_service import ChunkingService
+from src.services.document_service import DocumentService
 from src.tests.fakes import FakeCache, FakeCorreccionLLM, FakeEmbeddings, FakeLLM, FakeRetrieval
 from src.use_cases.ask_tutor import AskTutorUseCase
 from src.use_cases.correct_submission import CorreccionEntregaUseCase
@@ -32,6 +33,7 @@ def _build_app():
         FakeCorreccionLLM(), embeddings, retrieval
     )
     app.state.retrieval_service = retrieval
+    app.state.document_service = DocumentService()
 
     @app.get("/healthz")
     def healthz() -> dict:
@@ -100,3 +102,33 @@ def test_corregir_entrega_endpoint():
     body = response.json()
     assert body["feedback"]
     assert body["calificacion"] == 8.5
+
+
+def test_index_material_file_endpoint():
+    client = TestClient(_build_app())
+    response = client.post(
+        "/rag/material/archivo",
+        data={"subject_id": "sub-1", "material_id": "mat-archivo"},
+        files={
+            "archivo": (
+                "apunte.txt",
+                b"Contenido del apunte para indexar en el RAG.",
+                "text/plain",
+            )
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["material_id"] == "mat-archivo"
+    assert body["indexed"] is True
+    assert body["chunks"] >= 1
+
+
+def test_index_material_file_empty_raises():
+    client = TestClient(_build_app())
+    response = client.post(
+        "/rag/material/archivo",
+        data={"subject_id": "sub-1", "material_id": "mat-vacio"},
+        files={"archivo": ("vacio.txt", b"", "text/plain")},
+    )
+    assert response.status_code == 400

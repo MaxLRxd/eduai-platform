@@ -3,6 +3,7 @@ import {
   getCourseSections,
   getUploadedMaterials,
   uploadMaterial,
+  uploadMaterialFile,
 } from "../services/content.service";
 
 export function useCourseSections(courseId: string | null) {
@@ -25,6 +26,15 @@ export function useUploadMaterial() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: uploadMaterial,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["content", "materials"] }),
+  });
+}
+
+export function useUploadMaterialFile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: uploadMaterialFile,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["content", "materials"] }),
   });

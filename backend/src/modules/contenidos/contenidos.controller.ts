@@ -32,6 +32,26 @@ export async function crear(
   res.status(201).json({ contenido });
 }
 
+export async function crearArchivo(
+  req: Request<{ seccionId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const archivo = req.file as Express.Multer.File | undefined;
+  if (!archivo) {
+    throw new AppError(400, "Archivo requerido (campo 'archivo')");
+  }
+  const titulo = (req.body?.titulo as string | undefined)?.trim() || archivo.originalname;
+  const contenido = await contenidosService.crearArchivo(
+    req.params.seccionId,
+    req.user.id,
+    { buffer: archivo.buffer, nombreOriginal: archivo.originalname, titulo }
+  );
+  res.status(201).json({ contenido });
+}
+
 export async function actualizar(
   req: Request<{ contenidoId: string }, unknown, ActualizarContenidoInput>,
   res: Response

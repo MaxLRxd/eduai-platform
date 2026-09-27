@@ -45,6 +45,7 @@ services:
       - ./backend:/app
       - backend_modules:/app/node_modules
       - backend_dist:/app/dist
+      - uploads:/data/uploads
     env_file:
       - .env
     environment:
@@ -52,6 +53,8 @@ services:
       REDIS_URL: redis://redis:6379
       AI_SERVICE_URL: http://ai-service:8000
       PORT: 3000
+      UPLOAD_DIR: /data/uploads
+      MAX_FILE_SIZE_MB: 50
     depends_on:
       db:
         condition: service_healthy
@@ -106,3 +109,4 @@ volumes:
   backend_dist:
   frontend_modules:
   aipy_venv:
+  uploads:
