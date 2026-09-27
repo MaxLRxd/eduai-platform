@@ -39,12 +39,16 @@ export interface AskTutorResult {
 }
 
 // POST /api/tutor/sesiones/:sesionId/mensajes — envía una pregunta y devuelve la respuesta.
-export async function askTutor(sesionId: string, question: string): Promise<AskTutorResult> {
+export async function askTutor(
+  sesionId: string,
+  question: string,
+  modo?: ModoTutor
+): Promise<AskTutorResult> {
   const data = await api<AskTutorResult>(
     `/api/tutor/sesiones/${sesionId}/mensajes`,
     {
       method: "POST",
-      body: JSON.stringify({ contenido: question }),
+      body: JSON.stringify({ contenido: question, ...(modo ? { modo } : {}) }),
     }
   );
   return data;
@@ -60,7 +64,8 @@ export async function getTutorMessages(sesionId: string): Promise<TutorMensaje[]
 export async function askTutorStream(
   sesionId: string,
   question: string,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
+  modo?: ModoTutor
 ): Promise<string> {
   const token = getAccessToken();
 
@@ -70,7 +75,7 @@ export async function askTutorStream(
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ contenido: question }),
+    body: JSON.stringify({ contenido: question, ...(modo ? { modo } : {}) }),
     credentials: "include",
   });
 

@@ -36,7 +36,7 @@ export function useTutorChat(course: Course | undefined) {
           }
           return next;
         });
-      });
+      }, modo);
     } catch {
       setMessages((prev) => {
         const next = [...prev];

@@ -8,6 +8,7 @@ export const crearSesionSchema = z.object({
 
 export const enviarMensajeSchema = z.object({
   contenido: z.string().min(1, "El mensaje no puede estar vacio").max(8000),
+  modo: modoSesionSchema.optional(),
 });
 
 export type CrearSesionInput = z.infer<typeof crearSesionSchema>;

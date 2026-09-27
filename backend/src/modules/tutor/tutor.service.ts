@@ -151,7 +151,7 @@ export async function enviarMensaje(
   const resultado = await chatTutor(
     sesion.materia_id,
     input.contenido,
-    modoAMin(sesion.modo),
+    input.modo ? modoAMin(input.modo) : modoAMin(sesion.modo),
     history
   );
   const tiempoMs = Date.now() - inicio;
@@ -195,7 +195,8 @@ export async function enviarMensaje(
 export async function prepararStream(
   sesionId: string,
   contenido: string,
-  alumnoId: string
+  alumnoId: string,
+  modo: ModoSesionIA | undefined
 ): Promise<{ materiaId: string; modo: ModoIA; history: { role: "user" | "assistant"; content: string }[] }> {
   const sesion = await obtenerSesionDeAlumno(sesionId, alumnoId);
 
@@ -213,7 +214,11 @@ export async function prepararStream(
     .filter((p) => p.rol === "USER" || p.rol === "ASSISTANT")
     .map((p) => ({ role: p.rol.toLowerCase() as "user" | "assistant", content: p.contenido }));
 
-  return { materiaId: sesion.materia_id, modo: modoAMin(sesion.modo), history };
+  return {
+    materiaId: sesion.materia_id,
+    modo: modo ? modoAMin(modo) : modoAMin(sesion.modo),
+    history,
+  };
 }
 
 export async function registrarMensajeUsuario(sesionId: string, contenido: string, alumnoId: string) {

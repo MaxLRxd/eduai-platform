@@ -75,7 +75,8 @@ export async function stream(
   const { materiaId, modo, history } = await tutorService.prepararStream(
     req.params.sesionId,
     req.body.contenido,
-    req.user.id
+    req.user.id,
+    req.body.modo
   );
 
   await tutorService.registrarMensajeUsuario(req.params.sesionId, req.body.contenido, req.user.id);

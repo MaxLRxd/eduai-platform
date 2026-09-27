@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCourse } from "../../hooks/useCourses";
 import { useTutorChat } from "../../hooks/useTutorChat";
+import type { ModoTutor } from "../../services/tutor.service";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
@@ -13,7 +14,25 @@ const UNIT_TAG_COLOR = {
   Disponible: "gray",
 } as const;
 
-type Mode = "idle" | "study" | "exam";
+const MODO_LABEL: Record<ModoTutor, string> = {
+  NORMAL: "Normal",
+  SOCRATIC: "🧠 Socrático",
+  HINTS: "💡 Pistas",
+};
+
+const MODO_NOMBRE: Record<ModoTutor, string> = {
+  NORMAL: "normal",
+  SOCRATIC: "socrático",
+  HINTS: "pistas",
+};
+
+const MODO_BANNER: Record<ModoTutor, string> = {
+  NORMAL: "",
+  SOCRATIC:
+    "Modo estudio activo: el tutor no te da la respuesta directa, sino que te guía con preguntas para que descubras el concepto.",
+  HINTS:
+    "Modo pistas activo: el tutor te encamina paso a paso con pistas progresivas, sin revelar la respuesta completa.",
+};
 
 export function StudentCourseDetailPage(): React.ReactElement {
   const { courseId } = useParams<{ courseId: string }>();
@@ -21,14 +40,13 @@ export function StudentCourseDetailPage(): React.ReactElement {
   const { data: course, isLoading } = useCourse(courseId);
   const { messages, pending, ask } = useTutorChat(course);
   const [question, setQuestion] = useState("");
-  const [mode, setMode] = useState<Mode>("idle");
-  const [studyAnswer, setStudyAnswer] = useState("");
+  const [activeModo, setActiveModo] = useState<ModoTutor>("NORMAL");
 
   if (isLoading) return <p className="text-sm text-text-2">Cargando materia…</p>;
   if (!course) return <p className="text-sm text-text-2">No se encontró la materia.</p>;
 
-  const submitQuestion = (text: string): void => {
-    void ask(text);
+  const submitQuestion = (text: string, modo: ModoTutor = activeModo): void => {
+    void ask(text, modo);
     setQuestion("");
   };
 
@@ -92,75 +110,49 @@ export function StudentCourseDetailPage(): React.ReactElement {
             <p className="text-xs text-text-2 mb-3">
               Responde usando el contexto de <strong>{course.name}</strong>: {course.tutorFocus}.
             </p>
+
             <div className="flex gap-2 flex-wrap mb-2.5">
-              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Explicame la unidad actual con palabras simples")}>
+              {(["NORMAL", "SOCRATIC", "HINTS"] as ModoTutor[]).map((modo) => (
+                <Button
+                  key={modo}
+                  variant={activeModo === modo ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => setActiveModo(modo)}
+                >
+                  {MODO_LABEL[modo]}
+                </Button>
+              ))}
+            </div>
+            {MODO_BANNER[activeModo] && (
+              <div
+                className={`p-2.5 mb-2.5 rounded text-[12px] leading-relaxed ${
+                  activeModo === "SOCRATIC"
+                    ? "bg-violet-50 border-[1.5px] border-violet-600 text-violet-700"
+                    : "bg-amber-50 border-[1.5px] border-warning text-amber-700"
+                }`}
+              >
+                {MODO_BANNER[activeModo]}
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap mb-2.5">
+              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Explicame la unidad actual con palabras simples", "NORMAL")}>
                 Explicame fácil
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Dame preguntas para practicar")}>
+              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Dame preguntas para practicar", "NORMAL")}>
                 Practicar
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Resumí los materiales cargados")}>
+              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Resumí los materiales de esta materia", "NORMAL")}>
                 Resumir
               </Button>
-            </div>
-            <div className="flex gap-2 mb-3">
               <Button
                 size="sm"
-                className="flex-1 justify-center bg-gradient-to-br from-violet-600 to-violet-800 border-none"
-                onClick={() => setMode(mode === "study" ? "idle" : "study")}
-              >
-                🧠 Modo Estudio
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 justify-center bg-gradient-to-br from-amber-500 to-amber-700 border-none"
-                onClick={() => setMode(mode === "exam" ? "idle" : "exam")}
+                className="bg-gradient-to-br from-amber-500 to-amber-700 border-none"
+                onClick={() => submitQuestion("Generá un simulacro de examen de esta materia", "NORMAL")}
               >
                 📝 Simulacro
               </Button>
             </div>
-
-            {mode === "study" && (
-              <div className="p-3 bg-violet-50 rounded border-[1.5px] border-violet-600 mb-2.5">
-                <div className="font-bold text-violet-700 text-[13px] mb-2">🧠 Modo Estudio activado</div>
-                <div className="text-[13px] text-text-1 mb-2.5 p-2.5 bg-white rounded">
-                  ¿Podés explicar la diferencia entre una clase abstracta y una interfaz? ¿Cuándo usarías cada una?
-                </div>
-                <textarea
-                  className="w-full px-3 py-2 border border-border rounded text-sm mb-2"
-                  rows={3}
-                  placeholder="Escribí tu respuesta..."
-                  value={studyAnswer}
-                  onChange={(e) => setStudyAnswer(e.target.value)}
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => submitQuestion(`Corregí mi respuesta: ${studyAnswer}`)}>
-                    Responder →
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => submitQuestion("Dame una pista para responder esta pregunta")}>
-                    💡 Pista
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setMode("idle")}>
-                    Salir
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {mode === "exam" && (
-              <div className="p-3 bg-amber-50 rounded border-[1.5px] border-warning mb-2.5">
-                <div className="font-bold text-warning text-[13px] mb-2">📝 Simulacro de examen</div>
-                <div className="text-xs text-text-2 mb-2.5">Indicá el tema o unidad (opcional) y generaré preguntas tipo examen.</div>
-                <div className="flex gap-2">
-                  <Button size="sm" className="bg-warning border-none" onClick={() => submitQuestion("Generá un simulacro de examen de esta materia")}>
-                    Generar simulacro
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setMode("idle")}>
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            )}
 
             <div className="flex flex-col gap-2 max-h-72 overflow-y-auto mb-2.5">
               {messages.map((m, i) => (
@@ -185,7 +177,13 @@ export function StudentCourseDetailPage(): React.ReactElement {
               id="tutor-input"
               className="w-full px-3 py-2 border border-border rounded text-sm"
               rows={3}
-              placeholder="Preguntá sobre esta materia..."
+              placeholder={
+                activeModo === "SOCRATIC"
+                  ? "Escribí tu respuesta o consulta del modo estudio…"
+                  : activeModo === "HINTS"
+                    ? "Preguntá y pedí pistas paso a paso…"
+                    : "Preguntá sobre esta materia..."
+              }
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => {
@@ -196,7 +194,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
               }}
             />
             <Button fullWidth className="mt-2.5 justify-center" onClick={() => submitQuestion(question)} disabled={!question.trim() || pending}>
-              Preguntar al tutor
+              {activeModo === "NORMAL" ? "Preguntar al tutor" : `Enviar en modo ${MODO_NOMBRE[activeModo]}`}
             </Button>
           </Card>
 
