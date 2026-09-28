@@ -4,6 +4,14 @@ export interface CourseUnit {
   items: string[];
 }
 
+export interface CourseMaterial {
+  id: string;
+  titulo: string;
+  tipo: string;
+  /** El backend solo puede resumir materiales con texto, no archivos binarios. */
+  resumible: boolean;
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -15,7 +23,7 @@ export interface Course {
   intro: string;
   tutorFocus: string;
   units: CourseUnit[];
-  latest: string[];
+  materiales: CourseMaterial[];
 }
 
 export type AssignmentStatus = "Pendiente" | "En revisión" | "Entregado";

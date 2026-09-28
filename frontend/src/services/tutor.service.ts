@@ -111,3 +111,46 @@ export async function askTutorStream(
 
   return respuesta;
 }
+
+export interface ResumenResult {
+  resumen: string;
+  origen: string | null;
+  max_palabras: number;
+}
+
+// POST /api/materias/:materiaId/tutor/resumen — CU-A05.
+export async function resumirMaterial(
+  materiaId: string,
+  input: { contenido_id?: string; texto?: string; idioma?: string; max_palabras?: number }
+): Promise<ResumenResult> {
+  return api<ResumenResult>(`/api/materias/${materiaId}/tutor/resumen`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export type DificultadExamen = "facil" | "media" | "dificil";
+
+export interface ExamenPregunta {
+  tipo: "multiple_choice" | "desarrollo";
+  enunciado: string;
+  opciones: string[];
+  respuesta: string;
+}
+
+export interface ExamenResult {
+  titulo: string;
+  dificultad: string;
+  preguntas: ExamenPregunta[];
+}
+
+// POST /api/materias/:materiaId/tutor/examen — CU-A08.
+export async function generarSimulacro(
+  materiaId: string,
+  input: { n_preguntas?: number; dificultad?: DificultadExamen }
+): Promise<ExamenResult> {
+  return api<ExamenResult>(`/api/materias/${materiaId}/tutor/examen`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}

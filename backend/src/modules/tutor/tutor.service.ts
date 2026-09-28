@@ -1,10 +1,10 @@
 import type { ModoSesionIA } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { chatTutor } from "../../config/aiClient";
+import { chatTutor, generarExamen, resumirDocumento } from "../../config/aiClient";
 import { registrarConsultaTutor } from "../analytics/analytics.service";
 import { obtenerInscripcion } from "../materias/materias.service";
-import type { CrearSesionInput, EnviarMensajeInput } from "./tutor.schemas";
+import type { CrearSesionInput, EnviarMensajeInput, ExamenInput, ResumenInput } from "./tutor.schemas";
 
 type ModoIA = "normal" | "socratic" | "hints";
 
@@ -55,6 +55,14 @@ async function obtenerSesionDeAlumno(sesionId: string, alumnoId: string) {
   }
 
   return sesion;
+}
+
+async function exigirInscripcion(materiaId: string, alumnoId: string): Promise<void> {
+  const inscripcion = await obtenerInscripcion(materiaId, alumnoId);
+
+  if (!inscripcion) {
+    throw new AppError(403, "No estas inscripto a esta materia");
+  }
 }
 
 export async function crearSesion(materiaId: string, input: CrearSesionInput, alumnoId: string) {
@@ -269,5 +277,80 @@ export async function registrarRespuestaStream(
     rol: respuesta.rol,
     contenido: respuesta.contenido,
     creado_en: respuesta.creado_en,
+  };
+}
+
+async function textoDelContenido(contenidoId: string, materiaId: string) {
+  const contenido = await prisma.contenido.findUnique({
+    where: { id: contenidoId },
+    include: { seccion: { select: { materia_id: true } } },
+  });
+
+  // El contenido puede ser de cualquier materia: se compara la seccion contra
+  // la materia pedida para no filtrar la existencia de material ajeno.
+  if (!contenido || contenido.seccion.materia_id !== materiaId) {
+    throw new AppError(404, "Material no encontrado en esta materia");
+  }
+
+  const texto = contenido.texto_contenido?.trim();
+
+  if (!texto) {
+    throw new AppError(
+      400,
+      "Este material es un archivo binario y todavia no se puede resumir. Subi un material de texto."
+    );
+  }
+
+  return { texto, titulo: contenido.titulo };
+}
+
+export async function resumir(materiaId: string, input: ResumenInput, alumnoId: string) {
+  await exigirInscripcion(materiaId, alumnoId);
+
+  const fuente = input.contenido_id
+    ? await textoDelContenido(input.contenido_id, materiaId)
+    : { texto: input.texto ?? "", titulo: null };
+
+  if (fuente.texto.trim().length < 200) {
+    throw new AppError(400, "El texto es muy corto para generar un resumen util");
+  }
+
+  const resultado = await resumirDocumento(fuente.texto, input.idioma, input.max_palabras);
+
+  if (!resultado) {
+    throw new AppError(502, "No se pudo generar el resumen en este momento");
+  }
+
+  try {
+    await registrarConsultaTutor(materiaId, "resumen de material", false);
+  } catch {
+    // los analytics no deben interrumpir el flujo
+  }
+
+  return {
+    resumen: resultado.summary,
+    origen: fuente.titulo,
+    max_palabras: input.max_palabras,
+  };
+}
+
+export async function generarSimulacro(materiaId: string, input: ExamenInput, alumnoId: string) {
+  await exigirInscripcion(materiaId, alumnoId);
+
+  const resultado = await generarExamen(materiaId, input.n_preguntas, input.dificultad);
+
+  if (!resultado) {
+    throw new AppError(502, "No se pudo generar el simulacro en este momento");
+  }
+
+  return {
+    titulo: resultado.titulo,
+    dificultad: resultado.dificultad,
+    preguntas: resultado.preguntas.map((p) => ({
+      tipo: p.tipo,
+      enunciado: p.enunciado,
+      opciones: p.opciones ?? [],
+      respuesta: p.respuesta,
+    })),
   };
 }

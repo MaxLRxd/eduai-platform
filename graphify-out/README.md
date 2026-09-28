@@ -251,24 +251,29 @@ bloquea a los demás.
 | 1 | **Deploy cloud** | ❌ No existe | No hay `deploy.yml` ni `docker-compose.staging.yml`. Solo CI. Hay 3 Dockerfiles multi-stage y `frontend/nginx.conf` listos. Railway/Render + Postgres queda sin definir. |
 | 2 | **Almacenamiento R2** | ❌ No existe | Cero clientes S3 en el repo. Los uploads van a **disco local** (`UPLOAD_DIR` = `data/uploads`, `backend/src/config/storage.ts`). Las 4 vars `R2_*` están parseadas en `env.ts` pero **nadie las lee**. El puerto está listo para S3-compatible. |
 | 3 | **Observabilidad** | ⚠️ Solo parcial | Hay `structlog` + `pino` + `/healthz`, pero **cero métricas**: ni Sentry, ni OTel, ni Prometheus. Declarado fuera de alcance del MVP. |
-| 4 | **Cobertura de tests del backend** | ⚠️ Crítico | **1 solo archivo de test** (`health.test.ts`) para 17 módulos. En ai-services hay 9 archivos; en frontend 1. La lógica de negocio no está cubierta. |
+| 4 | **Cobertura de tests del backend** | ⚠️ Crítico | **2 archivos de test** (`health.test.ts`, `tutor-tools.test.ts`) para 17 módulos — el único que cubre lógica de negocio es el nuevo del flujo resumen/examen. En ai-services hay 9 archivos; en frontend 1. |
 | 5 | **Scripts Windows-only** | ⚠️ | `npm run dev:local` y `npm run ai:setup` hardcodean `.venv\Scripts\` (path de Windows). En Linux/Mac no levantan. Afecta a cualquier compañero que no esté en Windows. |
 
 ### 7.2 Funcionalidades a medio cablear
 
-Estos endpoints **existen y funcionan en `ai-services`**, pero el backend no los
-proxea y el frontend no los llama. La UI los "simula" mandando texto al chat
-general.
+Casos de uso que reachable en `ai-services`. **Resumen (CU-A05) y examen (CU-A08)
+se cablearon completos el 2026-09-27**; queda OCR.
 
 | Caso de uso | ai-services | Backend proxy | Frontend |
 |---|---|---|---|
-| Resumen de documento (CU-A05) | ✅ `POST /tutor/resumen` | ❌ | ❌ |
-| Simulacro de examen (CU-A08) | ✅ `POST /tutor/examen` | ❌ | ⚠️ manda un prompt de texto (`StudentCourseDetailPage.tsx:151`) |
+| Resumen de documento (CU-A05) | ✅ `POST /tutor/resumen` | ✅ `POST /api/materias/:materiaId/tutor/resumen` (2026-09-27) | ✅ `ResumenPanel.tsx` + `useResumen` |
+| Simulacro de examen (CU-A08) | ✅ `POST /tutor/examen` | ✅ `POST /api/materias/:materiaId/tutor/examen` (2026-09-27) | ✅ `SimulacroPanel.tsx` + `useSimulacro` |
 | OCR de imágenes (CU-P02) | ❌ no existe | ❌ | ❌ (el tipo `IMAGEN` existe en el dominio y se sube, pero **no se indexa**) |
 
-> Para cablear uno: agregar la función en `aiClient.ts` → un módulo backend que
-> valide con `obtenerProfesorAsignado()` o `requireRole` → un service en
-> frontend. La parte difícil ya está hecha.
+> **Cómo se cablearon (2026-09-27), por si hay que repetir el patrón:**
+> función en `aiClient.ts` (`resumirDocumento` / `generarExamen`, timeout 120 s y 180 s) →
+> schemas Zod en `tutor.schemas.ts` → service con `obtenerInscripcion()` y validación de pertenencia →
+> controller + rutas con `requireRole("ALUMNO")` → service en `tutor.service.ts` (frontend) →
+> hook con estado de carga/error → panel propio en la página del alumno.
+> El examen usa RAG de la materia; el resumen **no** usa RAG, solo manda el texto
+> (de un `contenido` con `texto_contenido` o de texto libre pegado por el alumno) y
+> **rechaza binarios** con un 400 claro. Sin migraciones: no se persiste nada.
+> Cubierto por `backend/src/tests/tutor-tools.test.ts` (11 casos).
 
 ### 7.3 Pendientes de negocio
 

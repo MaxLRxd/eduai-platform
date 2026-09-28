@@ -3,7 +3,7 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import * as tutorService from "./tutor.service";
 import { streamTutor } from "../../config/aiClient";
-import type { CrearSesionInput, EnviarMensajeInput } from "./tutor.schemas";
+import type { CrearSesionInput, EnviarMensajeInput, ExamenInput, ResumenInput } from "./tutor.schemas";
 import { AppError } from "../../middlewares/error";
 
 export async function crearSesion(
@@ -44,6 +44,28 @@ export async function enviarMensaje(
     throw new AppError(401, "No autenticado");
   }
   const resultado = await tutorService.enviarMensaje(req.params.sesionId, req.body, req.user.id);
+  res.json(resultado);
+}
+
+export async function resumen(
+  req: Request<{ materiaId: string }, unknown, ResumenInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const resultado = await tutorService.resumir(req.params.materiaId, req.body, req.user.id);
+  res.json(resultado);
+}
+
+export async function examen(
+  req: Request<{ materiaId: string }, unknown, ExamenInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const resultado = await tutorService.generarSimulacro(req.params.materiaId, req.body, req.user.id);
   res.json(resultado);
 }
 

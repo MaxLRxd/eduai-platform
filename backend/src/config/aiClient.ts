@@ -196,7 +196,6 @@ export interface CorreccionIAResult {
   feedback: string;
   calificacion: number;
 }
-
 export async function corregirEntregaIA(input: CorreccionIARequest): Promise<CorreccionIAResult | null> {
   if (!aiDisponible()) {
     logger.warn("AI_SERVICE_URL no configurado; no se pudo corregir la entrega con IA");
@@ -225,6 +224,85 @@ export async function corregirEntregaIA(input: CorreccionIARequest): Promise<Cor
     return (await res.json()) as CorreccionIAResult;
   } catch (err) {
     logger.error({ err }, "Error al comunicarse con ai-service para corregir");
+    return null;
+  }
+}
+
+export interface ResumenIAResult {
+  summary: string;
+}
+
+export async function resumirDocumento(
+  text: string,
+  language: string,
+  maxWords: number
+): Promise<ResumenIAResult | null> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; no se pudo resumir el documento");
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl()}/tutor/resumen`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language, max_words: maxWords }),
+      signal: AbortSignal.timeout(120_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al resumir el documento en ai-service");
+      return null;
+    }
+
+    return (await res.json()) as ResumenIAResult;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para resumir");
+    return null;
+  }
+}
+
+export type DificultadExamen = "facil" | "media" | "dificil";
+
+export interface ExamenPregunta {
+  tipo: "multiple_choice" | "desarrollo";
+  enunciado: string;
+  opciones: string[];
+  respuesta: string;
+}
+
+export interface ExamenIAResult {
+  titulo: string;
+  dificultad: string;
+  preguntas: ExamenPregunta[];
+}
+
+export async function generarExamen(
+  subjectId: string,
+  nQuestions: number,
+  difficulty: DificultadExamen
+): Promise<ExamenIAResult | null> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; no se pudo generar el simulacro");
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl()}/tutor/examen`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_id: subjectId, n_questions: nQuestions, difficulty }),
+      signal: AbortSignal.timeout(180_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al generar el simulacro en ai-service");
+      return null;
+    }
+
+    return (await res.json()) as ExamenIAResult;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para generar el simulacro");
     return null;
   }
 }

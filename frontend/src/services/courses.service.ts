@@ -1,4 +1,4 @@
-import type { Course, CourseUnit } from "../types/domain";
+import type { Course, CourseMaterial, CourseUnit } from "../types/domain";
 import { api } from "./api";
 
 interface MateriaDto {
@@ -47,7 +47,7 @@ function toCourseDto(m: MateriaDto): Course {
     intro: m.descripcion ?? m.nombre,
     tutorFocus: m.descripcion ?? m.nombre,
     units: [],
-    latest: [],
+    materiales: [],
   };
 }
 
@@ -71,12 +71,19 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
     ]);
 
     const unidades: CourseUnit[] = [];
-    const latest: string[] = [];
+    const materiales: CourseMaterial[] = [];
 
     for (const s of secciones.secciones) {
       const data = await api<{ contenidos: ContenidoDto[] }>(`/api/secciones/${s.id}/contenidos`);
       const items = data.contenidos.map((c) => c.titulo);
-      latest.push(...items);
+      materiales.push(
+        ...data.contenidos.map((c) => ({
+          id: c.id,
+          titulo: c.titulo,
+          tipo: c.tipo,
+          resumible: Boolean(c.texto_contenido?.trim()),
+        }))
+      );
       unidades.push({
         title: s.nombre,
         status: estadoUnidad({ ...s, contenidos: items.length }),
@@ -95,7 +102,7 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
       intro: materia.descripcion ?? materia.nombre,
       tutorFocus: materia.descripcion ?? materia.nombre,
       units: unidades,
-      latest,
+      materiales,
     };
   } catch {
     return undefined;

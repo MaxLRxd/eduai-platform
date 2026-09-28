@@ -44,8 +44,8 @@ Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `r
 | Feature | Endpoint | Estado |
 |---|---|---|
 | Tutor chat (CU-A04) | `POST /tutor/chat` + `POST /tutor/chat/stream` (SSE) | OK |
-| Resumen de documento (CU-A05) | `POST /tutor/resumen` | ⚠️ **Solo en ai-service**: el backend no lo proxea y no hay UI |
-| Simulacro de examen (CU-A08) | `POST /tutor/examen` | ⚠️ **Solo en ai-service**: el frontend manda un prompt de texto al chat, no al endpoint |
+| Resumen de documento (CU-A05) | `POST /tutor/resumen` | ✅ **Cableado desde 2026-09-27** — `POST /api/materias/:materiaId/tutor/resumen` (solo ALUMNO + inscripción) con panel propio en `ResumenPanel.tsx`: elige un material con texto o pega texto libre |
+| Simulacro de examen (CU-A08) | `POST /tutor/examen` | ✅ **Cableado desde 2026-09-27** — `POST /api/materias/:materiaId/tutor/examen` (solo ALUMNO + inscripción, usa RAG de la materia) con panel propio en `SimulacroPanel.tsx`: cantidad + dificultad, respuestas ocultas hasta que las pide |
 | Modo estudio socrático (CU-A09) / pistas (CU-A06) | modos del `ask_tutor` (`MODE_PROMPTS`) | ✅ **UI dedicada desde 2026-09-27** — selector de modo en el chat del alumno (`StudentCourseDetailPage.tsx`), el `modo` viaja en el body del POST y del stream |
 | Generar material docente (CU-P10) | `POST /tutor/generar-material` | OK — frontend `TeacherAIPage` |
 | Corrección de entregas (CU-P05) | `POST /tutor/corregir-entrega` | OK — frontend `TeacherCorrectionsPage` |
@@ -53,9 +53,9 @@ Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `r
 | Indexar/borrar material RAG | `POST /rag/material` + `DELETE` + `POST /rag/material/archivo` | OK — texto y archivos (PDF/DOCX/PPTX/TXT) desde 2026-09-25 |
 | OCR de imágenes (CU-P02) | — | ❌ **No existe** (`ocr_service.py` está en `IMPLEMENTATION.md` pero nunca se implementó). Las imágenes se suben pero no se indexan |
 
-Backend cableado en `backend/src/config/aiClient.ts` — llama 6 rutas: `chatTutor`, `streamTutor`, `indexMaterial`, `indexArchivo`, `generarMaterialDocente`, `corregirEntregaIA`. Todas con degradación elegante si `AI_SERVICE_URL` no está configurado (devuelven `null` → 501 con mensaje claro).
+Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTutor`, `streamTutor`, `indexMaterial`, `indexArchivo`, `generarMaterialDocente`, `corregirEntregaIA`, `resumirDocumento`, `generarExamen`. Todas con degradación elegante si `AI_SERVICE_URL` no está configurado (devuelven `null` → 501/502 con mensaje claro).
 
-> `/tutor/resumen` y `/tutor/examen` **no están en esa lista**: funcionan en Python pero están muertos desde Node. Para cablearlos falta la función en `aiClient.ts` + un módulo backend con guard + el service en frontend. La parte difícil (RAG + prompt) ya está hecha.
+> Los 4 endpoints de `tutor/` del `tutor_router` de Python están proxeyaados desde Node. `resumen` y `examen` se agregaron el 2026-09-27 con sus tests en `backend/src/tests/tutor-tools.test.ts` (11 casos: pertenencia del contenido a la materia, binarios sin texto, no inscripto, rol docente, 502 de la IA, validación del body).
 
 ## FALTA / PENDIENTE
 
@@ -85,12 +85,12 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 6 rutas: `chatTut
 - **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
 - **CI:** ✅ **arreglado (2026-09-27).** El pipeline estaba roto en 2 de 3 jobs: `backend` corría `npm run lint` sin que ese script existiera (ni `eslint`/`typescript-eslint` en devDeps), y `ai-service` corría `ruff check src tests` sobre un directorio inexistente. Agregado el `lint` del backend, sus devDeps, y corregido el path de ruff. Ahora `npm run lint` y `npm test` de la raíz funcionan. Opcional: agregar un job de `docker compose build`.
 - **Scripts Windows-only:** `dev:local` y `ai:setup` hardcodean `.venv\Scripts\`. En Linux/Mac no levantan — bloquea a cualquier compañero que no esté en Windows.
-- **Tests del backend: 1 solo archivo** (`health.test.ts`) para 17 módulos. Es la deuda de cobertura más grande del proyecto.
+- **Tests del backend: 2 archivos** (`health.test.ts`, `tutor-tools.test.ts`) para 17 módulos. Es la deuda de cobertura más grande del proyecto.
 
 ### 4. IA — modos y flujo
 
-- **UI del alumno:** ✅ **modo socrático y pistas tienen UI dedicada (2026-09-27).** El selector de modo vive en `StudentCourseDetailPage.tsx` y el `modo` viaja en el body de `POST /mensajes` y del stream. Falta cablear el **resumen de documentos (CU-A05)**: el endpoint existe en ai-service pero no hay proxy en el backend ni UI.
-- **Simulacro de examen (CU-A08):** el botón "📝 Simulacro" sigue mandando un prompt de texto al chat general en vez de llamar a `POST /tutor/examen`. El endpoint existe en ai-service.
+- **UI del alumno:** ✅ **modo socrático y pistas tienen UI dedicada (2026-09-27).** El selector de modo vive en `StudentCourseDetailPage.tsx` y el `modo` viaja en el body de `POST /mensajes` y del stream. El **resumen de documentos (CU-A05) también quedó cableado** con panel propio (`ResumenPanel.tsx`).
+- **Simulacro de examen (CU-A08):** ✅ **cableado (2026-09-27).** El botón viejo que mandaba un prompt de texto al chat se reemplazó por `SimulacroPanel.tsx`, que llama a `POST /api/materias/:materiaId/tutor/examen` con cantidad y dificultad elegibles.
 - **OCR de imágenes (CU-P02):** no implementado. `ocr_service.py` aparece en `IMPLEMENTATION.md` pero nunca existió. El tipo `IMAGEN` existe en el dominio y los archivos se suben, pero **no se indexan** al vector store.
 - **Registro de sesiones IA:** el `modo` ahora viaja por request, pero `useTutorChat.ts:16` cachea el `sesionId` en un ref → **la sesión se crea con el modo del primer mensaje y nunca se actualiza**. Si el alumno cambia de NORMAL a SOCRATIC a mitad de chat, `sesionIA.modo` queda desalineado del modo real. Los `mensajeIA` tampoco guardan el modo con el que se respondió.
 
@@ -109,8 +109,8 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 6 rutas: `chatTut
 4. ✅ Arreglar el CI y verificar lint/test/build de los tres módulos (**hecho, 2026-09-27**).
 5. ✅ Exponer los modos socrático y pistas en la UI del alumno (**hecho, 2026-09-27**).
 6. **Definir el deploy cloud** (Railway/Render + R2 + DB) — es lo que bloquea la entrega.
-7. **Cablear los endpoints muertos:** resumen (CU-A05) y examen (CU-A08) tienen la parte de Python hecha; falta `aiClient.ts` + módulo backend + service frontend.
-8. **Cubrir el backend con tests** — 1 archivo para 17 módulos.
+7. ✅ Cablear los endpoints muertos: resumen (CU-A05) y examen (CU-A08) (**hecho, 2026-09-27** — `aiClient.ts` + módulo backend + service/hook/UI + 11 tests).
+8. **Cubrir el backend con tests** — 2 archivos para 17 módulos; el de tutorTools cubre el flujo nuevo, el resto sigue sin tests.
 9. Arreglar los scripts Windows-only de la raíz.
 10. Evaluar Licencias, email, export PDF y OCR.
 

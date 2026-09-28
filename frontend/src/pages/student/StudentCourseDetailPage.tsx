@@ -6,6 +6,8 @@ import type { ModoTutor } from "../../services/tutor.service";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
+import { ResumenPanel } from "../../components/student/ResumenPanel";
+import { SimulacroPanel } from "../../components/student/SimulacroPanel";
 
 const UNIT_TAG_COLOR = {
   "En curso": "blue",
@@ -142,16 +144,6 @@ export function StudentCourseDetailPage(): React.ReactElement {
               <Button variant="secondary" size="sm" onClick={() => submitQuestion("Dame preguntas para practicar", "NORMAL")}>
                 Practicar
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Resumí los materiales de esta materia", "NORMAL")}>
-                Resumir
-              </Button>
-              <Button
-                size="sm"
-                className="bg-gradient-to-br from-amber-500 to-amber-700 border-none"
-                onClick={() => submitQuestion("Generá un simulacro de examen de esta materia", "NORMAL")}
-              >
-                📝 Simulacro
-              </Button>
             </div>
 
             <div className="flex flex-col gap-2 max-h-72 overflow-y-auto mb-2.5">
@@ -201,20 +193,25 @@ export function StudentCourseDetailPage(): React.ReactElement {
           <Card>
             <CardHeader title="📌 Material usado por la IA" />
             <div className="flex flex-col gap-2">
-              {course.latest.map((x) => (
-                <div key={x} className="flex items-start gap-3 py-1.5">
+              {course.materiales.map((m) => (
+                <div key={m.id} className="flex items-start gap-3 py-1.5">
                   <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: course.color }} />
                   <div>
-                    <div className="text-[13px] text-text-1 font-medium">{x}</div>
-                    <div className="text-[11px] text-text-3 mt-0.5">Disponible para el Tutor IA</div>
+                    <div className="text-[13px] text-text-1 font-medium">{m.titulo}</div>
+                    <div className="text-[11px] text-text-3 mt-0.5">
+                      {m.resumible ? "Disponible para el Tutor IA" : "Archivo · no indexado"}
+                    </div>
                   </div>
                 </div>
               ))}
-              {course.latest.length === 0 && (
+              {course.materiales.length === 0 && (
                 <div className="py-4 text-center text-[12px] text-text-3">Todavía no hay materiales indexados para el tutor.</div>
               )}
             </div>
           </Card>
+
+          <ResumenPanel course={course} />
+          <SimulacroPanel course={course} />
         </aside>
       </div>
     </div>
