@@ -65,6 +65,24 @@ async function exigirInscripcion(materiaId: string, alumnoId: string): Promise<v
   }
 }
 
+// El alumno puede cambiar de modo a mitad de conversacion. El request lo manda
+// en cada mensaje, asi que la IA siempre responde en el modo pedido; lo que
+// quedaba desalineado era el registro: sesionIA.modo se quedaba clavado en el
+// modo del primer mensaje. Eso rompe los analytics por modo y el fallback cuando
+// un cliente omite `modo`.
+async function sincronizarModo(
+  sesionId: string,
+  modoSesion: ModoSesionIA,
+  modoPedido: ModoSesionIA | undefined
+): Promise<ModoSesionIA> {
+  if (!modoPedido || modoPedido === modoSesion) {
+    return modoSesion;
+  }
+
+  await prisma.sesionIA.update({ where: { id: sesionId }, data: { modo: modoPedido } });
+  return modoPedido;
+}
+
 export async function crearSesion(materiaId: string, input: CrearSesionInput, alumnoId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(materiaId)) {
     throw new AppError(404, "Materia no encontrada");
@@ -155,11 +173,13 @@ export async function enviarMensaje(
     // los analytics no deben interrumpir el flujo del chat
   }
 
+  const modo = await sincronizarModo(sesionId, sesion.modo, input.modo);
+
   const inicio = Date.now();
   const resultado = await chatTutor(
     sesion.materia_id,
     input.contenido,
-    input.modo ? modoAMin(input.modo) : modoAMin(sesion.modo),
+    modoAMin(modo),
     history
   );
   const tiempoMs = Date.now() - inicio;
@@ -222,9 +242,11 @@ export async function prepararStream(
     .filter((p) => p.rol === "USER" || p.rol === "ASSISTANT")
     .map((p) => ({ role: p.rol.toLowerCase() as "user" | "assistant", content: p.contenido }));
 
+  const modoEfectivo = await sincronizarModo(sesionId, sesion.modo, modo);
+
   return {
     materiaId: sesion.materia_id,
-    modo: modo ? modoAMin(modo) : modoAMin(sesion.modo),
+    modo: modoAMin(modoEfectivo),
     history,
   };
 }

@@ -320,7 +320,7 @@ nadie veía porque el script no existía. Los 3 fixes:
   el mismo patrón que ya usaba `admin.controller.ts:14`
 - `types/express.d.ts:4` — `eslint-disable` directive que ya no hacía falta
 
-> **Verificación actual:** backend 14 tests · ai-services 45 (+1 skipped) ·
+> **Verificación actual:** backend 18 tests · ai-services 45 (+1 skipped) ·
 > frontend 3. `npm run lint` y `npm test` de la raíz funcionan.
 >
 > **`docker compose build` + `up -d` verificados el 2026-09-28**: los 5 servicios

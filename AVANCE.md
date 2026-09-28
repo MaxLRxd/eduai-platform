@@ -85,14 +85,21 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 - **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
 - **CI:** ✅ **arreglado (2026-09-27).** El pipeline estaba roto en 2 de 3 jobs: `backend` corría `npm run lint` sin que ese script existiera (ni `eslint`/`typescript-eslint` en devDeps), y `ai-service` corría `ruff check src tests` sobre un directorio inexistente. Agregado el `lint` del backend, sus devDeps, y corregido el path de ruff. Ahora `npm run lint` y `npm test` de la raíz funcionan. Opcional: agregar un job de `docker compose build`.
 - **Scripts cross-platform:** ✅ **arreglados 2026-09-28.** `dev:local`, `ai:setup` y `ai:test` ya no hardcodean `.venv\Scripts\`: delegan en `scripts/venv.mjs` y `scripts/venv-setup.mjs`, que resuelven `Scripts/` vs `bin/` según `process.platform`. Verificado levantando uvicorn en Windows; en Linux/macOS eligen `bin/`.
-- **Tests del backend: 2 archivos** (`health.test.ts`, `tutor-tools.test.ts`) para 17 módulos. Es la deuda de cobertura más grande del proyecto.
+- **Tests del backend: 2 archivos** (`health.test.ts`, `tutor-tools.test.ts`) con 18 tests para 17 módulos. Sigue siendo la deuda de cobertura más grande del proyecto.
 
 ### 4. IA — modos y flujo
 
 - **UI del alumno:** ✅ **modo socrático y pistas tienen UI dedicada (2026-09-27).** El selector de modo vive en `StudentCourseDetailPage.tsx` y el `modo` viaja en el body de `POST /mensajes` y del stream. El **resumen de documentos (CU-A05) también quedó cableado** con panel propio (`ResumenPanel.tsx`).
 - **Simulacro de examen (CU-A08):** ✅ **cableado (2026-09-27).** El botón viejo que mandaba un prompt de texto al chat se reemplazó por `SimulacroPanel.tsx`, que llama a `POST /api/materias/:materiaId/tutor/examen` con cantidad y dificultad elegibles.
 - **OCR de imágenes (CU-P02):** no implementado. `ocr_service.py` aparece en `IMPLEMENTATION.md` pero nunca existió. El tipo `IMAGEN` existe en el dominio y los archivos se suben, pero **no se indexan** al vector store.
-- **Registro de sesiones IA:** el `modo` ahora viaja por request, pero `useTutorChat.ts:16` cachea el `sesionId` en un ref → **la sesión se crea con el modo del primer mensaje y nunca se actualiza**. Si el alumno cambia de NORMAL a SOCRATIC a mitad de chat, `sesionIA.modo` queda desalineado del modo real. Los `mensajeIA` tampoco guardan el modo con el que se respondió.
+- **Registro de sesiones IA:** ✅ **corregido (2026-09-28).** El `modo` viaja en **cada** request
+  y el backend lo prioriza sobre el de la sesión (`modo ? modoAMin(modo) : modoAMin(sesion.modo)`),
+  así que la IA siempre respondía en el modo pedido — el chat funcionaba bien. Lo que quedaba
+  desalineado era el **registro**: `sesionIA.modo` se quedaba clavado en el modo del primer mensaje,
+  lo que rompía los analytics por modo y el fallback cuando un cliente omite `modo`.
+  Ahora `sincronizarModo()` persiste el cambio (sin escribir si el modo no cambió).
+  4 tests nuevos cubren el caso. **Pendiente menor:** `mensajeIA` sigue sin guardar el modo con el
+  que se respondió cada mensaje; para eso hace falta una migración de Prisma.
 
 ### 5. Licencias, email y extras
 
@@ -112,6 +119,7 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 7. ✅ Cablear los endpoints muertos: resumen (CU-A05) y examen (CU-A08) (**hecho, 2026-09-27** — `aiClient.ts` + módulo backend + service/hook/UI + 11 tests).
 8. **Cubrir el backend con tests** — 2 archivos para 17 módulos; el de tutorTools cubre el flujo nuevo, el resto sigue sin tests.
 9. ✅ Arreglar los scripts Windows-only de la raíz (**hecho, 2026-09-28** — `scripts/venv.mjs` + `scripts/venv-setup.mjs`).
+10. ✅ Persistir el cambio de modo del tutor a mitad de sesión (**hecho, 2026-09-28** — `sincronizarModo()` en `tutor.service.ts` + 4 tests).
 10. Evaluar Licencias, email, export PDF y OCR.
 
 ## Docker verificado (2026-09-28)

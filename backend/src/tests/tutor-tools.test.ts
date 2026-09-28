@@ -13,21 +13,26 @@ jest.mock("../config/prisma", () => ({
   prisma: {
     contenido: { findUnique: jest.fn() },
     inscripcion: { findUnique: jest.fn() },
+    sesionIA: { findUnique: jest.fn(), update: jest.fn() },
+    mensajeIA: { findMany: jest.fn(), create: jest.fn() },
   },
 }));
 
 const prismaMock = prisma as unknown as {
   contenido: { findUnique: jest.Mock };
   inscripcion: { findUnique: jest.Mock };
+  sesionIA: { findUnique: jest.Mock; update: jest.Mock };
+  mensajeIA: { findMany: jest.Mock; create: jest.Mock };
 };
 
 const resumirDocumentoMock = jest.fn();
 const generarExamenMock = jest.fn();
+const chatTutorMock = jest.fn();
 
 jest.mock("../config/aiClient", () => ({
   resumirDocumento: (...args: unknown[]) => resumirDocumentoMock(...args),
   generarExamen: (...args: unknown[]) => generarExamenMock(...args),
-  chatTutor: jest.fn(),
+  chatTutor: (...args: unknown[]) => chatTutorMock(...args),
   streamTutor: jest.fn(),
   indexArchivo: jest.fn(),
   indexMaterial: jest.fn(),
@@ -227,5 +232,96 @@ describe("tutor: resumen y examen", () => {
       expect(res.status).toBe(403);
       expect(generarExamenMock).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("tutor: cambio de modo a mitad de conversacion", () => {
+  const SESION_ID = "55555555-5555-4555-8555-555555555555";
+
+  let server: ReturnType<typeof createServer>;
+
+  const tokenAlumno = (): string =>
+    signAccessToken({ sub: ALUMNO_ID, email: "alumno@edu.ai", rol: "ALUMNO" });
+
+  const sesionConModo = (modo: "NORMAL" | "SOCRATIC" | "HINTS") => ({
+    id: SESION_ID,
+    alumno_id: ALUMNO_ID,
+    materia_id: MATERIA_ID,
+    modo,
+    iniciada_en: new Date(),
+    cerrada_en: null,
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    server = createServer(createApp() as unknown as import("http").RequestListener);
+    prismaMock.mensajeIA.findMany.mockResolvedValue([]);
+    prismaMock.mensajeIA.create
+      .mockResolvedValueOnce({ id: "msg-1", rol: "USER", contenido: "hola", creado_en: new Date() })
+      .mockResolvedValueOnce({ id: "msg-2", rol: "ASSISTANT", contenido: "hola!", creado_en: new Date() });
+    prismaMock.sesionIA.update.mockResolvedValue(sesionConModo("SOCRATIC"));
+    chatTutorMock.mockResolvedValue({
+      answer: "Respuesta",
+      sources: [],
+      prompt_depurado: null,
+      tokens_ahorrados: 0,
+      cached: false,
+    });
+  });
+
+  afterEach(() => {
+    server.close();
+  });
+
+  it("usa el modo del request para responder aunque la sesion tenga otro", async () => {
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("NORMAL"));
+
+    const res = await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/mensajes`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola", modo: "SOCRATIC" });
+
+    expect(res.status).toBe(200);
+    expect(chatTutorMock).toHaveBeenCalledWith(MATERIA_ID, "hola", "socratic", []);
+  });
+
+  it("persiste el modo nuevo en sesionIA", async () => {
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("NORMAL"));
+
+    await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/mensajes`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola", modo: "SOCRATIC" });
+
+    expect(prismaMock.sesionIA.update).toHaveBeenCalledWith({
+      where: { id: SESION_ID },
+      data: { modo: "SOCRATIC" },
+    });
+  });
+
+  it("no escribe si el modo no cambio", async () => {
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("HINTS"));
+
+    const res = await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/mensajes`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola", modo: "HINTS" });
+
+    expect(res.status).toBe(200);
+    expect(chatTutorMock).toHaveBeenCalledWith(MATERIA_ID, "hola", "hints", []);
+    expect(prismaMock.sesionIA.update).not.toHaveBeenCalled();
+  });
+
+  it("deja el modo de la sesion si el request no lo manda", async () => {
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("HINTS"));
+
+    const res = await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/mensajes`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola" });
+
+    expect(res.status).toBe(200);
+    expect(chatTutorMock).toHaveBeenCalledWith(MATERIA_ID, "hola", "hints", []);
+    expect(prismaMock.sesionIA.update).not.toHaveBeenCalled();
   });
 });
