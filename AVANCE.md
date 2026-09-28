@@ -78,7 +78,13 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 
 ### 3. Configuración / infra / deploy
 
-- **Deploy cloud sin definir** (quedó del Sprint 0): Railway/Render para backend+ai-service y RDS/DB; ver `README.md` y `.github/workflows/ci.yml`.
+- **Deploy cloud:** ⬜ **abierto, requiere reunión (2026-09-28).** Es lo único que bloquea la
+  entrega. Se escribió **`DEPLOY.md`** como documento de decisión para discutirlo en equipo:
+  comparativa de proveedores (Fly.io / Railway / Render+Vercel / VM propia), la trampa de los
+  **3 cold starts** (3 servicios = 3 arranques en cadena; el que molesta es el del `ai-service`,
+  que ya tarda 26 s con el modelo caliente), el requisito de que **DB y `ai-service` estén en la
+  misma región**, 7 preguntas abiertas y un checklist de lo que falta antes de deployar.
+  Postgres + `pgvector` **queda sin definir**.
 - **Bug en `backend/Dockerfile` (target `prod`):** ~~`CMD` llama `npm run db:deploy` que **no existe**~~ → ✅ **resuelto (2026-09-17):** se agregó el script `db:deploy` = `prisma migrate deploy`, el CMD pasó a `sh -c "npm run db:deploy && node dist/index.js"` (el exec-form con `&&` no funciona sin shell) y el CLI `prisma` se movió de `devDependencies` a `dependencies` para que `npm ci --omit=dev` lo incluya en la imagen prod.
 - **`ai-service` exige `GEMINI_API_KEY` al arrancar** → ✅ **resuelto (2026-09-17):** `gemini_api_key` ahora tiene default `""` y el cliente se crea **de forma perezosa** (`genai.get_genai_client` + propiedad `client` en `LLMService`/`EmbeddingsService`). Sin clave el servicio bootea, `/healthz` y `/tutor/depurar` funcionan, y el primer uso del LLM/embeddings falla con `502` y mensaje claro (`GEMINI_API_KEY no configurada…`).
 - **`pinecone_service.py`:** usa el cliente síncrono de Pinecone dentro de métodos `async` (bloquea el event loop). Aceptable para probar, revisar si se apuesta a Pinecone en prod.
@@ -115,7 +121,8 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**) y validar `docker compose up --build` completo (**hecho, 2026-09-28** — ver "Docker verificado").
 4. ✅ Arreglar el CI y verificar lint/test/build de los tres módulos (**hecho, 2026-09-27**).
 5. ✅ Exponer los modos socrático y pistas en la UI del alumno (**hecho, 2026-09-27**).
-6. **Definir el deploy cloud** (Railway/Render + R2 + DB) — es lo que bloquea la entrega.
+6. ⬜ **Definir el deploy cloud** — es lo que bloquea la entrega. **Abierto y documentado para
+   discutir en `DEPLOY.md`** (proveedores, cold starts, región de la DB, preguntas abiertas).
 7. ✅ Cablear los endpoints muertos: resumen (CU-A05) y examen (CU-A08) (**hecho, 2026-09-27** — `aiClient.ts` + módulo backend + service/hook/UI + 11 tests).
 8. **Cubrir el backend con tests** — 2 archivos para 17 módulos; el de tutorTools cubre el flujo nuevo, el resto sigue sin tests.
 9. ✅ Arreglar los scripts Windows-only de la raíz (**hecho, 2026-09-28** — `scripts/venv.mjs` + `scripts/venv-setup.mjs`).
