@@ -84,7 +84,7 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 - **`pinecone_service.py`:** usa el cliente síncrono de Pinecone dentro de métodos `async` (bloquea el event loop). Aceptable para probar, revisar si se apuesta a Pinecone en prod.
 - **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
 - **CI:** ✅ **arreglado (2026-09-27).** El pipeline estaba roto en 2 de 3 jobs: `backend` corría `npm run lint` sin que ese script existiera (ni `eslint`/`typescript-eslint` en devDeps), y `ai-service` corría `ruff check src tests` sobre un directorio inexistente. Agregado el `lint` del backend, sus devDeps, y corregido el path de ruff. Ahora `npm run lint` y `npm test` de la raíz funcionan. Opcional: agregar un job de `docker compose build`.
-- **Scripts Windows-only:** `dev:local` y `ai:setup` hardcodean `.venv\Scripts\`. En Linux/Mac no levantan — bloquea a cualquier compañero que no esté en Windows.
+- **Scripts cross-platform:** ✅ **arreglados 2026-09-28.** `dev:local`, `ai:setup` y `ai:test` ya no hardcodean `.venv\Scripts\`: delegan en `scripts/venv.mjs` y `scripts/venv-setup.mjs`, que resuelven `Scripts/` vs `bin/` según `process.platform`. Verificado levantando uvicorn en Windows; en Linux/macOS eligen `bin/`.
 - **Tests del backend: 2 archivos** (`health.test.ts`, `tutor-tools.test.ts`) para 17 módulos. Es la deuda de cobertura más grande del proyecto.
 
 ### 4. IA — modos y flujo
@@ -105,14 +105,59 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 
 1. ✅ Implementar subida de archivos (multipart + destino local) y ruta de descarga (**hecho, 2026-09-25**). Resta reemplazar disco local por R2 cuando se defina el deploy.
 2. ✅ Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO (**hecho, 2026-09-25**).
-3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**); queda validar `docker compose up --build` completo.
+3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**) y validar `docker compose up --build` completo (**hecho, 2026-09-28** — ver "Docker verificado").
 4. ✅ Arreglar el CI y verificar lint/test/build de los tres módulos (**hecho, 2026-09-27**).
 5. ✅ Exponer los modos socrático y pistas en la UI del alumno (**hecho, 2026-09-27**).
 6. **Definir el deploy cloud** (Railway/Render + R2 + DB) — es lo que bloquea la entrega.
 7. ✅ Cablear los endpoints muertos: resumen (CU-A05) y examen (CU-A08) (**hecho, 2026-09-27** — `aiClient.ts` + módulo backend + service/hook/UI + 11 tests).
 8. **Cubrir el backend con tests** — 2 archivos para 17 módulos; el de tutorTools cubre el flujo nuevo, el resto sigue sin tests.
-9. Arreglar los scripts Windows-only de la raíz.
+9. ✅ Arreglar los scripts Windows-only de la raíz (**hecho, 2026-09-28** — `scripts/venv.mjs` + `scripts/venv-setup.mjs`).
 10. Evaluar Licencias, email, export PDF y OCR.
+
+## Docker verificado (2026-09-28)
+
+`docker compose build` + `up -d` levantan los 5 servicios y responden:
+`backend /api/healthz` → `{"status":"ok","db":"ok"}`, `ai-service /healthz` → `{"status":"ok"}`,
+`frontend :5173` → 200. Seed: 10 alumnos, 1 admin, 6 profesores, clave `Clave1234`.
+
+Tres bugs reales que aparecieron al validar, ya corregidos:
+
+1. **`docker compose build` fallaba con `ERESOLVE`.** `backend/package.json` pedía `typescript: ^7.0.2`, pero `typescript-eslint@8` exige `>=4.8.4 <6.1.0`. Localmente no se notaba porque el root del workspace hoistea el TS 5.9.3 del frontend y `typescript-eslint` resolvía contra ese; en la imagen no hay hoist y el peer check fallaba. **El CI no lo detectaba** porque usa `npm ci` (respeta el lock, no re-resuelve peers). Bajado a `^5.9.3`, la misma versión que ya usaban el root y el frontend.
+2. **`backend/package-lock.json` era un lock standalone obsoleto** (pinned a TS 7) y **no está versionado**: vestigio de antes de los workspaces. El `Dockerfile` lo copiaba (`COPY package.json package-lock.json* ./`) y era el que disparaba el ERESOLVE. npm escribe el lock del root, nunca uno por subdirectorio.
+3. **El ai-service moría al arrancar:** `RuntimeError: Form data requires "python-multipart"`. `python-multipart` ya estaba en `requirements.txt`; el culpable era el volumen `aipy_venv`, que monta `/app/.venv` encima del venv horneado en la imagen y quedó con las deps de un build anterior. Se resuelve con `docker volume rm eduai_aipy_venv` (o `docker compose down -v`). **Ojo: cada vez que cambie `requirements.txt` hay que rehacer ese volumen.**
+
+> El flujo resumen/examen se validó end-to-end contra el stack: login → `/api/materias/mias` →
+> `/api/materias/:id/secciones` → `/api/secciones/:id/contenidos` → `POST .../tutor/resumen`.
+> Los guards responden bien (400 por enviar ambos `contenido_id` y `texto` o ninguno,
+> 404 si el contenido es de otra materia, 502 si la IA no está disponible).
+
+## Gemini en producción (2026-09-28)
+
+Con `GEMINI_API_KEY` real se encontró que el modelo por defecto no servía:
+
+- **`gemini-3.6-flash` devuelve 503 "high demand" de forma constante** en cuentas gratuitas.
+  Lo mismo con `3.7-flash`, `3.8-flash`, `3.5-flash` y `flash-latest`; `gemini-2.5-flash` da 404.
+  Los que sí responden son **`gemini-3.5-flash-lite`** y `gemini-3.1-flash-lite`.
+  **Default cambiado a `gemini-3.5-flash-lite`** en `settings.py` y en los dos `.env.example`.
+  Ojo: el 503 es intermitente, no permanente — `3.6-flash` a veces responde. Por eso el retry
+  (abajo) es lo que hace que la app sea confiable, y no el cambio de modelo solo.
+- **Reintentos con backoff exponencial** en `llm_service.py`: hasta 4 reintentos
+  (2s, 4s, 8s, 16s, tope 30s) con jitter, solo ante errores transitorios
+  (503, 429, `UNAVAILABLE`, `RESOURCE_EXHAUSTED`, timeouts). Los errores permanentes
+  (400 de prompt, 401 de key, 404 de modelo) **no** se reintentan: gastarían cuota sin chances.
+  Configurable con `LLM_MAX_RETRIES`, `LLM_RETRY_BASE_DELAY_SECONDS`, `LLM_RETRY_MAX_DELAY_SECONDS`.
+  El streaming reintenta **solo al abrir** el stream, nunca a mitad (duplicaría tokens).
+  Cubierto por `test_llm_retry.py` (10 casos).
+- **Prompts corregidos** según lo que devolvió el modelo en la prueba real:
+  el resumen arrancaba con "¡Hola! Soy tu tutor IA..." (ahora arranca directo en "Resumen general"),
+  y en el examen la respuesta de una pregunta de desarrollo era
+  *"La guía de corrección debe indicar que..."* — el modelo se filtraba una instrucción del prompt
+  en vez de dar la respuesta (ahora se pide explícitamente la respuesta en sí).
+- **El índice HNSW nunca se crea** y el warning era silencioso: `EMBEDDING_DIMENSIONS=3072`
+  pero pgvector no indexa más de 2000 dimensiones con HNSW. La búsqueda **funciona igual**
+  (escaneo secuencial) y el examen recupera material correctamente, pero degrada con volumen.
+  El warning ahora dice la causa y el arreglo. Arreglo de fondo: bajar `EMBEDDING_DIMENSIONS`
+  a ≤2000 y reindexar, o migrar a un índice IVF. **Requiere reindexar el material, no se hizo.**
 
 ## CÓMO CORRER
 
@@ -120,6 +165,7 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 
 ```bash
 # 1. Completar .env (raíz): GEMINI_API_KEY obligatoria para el ai-service
+#    (usar un modelo *-flash-lite: los flash "grandes" dan 503 en cuentas gratuitas)
 # 2. Levantar todo
 docker compose up --build -d #el -d es para que se levanten en segundo plano y no quede la consola ahí, opcional
 # 3. Migraciones + seed (el CMD dev no los corre solo)

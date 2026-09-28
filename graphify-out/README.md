@@ -252,7 +252,7 @@ bloquea a los demás.
 | 2 | **Almacenamiento R2** | ❌ No existe | Cero clientes S3 en el repo. Los uploads van a **disco local** (`UPLOAD_DIR` = `data/uploads`, `backend/src/config/storage.ts`). Las 4 vars `R2_*` están parseadas en `env.ts` pero **nadie las lee**. El puerto está listo para S3-compatible. |
 | 3 | **Observabilidad** | ⚠️ Solo parcial | Hay `structlog` + `pino` + `/healthz`, pero **cero métricas**: ni Sentry, ni OTel, ni Prometheus. Declarado fuera de alcance del MVP. |
 | 4 | **Cobertura de tests del backend** | ⚠️ Crítico | **2 archivos de test** (`health.test.ts`, `tutor-tools.test.ts`) para 17 módulos — el único que cubre lógica de negocio es el nuevo del flujo resumen/examen. En ai-services hay 9 archivos; en frontend 1. |
-| 5 | **Scripts Windows-only** | ⚠️ | `npm run dev:local` y `npm run ai:setup` hardcodean `.venv\Scripts\` (path de Windows). En Linux/Mac no levantan. Afecta a cualquier compañero que no esté en Windows. |
+| 5 | ~~**Scripts Windows-only**~~ | ✅ Resuelto 2026-09-28 | `dev:local`, `ai:setup` y `ai:test` delegan en `scripts/venv.mjs` / `scripts/venv-setup.mjs`, que resuelven `.venv\Scripts\` vs `.venv/bin/` según `process.platform`. |
 
 ### 7.2 Funcionalidades a medio cablear
 
@@ -320,11 +320,24 @@ nadie veía porque el script no existía. Los 3 fixes:
   el mismo patrón que ya usaba `admin.controller.ts:14`
 - `types/express.d.ts:4` — `eslint-disable` directive que ya no hacía falta
 
-> **Verificación actual:** backend 3 tests · ai-services 35 (+1 skipped) ·
+> **Verificación actual:** backend 14 tests · ai-services 45 (+1 skipped) ·
 > frontend 3. `npm run lint` y `npm test` de la raíz funcionan.
 >
-> Pendiente: `npm run dev:local` y `ai:setup` hardcodean `.venv\Scripts\`, así
-> que solo andan en Windows. Si alguien del equipo usa Linux/Mac, no levanta.
+> **`docker compose build` + `up -d` verificados el 2026-09-28**: los 5 servicios
+> levantan y responden. Se encontraron y corrigieron 3 bugs que ni el CI ni el
+> lint veían — el más importante, `backend` pedía `typescript@^7` mientras
+> `typescript-eslint@8` exige `<6.1.0`, lo que rompía el build de la imagen
+> (el CI no lo detectaba porque `npm ci` no re-resuelve peers). Ver la sección
+> "Docker verificado" de `AVANCE.md` para el detalle de los tres.
+>
+> **Gemini configurado y probado con key real (2026-09-28)**: el modelo por
+> defecto `gemini-3.6-flash` daba 503 "high demand" constante en cuenta gratuita
+> (igual que 3.7/3.8/3.5-flash y `flash-latest`); los `*-flash-lite` responden.
+> Default movido a `gemini-3.5-flash-lite` y se agregó **retry con backoff
+> exponencial** en `llm_service.py` (solo para errores transitorios: 503/429/timeouts).
+> Pendiente Known: el índice HNSW no se crea porque `EMBEDDING_DIMENSIONS=3072`
+> supera el límite de 2000 de pgvector — la búsqueda cae a escaneo secuencial y
+> funciona, pero degrada con volumen. Detalle en `AVANCE.md`.
 
 ---
 
@@ -363,7 +376,7 @@ nadie veía porque el script no existía. Los 3 fixes:
    npm run lint      --workspace frontend
    npm run build     --workspace frontend
    ```
-   > `dev:local` y `ai:setup` son Windows-only (§7.1 #5).
+    > `dev:local` y `ai:setup` ya son cross-platform (§7.1 #5, resuelto 2026-09-28).
 
 ---
 

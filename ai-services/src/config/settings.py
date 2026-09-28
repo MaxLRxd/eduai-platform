@@ -5,10 +5,15 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.6-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"
     llm_provider: str = "gemini"
     gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dimensions: int = 3072
+
+    # Reintentos ante errores transitorios del proveedor (503 high demand, 429).
+    llm_max_retries: int = 4
+    llm_retry_base_delay_seconds: float = 2.0
+    llm_retry_max_delay_seconds: float = 30.0
 
     database_url: str = "postgresql://eduai:eduai@localhost:5432/eduai"
     redis_url: str = "redis://localhost:6379"

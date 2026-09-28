@@ -6,6 +6,12 @@ from pgvector.asyncpg import register_vector
 
 logger = structlog.get_logger(__name__)
 
+# pgvector no puede indexar vectores de mas de 2000 dimensiones con HNSW
+# (limite de la implementacion vector_cosine_ops). Con mas dimensiones el
+# CREATE INDEX falla y la busqueda cae a un escaneo secuencial: sigue siendo
+# correcta, pero se degrada con volumen.
+HNSW_MAX_DIMENSIONS = 2000
+
 
 async def _init_connection(conn: asyncpg.Connection) -> None:
     await register_vector(conn)
@@ -60,7 +66,21 @@ class RetrievalService:
                     "ON ai_materials USING hnsw (embedding vector_cosine_ops)"
                 )
             except Exception as exc:
-                logger.warning("hnsw_index_unavailable", error=str(exc))
+                if self._dimensions > HNSW_MAX_DIMENSIONS:
+                    logger.warning(
+                        "hnsw_index_unavailable",
+                        error=str(exc),
+                        dimensions=self._dimensions,
+                        limite=HNSW_MAX_DIMENSIONS,
+                        detalle=(
+                            "pgvector no indexa vectores de mas de 2000 dimensiones con HNSW. "
+                            "La busqueda sigue funcionando con escaneo secuencial, pero "
+                            "conviene bajar EMBEDDING_DIMENSIONS (y reindexar el material) "
+                            "o cambiar a un indice IVF para no perder performance."
+                        ),
+                    )
+                else:
+                    logger.warning("hnsw_index_unavailable", error=str(exc))
 
     async def upsert_chunks(
         self,

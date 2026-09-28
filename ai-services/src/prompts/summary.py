@@ -14,4 +14,6 @@ Formato de la respuesta:
 Reglas:
 - Sé fiel al contenido del documento: no agregues información que no esté presente.
 - Escribí el resumen en el idioma "{language}".
+- Arrancá directamente con la sección "Resumen general". No saludes, no te presentes y no anuncies lo que vas a hacer (nada de "¡Hola!", "aquí tenés", "preparé el siguiente..."): la respuesta es el resumen, no una conversación.
+- El límite de {max_words} palabras aplica al resumen general; las listas de conceptos y las preguntas de repaso son adicionales.
 """
