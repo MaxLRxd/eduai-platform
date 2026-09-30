@@ -59,3 +59,18 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export async function getHealth(): Promise<{ status: string }> {
   return api<{ status: string }>("/api/healthz");
 }
+
+/** El backend responde los errores como `{ error: string }`. */
+export function apiErrorMessage(error: unknown, fallback = "Ocurrió un error"): string {
+  if (error instanceof ApiError) {
+    try {
+      const parsed = JSON.parse(error.message) as { error?: string; message?: string };
+      const texto = parsed.error ?? parsed.message;
+      if (texto) return texto;
+    } catch {
+      return error.message;
+    }
+    return error.message;
+  }
+  return error instanceof Error ? error.message : fallback;
+}

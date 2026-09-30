@@ -38,6 +38,7 @@ const actividad = (formatos_permitidos: string | null = null): Record<string, un
   nombre: "TP1",
   tipo: "ARCHIVO",
   formatos_permitidos,
+  activo: true,
 });
 
 describe("entregas: subida de archivo del alumno", () => {
@@ -130,6 +131,19 @@ describe("entregas: subida de archivo del alumno", () => {
       .set("Authorization", `Bearer ${tokenAlumno()}`);
 
     expect(res.status).toBe(400);
+    expect(guardarArchivoMock).not.toHaveBeenCalled();
+  });
+
+  it("rechaza la subida si el docente archivo la actividad", async () => {
+    prismaMock.actividad.findUnique.mockResolvedValue({ ...actividad(), activo: false });
+
+    const res = await request(server)
+      .post(`/api/actividades/${ACTIVIDAD_ID}/entrega/archivo`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .attach("archivo", Buffer.from("x"), "tp1.txt");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain("archivada");
     expect(guardarArchivoMock).not.toHaveBeenCalled();
   });
 });

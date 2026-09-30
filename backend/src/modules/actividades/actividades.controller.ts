@@ -61,6 +61,17 @@ export async function enviar(
   res.status(201).json({ entrega });
 }
 
+export async function eliminar(
+  req: Request<{ actividadId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const resultado = await actividadesService.eliminar(req.params.actividadId, req.user.id);
+  res.json(resultado);
+}
+
 export async function subirArchivo(
   req: Request<{ actividadId: string }>,
   res: Response

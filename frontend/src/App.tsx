@@ -21,6 +21,7 @@ import { TeacherCorrectionsPage } from "./pages/teacher/TeacherCorrectionsPage";
 import { TeacherAnalyticsPage } from "./pages/teacher/TeacherAnalyticsPage";
 import { TeacherAIPage } from "./pages/teacher/TeacherAIPage";
 import { TeacherPlanningPage } from "./pages/teacher/TeacherPlanningPage";
+import { TeacherActivitiesPage } from "./pages/teacher/TeacherActivitiesPage";
 import { TeacherMessagesPage } from "./pages/teacher/TeacherMessagesPage";
 import { TeacherContentPage } from "./pages/teacher/TeacherContentPage";
 import { TeacherProfilePage } from "./pages/teacher/TeacherProfilePage";
@@ -167,6 +168,16 @@ export function App(): React.ReactElement {
         }
       />
 
+      <Route
+        path="/teacher/activities"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Actividades">
+              <TeacherActivitiesPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/teacher/corrections"
         element={

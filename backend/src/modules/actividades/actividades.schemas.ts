@@ -19,7 +19,10 @@ export const crearActividadSchema = z.object({
   correccion_manual: z.boolean().default(false),
 });
 
-export const actualizarActividadSchema = crearActividadSchema.partial();
+export const actualizarActividadSchema = crearActividadSchema.partial().extend({
+  // Archivar en vez de borrar: se oculta de la lista del alumno y conserva las entregas.
+  activo: z.boolean().optional(),
+});
 
 export const enviarEntregaSchema = z
   .object({

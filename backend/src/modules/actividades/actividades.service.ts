@@ -100,10 +100,14 @@ export async function listarPorMateria(materiaId: string, usuarioId: string, rol
   }
 
   const actividades = await prisma.actividad.findMany({
-    where: { seccion: { materia_id: materiaId } },
+    // El alumno solo ve las actividades activas; el docente ve tambien las archivadas
+    // para poder restaurarlas o borrarlas.
+    where: { seccion: { materia_id: materiaId }, ...(rol === "ALUMNO" ? { activo: true } : {}) },
     include: {
       seccion: { select: { id: true, nombre: true, tipo: true } },
       rubrica: { select: { id: true, nombre: true } },
+      // El docente necesita el total de entregas para decidir borrar vs archivar.
+      ...(rol === "ALUMNO" ? {} : { _count: { select: { entregas: true } } }),
       entregas: {
         where: { alumno_id: usuarioId },
         take: 1,
@@ -168,6 +172,7 @@ export async function crear(materiaId: string, input: CrearActividadInput, usuar
       formatos_permitidos: input.formatos_permitidos ?? null,
       fecha_limite: input.fecha_limite,
       correccion_manual: input.correccion_manual,
+      activo: true,
     },
     include: {
       seccion: { select: { id: true, nombre: true, tipo: true } },
@@ -214,18 +219,50 @@ export async function actualizar(
       fecha_limite: input.fecha_limite,
       correccion_manual: input.correccion_manual,
       rubrica_id: input.rubrica_id,
+      activo: input.activo,
     },
     include: {
       seccion: { select: { id: true, nombre: true, tipo: true } },
       rubrica: { select: { id: true, nombre: true } },
+      _count: { select: { entregas: true } },
     },
   });
 
   return actualizada;
 }
 
+export async function eliminar(actividadId: string, usuarioId: string) {
+  const actividad = await obtenerActividadODefecto(actividadId);
+
+  const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
+
+  const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+
+  if (!perfil) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  // Regla de producto: si ya se califico, se archiva; si no tiene entregas, se borra.
+  const entregas = await prisma.entrega.count({ where: { actividad_id: actividadId } });
+
+  if (entregas > 0) {
+    throw new AppError(
+      409,
+      `No se puede eliminar: la actividad tiene ${entregas} entrega${entregas === 1 ? "" : "s"}. Archivala en su lugar.`
+    );
+  }
+
+  await prisma.actividad.delete({ where: { id: actividadId } });
+
+  return { eliminada: true };
+}
+
 export async function enviar(actividadId: string, alumnoId: string, input: EnviarEntregaInput) {
   const actividad = await obtenerActividadODefecto(actividadId);
+
+  if (!actividad.activo) {
+    throw new AppError(409, "La actividad fue archivada por el docente y no admite nuevas entregas");
+  }
 
   const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
 
@@ -286,6 +323,10 @@ export async function subirArchivoEntrega(
   archivo: { originalname: string; buffer: Buffer }
 ) {
   const actividad = await obtenerActividadODefecto(actividadId);
+
+  if (!actividad.activo) {
+    throw new AppError(409, "La actividad fue archivada por el docente y no admite nuevas entregas");
+  }
 
   const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
 

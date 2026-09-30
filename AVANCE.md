@@ -148,7 +148,7 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 11. ✅ OCR de imágenes y PDF escaneado, CU-P02 (**hecho y verificado E2E, 2026-09-30** — `OcrService` con tesseract + poppler; una imagen subida por el docente llega al RAG y el alumno la recupera).
 12. ✅ Entrega de actividades por el alumno, CU-A03 (**hecho y verificado E2E, 2026-09-30** — ver "Entregas del alumno" abajo).
 13. ⬜ **Configuración de rúbricas por el docente (CU-P04)** — el backend expone `GET/POST /api/materias/:id/rubricas` pero no hay UI para crearlas ni editarlas; hoy solo se leen para la corrección (CU-A07).
-14. ⬜ **Creación de actividades por el docente (CU-P03)** — no hay UI para crear actividades, solo el listado. Sin esto el alumno no tiene nada que entregar desde la interfaz.
+14. ✅ **Creación de actividades por el docente (CU-P03)** (**hecho y verificado E2E, 2026-09-30** — ver "Gestión de actividades del docente" abajo).
 15. Evaluar Licencias, email, export PDF.
 
 ## Entregas del alumno (CU-A03, 2026-09-30)
@@ -178,6 +178,44 @@ entregar.
 
 **Nota de alcance:** la entrega no dispara la corrección IA. El auto-correction (CU-A07)
 sigue siendo un paso manual del docente desde `TeacherCorrectionsPage`.
+
+## Gestión de actividades del docente (CU-P03, 2026-09-30)
+
+El backend ya tenía `crear` y `actualizar`, pero **no había forma de borrar una actividad ni de
+sacarla de la lista del alumno sin borrarla**, y el frontend no tenía ninguna pantalla de
+actividades: el docente solo podía verlas desde el listado. Para poder entregar, el alumno
+necesitaba actividades que el profesor pudiera dar de alta y sacar de circulation.
+
+Regla de producto acordada: **no se borra una actividad que ya tiene entregas, se archiva.**
+
+Qué se agregó:
+
+- `Actividad.activo Boolean @default(true)` + migración `20260930120000_actividad_activo`.
+  El alumno solo lista activas; el docente lista activas y archivadas, con `_count.entregas`
+  para saber cuántas hay antes de decidir.
+- `DELETE /api/actividades/:actividadId`: borra solo con cero entregas; si hay entregas
+  devuelve 409 con el mensaje `No se puede eliminar: la actividad tiene N entrega(s).
+  Archivala en su lugar.`
+- Archivar/restaurar es `PUT` con `{ activo: false|true }`; una actividad archivada tampoco
+  acepta nuevas entregas ni subidas de archivo (409), para que nadie entregue sin ver el
+  aviso.
+- Frontend nuevo: `activities.service.ts`, `useActivities.ts`, `ActivityFormModal` (los 4 tipos,
+  fecha límite, corrección manual y rúbrica opcional) y `TeacherActivitiesPage`, con ruta
+  `/teacher/activities` y entrada en la nav del profesor.
+- `apiErrorMessage()` en `services/api.ts`: el backend responde `{ error }` y el parseo estaba
+  triplicado en tres componentes con una copia mal formada.
+- 12 tests en `backend/src/tests/actividades-ciclo.test.ts` (archivar, restaurar, borrar con y
+  sin entregas, orden de validación de permisos, guards de rol) + 1 test de actividad archivada
+  en `entrega-archivo.test.ts`.
+
+Verificado E2E contra el stack real (33 checks): el docente crea los 4 tipos, el alumno los ve,
+entrega, el docente archiva y el alumno deja de verlos y recibe 409 al entregar, restaura y el
+alumno los vuelve a ver, el docente de otra materia recibe 403, y borrar funciona solo cuando no
+hay entregas. Suite: backend 36/36, frontend 3/3, lint sin errores.
+
+**Pendiente:** el selector de rúbrica del formulario queda vacío hasta que exista la UI de
+CU-P04, y `esperado` (el contenido clave que debería usar la IA para corregir) todavía no forma
+parte de `Rubrica.criterios`.
 
 
 ## Docker verificado (2026-09-28)

@@ -3,7 +3,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { InfoBox } from "../ui/InfoBox";
 import { useSubmitAssignment, useUploadAssignmentFile } from "../../hooks/useAssignments";
-import { ApiError } from "../../services/api";
+import { apiErrorMessage } from "../../services/api";
 import type { Assignment, AssignmentType } from "../../types/domain";
 
 const TITULO: Record<AssignmentType, string> = {
@@ -26,20 +26,6 @@ const inputClass =
 function esVencida(iso: string): boolean {
   const f = new Date(iso);
   return !Number.isNaN(f.getTime()) && f.getTime() < Date.now();
-}
-
-function limpiarErrorApi(error: unknown): string {
-  if (error instanceof ApiError) {
-    try {
-      const parsed = JSON.parse(error.message) as { error?: string; message?: string };
-      const texto = parsed.error ?? parsed.message;
-      if (texto) return texto;
-    } catch {
-      return error.message;
-    }
-    return error.message;
-  }
-  return error instanceof Error ? error.message : "No se pudo enviar la entrega";
 }
 
 export function AssignmentSubmitModal({
@@ -129,7 +115,7 @@ export function AssignmentSubmitModal({
       }
       onClose();
     } catch (e) {
-      setError(limpiarErrorApi(e));
+      setError(apiErrorMessage(e, "No se pudo enviar la entrega"));
     }
   };
 

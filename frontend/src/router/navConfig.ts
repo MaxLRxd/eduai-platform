@@ -43,6 +43,7 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { icon: "grades", label: "Calificaciones", path: "/teacher/grades" },
         { icon: "attendance", label: "Asistencia", path: "/teacher/attendance" },
         { icon: "planning", label: "Planificación", path: "/teacher/planning" },
+        { icon: "assignments", label: "Actividades", path: "/teacher/activities" },
         { icon: "corrections", label: "Correcciones", path: "/teacher/corrections" },
         { icon: "analytics", label: "Analytics", path: "/teacher/analytics" },
         { icon: "ai", label: "Asistente IA", path: "/teacher/ai" },

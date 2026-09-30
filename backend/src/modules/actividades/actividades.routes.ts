@@ -34,6 +34,12 @@ router.put(
   validateBody(actualizarActividadSchema),
   actividadesController.actualizar
 );
+router.delete(
+  "/actividades/:actividadId",
+  requireAuth,
+  requireRole("PROFESOR"),
+  actividadesController.eliminar
+);
 
 router.get(
   "/actividades/:actividadId/entregas",

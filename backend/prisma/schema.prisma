@@ -288,6 +288,7 @@ model Actividad {
   formatos_permitidos String?       @db.VarChar(100)
   fecha_limite        DateTime
   correccion_manual   Boolean       @default(false)
+  activo              Boolean       @default(true)
   created_at          DateTime      @default(now())
   updated_at          DateTime      @updatedAt
 
