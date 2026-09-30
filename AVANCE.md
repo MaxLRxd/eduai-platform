@@ -147,7 +147,7 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 10. ✅ Persistir el cambio de modo del tutor a mitad de sesión (**hecho, 2026-09-28** — `sincronizarModo()` en `tutor.service.ts` + 4 tests).
 11. ✅ OCR de imágenes y PDF escaneado, CU-P02 (**hecho y verificado E2E, 2026-09-30** — `OcrService` con tesseract + poppler; una imagen subida por el docente llega al RAG y el alumno la recupera).
 12. ✅ Entrega de actividades por el alumno, CU-A03 (**hecho y verificado E2E, 2026-09-30** — ver "Entregas del alumno" abajo).
-13. ⬜ **Configuración de rúbricas por el docente (CU-P04)** — el backend expone `GET/POST /api/materias/:id/rubricas` pero no hay UI para crearlas ni editarlas; hoy solo se leen para la corrección (CU-A07).
+13. ✅ **Configuración de rúbricas por el docente (CU-P04)** (**hecho y verificado E2E, 2026-09-30** — ver "Rúbricas y corrección IA" abajo).
 14. ✅ **Creación de actividades por el docente (CU-P03)** (**hecho y verificado E2E, 2026-09-30** — ver "Gestión de actividades del docente" abajo).
 15. Evaluar Licencias, email, export PDF.
 
@@ -216,6 +216,49 @@ hay entregas. Suite: backend 36/36, frontend 3/3, lint sin errores.
 **Pendiente:** el selector de rúbrica del formulario queda vacío hasta que exista la UI de
 CU-P04, y `esperado` (el contenido clave que debería usar la IA para corregir) todavía no forma
 parte de `Rubrica.criterios`.
+
+## Rúbricas y corrección IA (CU-P04 + CU-A07, 2026-09-30)
+
+La pantalla de correcciones tenía un card "Gestionar rúbricas" con los botones "Editar" y
+"+ Nueva rúbrica" **sin handler**: no había forma de crear ni editar una rúbrica desde la
+interfaz. Peor: `Rubrica.criterios` solo guardaba `{nombre, peso}`, así que la rúbrica le decía
+a la IA cuánto pesaba cada criterio pero **nada sobre qué tenía que encontrar**. El modelo
+corrigía a ciegas.
+
+Qué se agregó:
+
+- **`esperado` en el criterio de rúbrica.** Es el campo que hace útil la rúbrica: el docente
+  escribe qué tiene que aparecer en la entrega y eso viaja al prompt
+  (`ai-services/src/prompts/correccion.py` gained a regla explícita para usarlo).
+- Validación: `esperado` es obligatorio y **los pesos deben sumar 100** (`criteriosSchema`).
+  Ojo con `.trim()`: sin él, `esperado: "   "` pasaba el `min(1)`.
+- `PUT /api/rubricas/:rubricaId` y `DELETE /api/rubricas/:rubricaId`. Borrar una rúbrica en
+  uso por actividades devuelve 409 y pide desvincularla primero.
+- **Desvincular una rúbrica ahora es posible**: `rubrica_id` acepta `null` en la actualización
+  de actividad. Antes no había forma, así que la regla de "sacala primero" era imposible de
+  cumplir y la rúbrica quedaba bloqueada para siempre.
+- **CU-A07 conectado de verdad**: `POST /api/entregas/:entregaId/corregir-ia` (PROFESOR) llama
+  al ai-service con la rúbrica de la actividad y guarda `calificacion_ia` / `feedback_ia`
+  como **borrador** (`revision_tipo: "IA"`, `publicado: false`). El docente igual tiene que
+  revisarla y publicarla; no se publica sola. Si el ai-service no contesta, degrada a 502 en
+  vez de romper la request. Una entrega ya publicada no se puede volver a corregir (409).
+- Frontend: `RubricFormModal` (criterios dinámicos, botón "Repartir 100", indicador de suma y
+  aviso si falta un `esperado`), los botones de la tarjeta ahora funcionan, y un botón
+  "Volver a corregir con IA" en el panel de revisión.
+- `useRubrics` pasó a ser la única fuente de rúbricas: la pantalla de actividades usaba una
+  `queryKey` distinta (`["rubrics", id]` vs `["corrections","rubrics", id]`), así que al
+  borrar una rúbrica el selector de la actividad ofrecía una que ya no existía.
+- 14 tests en `backend/src/tests/rubricas.test.ts` + 2 de desvinculación en
+  `actividades-ciclo.test.ts` + 2 en el lado IA que verifican que `esperado` llegue al prompt.
+
+Verificado E2E contra el stack real: se crea, edita, vincula a una actividad, no se puede
+borrar en uso (409), se desvincula con `rubrica_id: null` y ahí sí se borra; el alumno y el
+docente ajeno reciben 403; y sin clave de IA el flujo degrada a 502 con un mensaje usable.
+
+**Lo que no quedó verificado:** el camino feliz de la corrección con Gemini, porque
+`GEMINI_API_KEY` está vacía en `.env` (el valor es un espacio). El 502 se comprobó de punta a
+punta, y el camino exitoso está cubierto por tests con el cliente del ai-service mockeado. Con
+la clave cargada, `POST /api/entregas/:id/corregir-ia` es el comando a probar.
 
 
 ## Docker verificado (2026-09-28)

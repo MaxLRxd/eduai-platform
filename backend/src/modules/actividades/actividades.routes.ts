@@ -6,6 +6,7 @@ import { env } from "../../config/env";
 import * as actividadesController from "./actividades.controller";
 import {
   actualizarActividadSchema,
+  actualizarRubricaSchema,
   corregirEntregaSchema,
   crearActividadSchema,
   crearRubricaSchema,
@@ -87,6 +88,12 @@ router.patch(
   validateBody(corregirEntregaSchema),
   actividadesController.corregir
 );
+router.post(
+  "/entregas/:entregaId/corregir-ia",
+  requireAuth,
+  requireRole("PROFESOR"),
+  actividadesController.corregirConIA
+);
 
 router.get(
   "/materias/:materiaId/rubricas",
@@ -100,6 +107,19 @@ router.post(
   requireRole("PROFESOR"),
   validateBody(crearRubricaSchema),
   actividadesController.crearRubrica
+);
+router.put(
+  "/rubricas/:rubricaId",
+  requireAuth,
+  requireRole("PROFESOR"),
+  validateBody(actualizarRubricaSchema),
+  actividadesController.actualizarRubrica
+);
+router.delete(
+  "/rubricas/:rubricaId",
+  requireAuth,
+  requireRole("PROFESOR"),
+  actividadesController.eliminarRubrica
 );
 
 export default router;

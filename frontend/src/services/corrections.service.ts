@@ -29,8 +29,35 @@ interface RubricaApi {
   id: string;
   nombre: string;
   descripcion: string | null;
-  criterios: { nombre: string; peso: number }[];
+  criterios: { nombre: string; peso: number; esperado?: string }[];
   actividades: number;
+}
+
+export interface RubricCriterionInput {
+  nombre: string;
+  peso: number;
+  esperado: string;
+}
+
+export interface RubricInput {
+  nombre: string;
+  descripcion?: string;
+  criterios: RubricCriterionInput[];
+}
+
+function toRubric(r: RubricaApi): Rubric {
+  return {
+    id: r.id,
+    name: r.nombre,
+    description: r.descripcion,
+    criteriaCount: (r.criterios ?? []).length,
+    activitiesCount: r.actividades,
+    criterios: (r.criterios ?? []).map((c) => ({
+      name: c.nombre,
+      weight: `${c.peso}%`,
+      expected: c.esperado ?? "",
+    })),
+  };
 }
 
 export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
@@ -52,14 +79,43 @@ export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
 export async function getRubrics(materiaId: string): Promise<Rubric[]> {
   if (!materiaId) return [];
   const data = await api<{ rubricas: RubricaApi[] }>(`/api/materias/${materiaId}/rubricas`);
-  return (data.rubricas ?? []).map((r) => ({
-    id: r.id,
-    name: r.nombre,
-    description: r.descripcion,
-    criteriaCount: (r.criterios ?? []).length,
-    activitiesCount: r.actividades,
-    criterios: (r.criterios ?? []).map((c) => ({ name: c.nombre, weight: `${c.peso}%` })),
-  }));
+  return (data.rubricas ?? []).map(toRubric);
+}
+
+export async function createRubric(materiaId: string, input: RubricInput): Promise<Rubric> {
+  const data = await api<{ rubrica: RubricaApi }>(`/api/materias/${materiaId}/rubricas`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return toRubric(data.rubrica);
+}
+
+export async function updateRubric(rubricId: string, input: Partial<RubricInput>): Promise<Rubric> {
+  const data = await api<{ rubrica: RubricaApi }>(`/api/rubricas/${rubricId}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return toRubric(data.rubrica);
+}
+
+export async function deleteRubric(rubricId: string): Promise<void> {
+  await api(`/api/rubricas/${rubricId}`, { method: "DELETE" });
+}
+
+/** CU-A07: pide al backend una correccion sugerida por IA y la deja como borrador. */
+export async function correctWithAi(entregaId: string): Promise<{ grade: string; feedback: string }> {
+  const data = await api<{
+    entrega: { calificacion_ia: number | null; feedback_ia: string | null };
+  }>(`/api/entregas/${entregaId}/corregir-ia`, { method: "POST" });
+
+  if (data.entrega.feedback_ia == null) {
+    throw new Error("La IA no devolvio feedback para esta entrega");
+  }
+
+  return {
+    grade: data.entrega.calificacion_ia != null ? String(data.entrega.calificacion_ia) : "",
+    feedback: data.entrega.feedback_ia,
+  };
 }
 
 export async function publishCorrection(input: {

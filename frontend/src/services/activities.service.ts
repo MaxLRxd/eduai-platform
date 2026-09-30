@@ -20,7 +20,8 @@ export interface TeacherActivity {
 
 export interface ActivityInput {
   seccion_id: string;
-  rubrica_id?: string;
+  /** `null` desvincula la rubrica de la actividad. */
+  rubrica_id?: string | null;
   nombre: string;
   consigna: string;
   tipo: AssignmentType;

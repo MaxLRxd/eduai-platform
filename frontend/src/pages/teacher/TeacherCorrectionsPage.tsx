@@ -1,18 +1,39 @@
 import React, { useEffect, useState } from "react";
-import { useCorrectionQueue, usePublishCorrection, useRubrics } from "../../hooks/useCorrections";
+import {
+  useCorrectWithAi,
+  useCorrectionQueue,
+  useCreateRubric,
+  useDeleteRubric,
+  usePublishCorrection,
+  useRubrics,
+  useUpdateRubric,
+} from "../../hooks/useCorrections";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
+import { RubricFormModal, errorDeFormulario } from "../../components/teacher/RubricFormModal";
+import { apiErrorMessage } from "../../services/api";
+import type { Rubric } from "../../types/domain";
+import type { RubricInput } from "../../services/corrections.service";
 
 export function TeacherCorrectionsPage(): React.ReactElement {
   const { data: queue, isLoading } = useCorrectionQueue();
   const publish = usePublishCorrection();
+  const correctWithAi = useCorrectWithAi();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [grade, setGrade] = useState("");
   const [feedback, setFeedback] = useState("");
   const [published, setPublished] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const [rubricModal, setRubricModal] = useState<{ open: boolean; rubric: Rubric | null }>({
+    open: false,
+    rubric: null,
+  });
+  const [rubricError, setRubricError] = useState<string | null>(null);
+  const [rubricNotice, setRubricNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (queue && queue.length > 0 && !selectedId) {
@@ -26,11 +47,17 @@ export function TeacherCorrectionsPage(): React.ReactElement {
   const primaryRubric = rubrics?.[0];
   const criteria = primaryRubric?.criterios ?? [];
 
+  const crearRubrica = useCreateRubric(selectedMateriaId);
+  const actualizarRubrica = useUpdateRubric(selectedMateriaId);
+  const eliminarRubrica = useDeleteRubric(selectedMateriaId);
+  const savingRubric = crearRubrica.isPending || actualizarRubrica.isPending;
+
   useEffect(() => {
     if (selected) {
       setGrade(selected.aiGrade !== "—" ? selected.aiGrade : "");
       setFeedback(selected.aiFeedback);
       setPublished(false);
+      setAiError(null);
     }
   }, [selected?.id]);
 
@@ -40,6 +67,41 @@ export function TeacherCorrectionsPage(): React.ReactElement {
       { entregaId: selectedId, grade, feedback },
       { onSuccess: () => setPublished(true) }
     );
+  };
+
+  const handleAiCorrection = (): void => {
+    if (!selectedId) return;
+    setAiError(null);
+    correctWithAi.mutate(selectedId, {
+      onSuccess: (resultado) => {
+        setGrade(resultado.grade);
+        setFeedback(resultado.feedback);
+      },
+      onError: (e) => setAiError(apiErrorMessage(e, "La IA no pudo corregir la entrega")),
+    });
+  };
+
+  const handleSaveRubric = (input: RubricInput): void => {
+    setRubricError(null);
+    const onOk = (): void => {
+      setRubricModal({ open: false, rubric: null });
+      setRubricNotice(rubricModal.rubric ? "Rúbrica actualizada." : "Rúbrica creada.");
+    };
+    const onFail = (e: unknown): void => setRubricError(errorDeFormulario(e));
+
+    if (rubricModal.rubric) {
+      actualizarRubrica.mutate({ rubricId: rubricModal.rubric.id, input }, { onSuccess: onOk, onError: onFail });
+    } else {
+      crearRubrica.mutate(input, { onSuccess: onOk, onError: onFail });
+    }
+  };
+
+  const handleDeleteRubric = (rubrica: Rubric): void => {
+    setRubricNotice(null);
+    eliminarRubrica.mutate(rubrica.id, {
+      onSuccess: () => setRubricNotice(`Rúbrica "${rubrica.name}" eliminada.`),
+      onError: (e) => setRubricError(apiErrorMessage(e, "No se pudo eliminar la rúbrica")),
+    });
   };
 
   return (
@@ -115,6 +177,19 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               <div className="text-xs font-bold text-info mb-1.5 uppercase tracking-wide">🤖 Feedback auto-generado por IA</div>
               <div className="px-3 py-2.5 bg-blue-50 rounded text-[13px] text-text-1 mb-3.5 border border-blue-200">{selected.aiFeedback}</div>
 
+              {!correctWithAi.isSuccess && (
+                <Button
+                  fullWidth
+                  variant="ghost"
+                  className="justify-center mb-3.5"
+                  onClick={handleAiCorrection}
+                  disabled={correctWithAi.isPending}
+                >
+                  {correctWithAi.isPending ? "Corrigiendo con IA…" : "🤖 Volver a corregir con IA"}
+                </Button>
+              )}
+              {aiError && <InfoBox variant="error">{aiError}</InfoBox>}
+
               <div className="mb-3.5">
                 <label htmlFor="grade" className="block text-xs font-semibold text-text-1 mb-1.5">
                   Calificación final
@@ -160,10 +235,11 @@ export function TeacherCorrectionsPage(): React.ReactElement {
                 <div className="border-t border-border mt-4.5 pt-4">
                   <div className="font-bold text-[13px] text-text-1 mb-2.5">📋 Rúbrica asociada: {primaryRubric.name}</div>
                   {criteria.map((c) => (
-                    <div key={c.name} className="flex justify-between items-center py-1.5 border-b border-border last:border-0">
+                    <div key={c.name} className="flex justify-between items-start py-1.5 border-b border-border last:border-0 gap-3">
                       <div>
                         <div className="text-xs font-semibold text-text-1">{c.name}</div>
                         <div className="text-[11px] text-text-3">Peso: {c.weight}</div>
+                        {c.expected && <div className="text-[11px] text-text-2 mt-0.5">Esperado: {c.expected}</div>}
                       </div>
                     </div>
                   ))}
@@ -181,16 +257,42 @@ export function TeacherCorrectionsPage(): React.ReactElement {
             <CardHeader title={<span className="text-primary">📋 Gestionar rúbricas</span>} />
             <div className="flex flex-col gap-2">
               {(rubrics ?? []).map((r) => (
-                <div key={r.id} className="flex justify-between items-center p-2 bg-surface-2 rounded-sm">
-                  <div>
-                    <div className="text-[13px] font-semibold text-text-1">{r.name}</div>
-                    <div className="text-[11px] text-text-3">
-                      {r.criteriaCount} criterios · {r.activitiesCount} actividades
+                <div key={r.id} className="p-2 bg-surface-2 rounded-sm">
+                  <div className="flex justify-between items-center gap-2">
+                    <div>
+                      <div className="text-[13px] font-semibold text-text-1">{r.name}</div>
+                      <div className="text-[11px] text-text-3">
+                        {r.criteriaCount} criterios · {r.activitiesCount} actividades
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setRubricError(null);
+                          setRubricNotice(null);
+                          setRubricModal({ open: true, rubric: r });
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={eliminarRubrica.isPending}
+                        onClick={() => handleDeleteRubric(r)}
+                        aria-label={`Eliminar rúbrica ${r.name}`}
+                      >
+                        🗑️
+                      </Button>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Editar
-                  </Button>
+                  {r.criterios.map((c) => (
+                    <div key={c.name} className="text-[11px] text-text-2 mt-1.5">
+                      · {c.name} ({c.weight})
+                    </div>
+                  ))}
                 </div>
               ))}
               {rubrics !== undefined && rubrics.length === 0 && (
@@ -198,11 +300,37 @@ export function TeacherCorrectionsPage(): React.ReactElement {
                   {selected ? "Esta materia no tiene rúbricas todavía." : "Seleccioná una entrega para ver sus rúbricas."}
                 </div>
               )}
-              <Button className="justify-center mt-1">+ Nueva rúbrica</Button>
+              {rubricError && <InfoBox variant="error">{rubricError}</InfoBox>}
+              {rubricNotice && <InfoBox variant="success">{rubricNotice}</InfoBox>}
+              <Button
+                className="justify-center mt-1"
+                disabled={!selectedMateriaId}
+                onClick={() => {
+                  setRubricError(null);
+                  setRubricNotice(null);
+                  setRubricModal({ open: true, rubric: null });
+                }}
+              >
+                + Nueva rúbrica
+              </Button>
+              {!selectedMateriaId && (
+                <div className="text-[11px] text-text-3 text-center">
+                  Seleccioná una entrega para ver la materia de sus rúbricas.
+                </div>
+              )}
             </div>
           </Card>
         </aside>
       </div>
+
+      <RubricFormModal
+        open={rubricModal.open}
+        rubric={rubricModal.rubric}
+        onClose={() => setRubricModal({ open: false, rubric: null })}
+        onSave={handleSaveRubric}
+        saving={savingRubric}
+        error={rubricError}
+      />
     </div>
   );
 }

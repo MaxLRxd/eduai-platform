@@ -114,6 +114,28 @@ describe("actividades: ciclo de vida del docente", () => {
       expect(res.status).toBe(403);
       expect(prismaMock.actividad.update).not.toHaveBeenCalled();
     });
+
+    it("desvincula la rubrica con null", async () => {
+      const res = await request(server)
+        .put(`/api/actividades/${ACTIVIDAD_ID}`)
+        .set("Authorization", `Bearer ${tokenProfe()}`)
+        .send({ rubrica_id: null });
+
+      expect(res.status).toBe(200);
+      expect(prismaMock.actividad.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ rubrica_id: null }) })
+      );
+    });
+
+    it("rechaza un rubrica_id que no es uuid", async () => {
+      const res = await request(server)
+        .put(`/api/actividades/${ACTIVIDAD_ID}`)
+        .set("Authorization", `Bearer ${tokenProfe()}`)
+        .send({ rubrica_id: "no-es-uuid" });
+
+      expect(res.status).toBe(400);
+      expect(prismaMock.actividad.update).not.toHaveBeenCalled();
+    });
   });
 
   describe("eliminar", () => {

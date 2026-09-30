@@ -3,6 +3,7 @@ import { AppError } from "../../middlewares/error";
 import * as actividadesService from "./actividades.service";
 import type {
   ActualizarActividadInput,
+  ActualizarRubricaInput,
   CorregirEntregaInput,
   CrearActividadInput,
   CrearRubricaInput,
@@ -110,6 +111,43 @@ export async function corregir(
   }
   const entrega = await actividadesService.corregir(req.params.entregaId, req.body, req.user.id);
   res.json({ entrega });
+}
+
+export async function corregirConIA(
+  req: Request<{ entregaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const entrega = await actividadesService.corregirConIA(req.params.entregaId, req.user.id);
+  res.json({ entrega });
+}
+
+export async function actualizarRubrica(
+  req: Request<{ rubricaId: string }, unknown, ActualizarRubricaInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const rubrica = await actividadesService.actualizarRubrica(
+    req.params.rubricaId,
+    req.body,
+    req.user.id
+  );
+  res.json({ rubrica });
+}
+
+export async function eliminarRubrica(
+  req: Request<{ rubricaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const resultado = await actividadesService.eliminarRubrica(req.params.rubricaId, req.user.id);
+  res.json(resultado);
 }
 
 export async function listarPendientes(

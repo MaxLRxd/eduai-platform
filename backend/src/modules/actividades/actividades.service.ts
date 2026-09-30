@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Prisma, Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { corregirEntregaIA } from "../../config/aiClient";
 import { guardarArchivo } from "../../config/storage";
 import { AppError } from "../../middlewares/error";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
@@ -10,6 +11,7 @@ import {
 } from "../materias/materias.service";
 import type {
   ActualizarActividadInput,
+  ActualizarRubricaInput,
   CorregirEntregaInput,
   CrearActividadInput,
   CrearRubricaInput,
@@ -70,6 +72,30 @@ async function obtenerActividadODefecto(actividadId: string) {
   }
 
   return actividad;
+}
+
+async function obtenerRubricaODefecto(rubricaId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rubricaId)) {
+    throw new AppError(404, "Rubrica no encontrada");
+  }
+
+  const rubrica = await prisma.rubrica.findUnique({ where: { id: rubricaId } });
+
+  if (!rubrica) {
+    throw new AppError(404, "Rubrica no encontrada");
+  }
+
+  return rubrica;
+}
+
+async function exigirAccesoAMateria(materiaId: string, usuarioId: string) {
+  const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+
+  if (!perfil) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  return perfil;
 }
 
 export async function listarPorMateria(materiaId: string, usuarioId: string, rol: Rol) {
@@ -490,13 +516,23 @@ export async function listarRubricas(materiaId: string, usuarioId: string) {
     orderBy: { created_at: "asc" },
   });
 
-  return rubricas.map((rubrica) => ({
+  return rubricas.map((rubrica) => toRubricaDto(rubrica));
+}
+
+function toRubricaDto(rubrica: {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  criterios: Prisma.JsonValue;
+  _count: { actividades: number };
+}) {
+  return {
     id: rubrica.id,
     nombre: rubrica.nombre,
     descripcion: rubrica.descripcion,
     criterios: rubrica.criterios as object,
     actividades: rubrica._count.actividades,
-  }));
+  };
 }
 
 export async function crearRubrica(
@@ -521,11 +557,117 @@ export async function crearRubrica(
     include: { _count: { select: { actividades: true } } },
   });
 
-  return {
-    id: rubrica.id,
-    nombre: rubrica.nombre,
-    descripcion: rubrica.descripcion,
-    criterios: rubrica.criterios as object,
-    actividades: rubrica._count.actividades,
-  };
+  return toRubricaDto(rubrica);
+}
+
+export async function actualizarRubrica(
+  rubricaId: string,
+  input: ActualizarRubricaInput,
+  usuarioId: string
+) {
+  const rubrica = await obtenerRubricaODefecto(rubricaId);
+
+  await exigirAccesoAMateria(rubrica.materia_id, usuarioId);
+
+  const actualizada = await prisma.rubrica.update({
+    where: { id: rubricaId },
+    data: {
+      nombre: input.nombre,
+      descripcion: input.descripcion,
+      criterios: (input.criterios as Prisma.InputJsonValue) ?? undefined,
+    },
+    include: { _count: { select: { actividades: true } } },
+  });
+
+  return toRubricaDto(actualizada);
+}
+
+export async function eliminarRubrica(rubricaId: string, usuarioId: string) {
+  const rubrica = await obtenerRubricaODefecto(rubricaId);
+
+  await exigirAccesoAMateria(rubrica.materia_id, usuarioId);
+
+  // Una rubrica en uso no se borra: dejaria actividades sin criterio de correccion.
+  const enUso = await prisma.actividad.count({ where: { rubrica_id: rubricaId } });
+
+  if (enUso > 0) {
+    throw new AppError(
+      409,
+      `No se puede eliminar: la rubrica esta siendo usada por ${enUso} actividad${enUso === 1 ? "" : "es"}. Sacala primero de esas actividades.`
+    );
+  }
+
+  await prisma.rubrica.delete({ where: { id: rubricaId } });
+
+  return { eliminada: true };
+}
+
+/**
+ * CU-A07: le pide al ai-service una correccion sugerida contra la rubrica de la actividad
+ * y guarda el resultado como borrador. No publica: el docente sigue teniendo que
+ * revisarla y publicarla desde la cola de correcciones.
+ */
+export async function corregirConIA(entregaId: string, usuarioId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entregaId)) {
+    throw new AppError(404, "Entrega no encontrada");
+  }
+
+  const entrega = await prisma.entrega.findUnique({ where: { id: entregaId } });
+
+  if (!entrega) {
+    throw new AppError(404, "Entrega no encontrada");
+  }
+
+  if (entrega.publicado) {
+    throw new AppError(409, "La correccion ya fue publicada; no se puede volver a generar");
+  }
+
+  const actividad = await obtenerActividadODefecto(entrega.actividad_id);
+
+  const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
+
+  await exigirAccesoAMateria(materiaId, usuarioId);
+
+  const contenido = [entrega.respuesta_texto, entrega.respuesta_codigo]
+    .filter((texto): texto is string => Boolean(texto?.trim()))
+    .join("\n\n");
+
+  if (!contenido && !entrega.archivo_nombre) {
+    throw new AppError(422, "La entrega no tiene contenido para corregir");
+  }
+
+  // La rubrica de la actividad manda; si no tiene, se deja que el ai-service use la suya.
+  const rubrica = actividad.rubrica_id
+    ? await prisma.rubrica.findUnique({ where: { id: actividad.rubrica_id } })
+    : null;
+
+  const criterios = (rubrica?.criterios as { nombre: string; peso: number; esperado?: string }[] | undefined) ?? [];
+
+  const resultado = await corregirEntregaIA({
+    subject_id: actividad.seccion_id,
+    material_id: actividad.id,
+    consigna: actividad.consigna,
+    entrega: contenido || `[entrega adjunta: ${entrega.archivo_nombre}]`,
+    rubrica: criterios.map((c) => ({
+      nombre: c.nombre,
+      peso: c.peso,
+      esperado: c.esperado ?? "",
+    })),
+  });
+
+  if (!resultado) {
+    throw new AppError(502, "El servicio de IA no pudo corregir la entrega. Reintenta en unos segundos.");
+  }
+
+  const corregida = await prisma.entrega.update({
+    where: { id: entregaId },
+    data: {
+      calificacion_ia: resultado.calificacion,
+      feedback_ia: resultado.feedback,
+      revision_tipo: "IA",
+    },
+    include: { alumno: { select: { id: true, nombre: true, email: true } } },
+  });
+
+  return toEntregaDto(corregida);
 }

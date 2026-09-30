@@ -2,9 +2,8 @@ import React, { useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import { useCourseSections } from "../../hooks/useContent";
 import { useDeleteActivity, useTeacherActivities, useUpdateActivity } from "../../hooks/useActivities";
-import { getRubrics } from "../../services/corrections.service";
+import { useRubrics } from "../../hooks/useCorrections";
 import { apiErrorMessage } from "../../services/api";
-import { useQuery } from "@tanstack/react-query";
 import { CourseFilter } from "../../components/ui/CourseFilter";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -35,11 +34,7 @@ export function TeacherActivitiesPage(): React.ReactElement {
 
   const { data: sections } = useCourseSections(materiaId || null);
   const { data: activities, isLoading } = useTeacherActivities(materiaId || null);
-  const { data: rubrics } = useQuery({
-    queryKey: ["rubrics", materiaId],
-    queryFn: () => getRubrics(materiaId),
-    enabled: Boolean(materiaId),
-  });
+  const { data: rubrics } = useRubrics(materiaId || undefined);
 
   const update = useUpdateActivity();
   const remove = useDeleteActivity();

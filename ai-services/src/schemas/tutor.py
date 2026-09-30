@@ -96,6 +96,9 @@ class MaterialResponse(BaseModel):
 class CriterioRubrica(BaseModel):
     nombre: str = Field(..., min_length=1)
     peso: float = Field(..., ge=0.0, le=100.0)
+    # Lo que el docente espera encontrar en la entrega. Sin esto la rubrica
+    # solo dice cuanto pesa cada criterio y el modelo corrige a ciegas.
+    esperado: str = Field("", description="Contenido clave esperado para el criterio")
 
 
 class CorrectSubmissionRequest(BaseModel):

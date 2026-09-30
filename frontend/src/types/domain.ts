@@ -141,6 +141,8 @@ export interface CorrectionQueueItem {
 export interface RubricCriterion {
   name: string;
   weight: string;
+  /** Lo que el docente espera que aparezca en la entrega. Es lo que usa la IA. */
+  expected: string;
 }
 
 export interface Rubric {

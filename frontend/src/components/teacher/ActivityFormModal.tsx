@@ -116,7 +116,9 @@ export function ActivityFormModal({
 
     const payload = {
       seccion_id: seccionId,
-      rubrica_id: rubricaId || undefined,
+      // Al editar tiene que ir null explícito: sin esto, vaciar el selector no
+      // desvincula la rubrica y sigue dibujada en la actividad.
+      rubrica_id: editing ? rubricaId || null : rubricaId || undefined,
       nombre: nombre.trim(),
       consigna: consigna.trim(),
       tipo,

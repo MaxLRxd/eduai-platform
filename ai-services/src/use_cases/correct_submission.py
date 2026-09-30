@@ -5,17 +5,45 @@ import re
 
 from src.config.settings import settings
 from src.prompts.correccion import SYSTEM_PROMPT as CORRECCION_PROMPT
-from src.schemas.tutor import CorrectSubmissionRequest
+from src.schemas.tutor import CorrectSubmissionRequest, CriterioRubrica
 from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
 from src.services.retrieval_service import RetrievalService
 from src.use_cases._helpers import format_context
 
 DEFAULT_RUBRICA = [
-    {"nombre": "Recuperación del contenido", "peso": 40},
-    {"nombre": "Claridad y organización", "peso": 30},
-    {"nombre": "Cumplimiento de la consigna", "peso": 30},
+    {
+        "nombre": "Recuperación del contenido",
+        "peso": 40,
+        "esperado": "Define correctamente los conceptos principales de la consigna.",
+    },
+    {
+        "nombre": "Claridad y organización",
+        "peso": 30,
+        "esperado": "La respuesta se entiende, esta ordenada y no se contradice.",
+    },
+    {
+        "nombre": "Cumplimiento de la consigna",
+        "peso": 30,
+        "esperado": "Responde todo lo que la consigna pide, sin salirse del tema.",
+    },
 ]
+
+
+def _peso_legible(peso: float) -> str:
+    """60.0 -> '60', 62.5 -> '62.5'. El modelo no necesita decimales de relleno."""
+    return str(int(peso)) if float(peso).is_integer() else str(peso)
+
+
+def _formatear_rubrica(criterios: list) -> str:
+    lineas = []
+    for c in criterios:
+        linea = f"- {c.nombre} (peso {_peso_legible(c.peso)}%)"
+        esperado = (getattr(c, "esperado", "") or "").strip()
+        if esperado:
+            linea += f"\n    Esperado: {esperado}"
+        lineas.append(linea)
+    return "\n".join(lineas)
 
 
 class CorreccionEntregaUseCase:
@@ -35,8 +63,10 @@ class CorreccionEntregaUseCase:
         results = await self.retrieval.search(req.subject_id, embedding, settings.retrieval_top_k)
         context = format_context(results)
 
-        rubrica = [{"nombre": c.nombre, "peso": c.peso} for c in req.rubrica] or DEFAULT_RUBRICA
-        rubrica_txt = "\n".join(f"- {c['nombre']} (peso {c['peso']}%)" for c in rubrica)
+        rubrica = list(req.rubrica) or [
+            CriterioRubrica(**c) for c in DEFAULT_RUBRICA
+        ]
+        rubrica_txt = _formatear_rubrica(rubrica)
 
         user_content = (
             f"CONSIGNA DE LA ACTIVIDAD:\n{req.consigna or '(sin consigna cargada)'}\n\n"

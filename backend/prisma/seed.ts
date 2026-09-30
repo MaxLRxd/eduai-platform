@@ -142,6 +142,8 @@ async function main(): Promise<void> {
     });
 
     // Rúbrica
+    // `esperado` es lo que lee el Auto-correction Engine: sin ese campo la rúbrica
+    // solo dice cuánto pesa cada criterio y el modelo corrige a ciegas.
     const rubrica = await prisma.rubrica.create({
       data: {
         profesor_id: def.profe.perfil.id,
@@ -149,9 +151,21 @@ async function main(): Promise<void> {
         nombre: `Rúbrica de ${def.nombre}`,
         descripcion: "Criterios de evaluación generales",
         criterios: [
-          { nombre: "Cumplimiento", peso: 40, niveles: ["Incompleto", "Parcial", "Completo"] },
-          { nombre: "Corrección", peso: 40, niveles: ["Con errores graves", "Con errores menores", "Sin errores"] },
-          { nombre: "Presentación", peso: 20, niveles: ["Descuidada", "Aceptable", "Excelente"] },
+          {
+            nombre: "Cumplimiento",
+            peso: 40,
+            esperado: `Resuelve todo lo que pide la consigna de ${def.nombre}, sin partes sin desarrollar.`,
+          },
+          {
+            nombre: "Corrección",
+            peso: 40,
+            esperado: "Aplica los conceptos de la cátedra sin errores conceptuales ni de resultados.",
+          },
+          {
+            nombre: "Presentación",
+            peso: 20,
+            esperado: "Entrega prolija, con las consignas citadas y en el formato pedido.",
+          },
         ],
       },
     });
