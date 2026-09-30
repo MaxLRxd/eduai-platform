@@ -4,6 +4,17 @@ FROM python:3.12-slim AS base
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 
+# Tesseract (CU-P02, OCR de imagenes y PDF escaneado) + poppler (pdf2image).
+# spa = espanol, eng = ingles (muchos apuntes mezclan ambos).
+# tesseract-ocr-all-tr / poppler-utils son las imagenes que exponen ambos binarios.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-spa \
+        tesseract-ocr-eng \
+        poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 # --- Desarrollo: hot reload ---
 FROM base AS dev
 RUN python -m venv /app/.venv

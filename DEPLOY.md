@@ -55,7 +55,7 @@ Y el que domina es el `ai-service`, porque ya de por sí es lento: con el modelo
 `POST /tutor/resumen` tarda **26,7 s** medidos. Sumale el arranque del contenedor Python
 (imports de `google-genai`, `fastapi`, `pinecone`...) y el primer request del día puede caer
 fácilmente en el minuto.
-
+si 
 **Consecuencia práctica:** el cold start del `ai-service` es el que hay que evitar, no el del frontend.
 
 ### Qué proveedores lo resuelven bien

@@ -11,3 +11,8 @@ pypdf
 python-docx
 python-pptx
 python-multipart
+# CU-P02 OCR: pytesseract habla con el binario tesseract, pdf2image rasteriza el
+# PDF a imagenes con poppler. Pillow ya viene como dependencia de pdf2image.
+pytesseract
+pdf2image
+Pillow

@@ -51,7 +51,7 @@ Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `r
 | Corrección de entregas (CU-P05) | `POST /tutor/corregir-entrega` | OK — frontend `TeacherCorrectionsPage` |
 | Depurar prompt (CU-SYS01) | `POST /tutor/depurar` | OK |
 | Indexar/borrar material RAG | `POST /rag/material` + `DELETE` + `POST /rag/material/archivo` | OK — texto y archivos (PDF/DOCX/PPTX/TXT) desde 2026-09-25 |
-| OCR de imágenes (CU-P02) | — | ❌ **No existe** (`ocr_service.py` está en `IMPLEMENTATION.md` pero nunca se implementó). Las imágenes se suben pero no se indexan |
+| OCR de imágenes (CU-P02) | `POST /rag/material/archivo` (vía `DocumentService`) | ✅ **Implementado 2026-09-30** — `OcrService` con tesseract: extrae texto de JPG/PNG/GIF/WEBP/BMP/TIFF y de **PDF escaneados** (rasteriza con poppler y transcribe página por página, marcando `[pagina N]`). El backend ya no saltea `IMAGEN` al indexar, así que una foto de apunte entra al RAG. Sin tesseract el servicio degrada a texto vacío en vez de romper el arranque |
 
 Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTutor`, `streamTutor`, `indexMaterial`, `indexArchivo`, `generarMaterialDocente`, `corregirEntregaIA`, `resumirDocumento`, `generarExamen`. Todas con degradación elegante si `AI_SERVICE_URL` no está configurado (devuelven `null` → 501/502 con mensaje claro).
 
@@ -97,7 +97,25 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 
 - **UI del alumno:** ✅ **modo socrático y pistas tienen UI dedicada (2026-09-27).** El selector de modo vive en `StudentCourseDetailPage.tsx` y el `modo` viaja en el body de `POST /mensajes` y del stream. El **resumen de documentos (CU-A05) también quedó cableado** con panel propio (`ResumenPanel.tsx`).
 - **Simulacro de examen (CU-A08):** ✅ **cableado (2026-09-27).** El botón viejo que mandaba un prompt de texto al chat se reemplazó por `SimulacroPanel.tsx`, que llama a `POST /api/materias/:materiaId/tutor/examen` con cantidad y dificultad elegibles.
-- **OCR de imágenes (CU-P02):** no implementado. `ocr_service.py` aparece en `IMPLEMENTATION.md` pero nunca existió. El tipo `IMAGEN` existe en el dominio y los archivos se suben, pero **no se indexan** al vector store.
+- **OCR de imágenes (CU-P02):** ✅ **hecho (2026-09-30).** `src/services/ocr_service.py`.
+  - Dependencias de sistema en el `Dockerfile`: `tesseract-ocr`, `tesseract-ocr-spa`, `tesseract-ocr-eng`
+    y `poppler-utils`. Python: `pytesseract`, `pdf2image`, `Pillow`.
+  - **PDF escaneado:** si `pypdf` saca menos de 24 caracteres, se considera escaneado y se
+    rasterizan hasta 10 páginas (`pdf2image` + poppler) y se transcriben.
+  - **SVG queda fuera a propósito**: es XML vectorial, PIL no lo renderiza. Antes de este cambio
+    el SVG caía al `decode` final y **el XML crudo terminaba indexado en el vector store**; ahora
+    devuelve vacío. Lo mismo para video.
+  - **Filtro de binarios:** el fallback a `decode("utf-8")` ahora rechaza texto con >5% de
+    caracteres de reemplazo o de control, así que un `.bin` o `.zip` desconocido no se indexa.
+  - Idioma: `spa+eng`. Testado en Docker con tesseract 5.5.0: una imagen de apunte y el mismo
+    contenido en JPG dan 206 caracteres, y el PDF escaneado 217. El texto llega al chunking
+    correctamente (1 chunk listo para embeber).
+  - ✅ **E2E verificado (2026-09-30)** con `GEMINI_API_KEY` puesta: un docente sube un PNG por
+    `POST /api/secciones/:id/contenidos/archivo` → `tipo=IMAGEN`, `rag_indexado=True` en 1,3 s.
+    Se puso una marca única (`39CECD`) solo en esa imagen y el alumno la recupera por RAG con
+    score 0.808. La cadena completa funciona: imagen → OCR → chunks → embeddings → pgvector → RAG.
+  - Tests: 21 casos nuevos en `test_ocr_service.py` (motor ausente, formatos, limpieza, binarios).
+    Ojo: **mocks**ean tesseract, así que pasan aunque falte el binario. La prueba real es el E2E.
 - **Registro de sesiones IA:** ✅ **corregido (2026-09-28).** El `modo` viaja en **cada** request
   y el backend lo prioriza sobre el de la sesión (`modo ? modoAMin(modo) : modoAMin(sesion.modo)`),
   así que la IA siempre respondía en el modo pedido — el chat funcionaba bien. Lo que quedaba
@@ -127,7 +145,8 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 8. **Cubrir el backend con tests** — 2 archivos para 17 módulos; el de tutorTools cubre el flujo nuevo, el resto sigue sin tests.
 9. ✅ Arreglar los scripts Windows-only de la raíz (**hecho, 2026-09-28** — `scripts/venv.mjs` + `scripts/venv-setup.mjs`).
 10. ✅ Persistir el cambio de modo del tutor a mitad de sesión (**hecho, 2026-09-28** — `sincronizarModo()` en `tutor.service.ts` + 4 tests).
-10. Evaluar Licencias, email, export PDF y OCR.
+11. ✅ OCR de imágenes y PDF escaneado, CU-P02 (**hecho y verificado E2E, 2026-09-30** — `OcrService` con tesseract + poppler; una imagen subida por el docente llega al RAG y el alumno la recupera).
+12. Evaluar Licencias, email, export PDF.
 
 ## Docker verificado (2026-09-28)
 

@@ -320,8 +320,16 @@ nadie veía porque el script no existía. Los 3 fixes:
   el mismo patrón que ya usaba `admin.controller.ts:14`
 - `types/express.d.ts:4` — `eslint-disable` directive que ya no hacía falta
 
-> **Verificación actual:** backend 18 tests · ai-services 45 (+1 skipped) ·
+> **Verificación actual:** backend 18 tests · ai-services 66 (+1 skipped) ·
 > frontend 3. `npm run lint` y `npm test` de la raíz funcionan.
+>
+> **OCR implementado (CU-P02, 2026-09-30):** `OcrService` con tesseract + poppler
+> (`ocr_service.py`). Extrae texto de imágenes (jpg/png/gif/webp/bmp/tiff) y de
+> **PDF escaneados**, que antes no se indexaban. El backend dejó de saltear
+> `IMAGEN` en la indexación RAG. Se corrigió de paso un bug donde el SVG y los
+> binarios desconocidos terminaban indexados como texto. E2E verificado: una
+> imagen subida por el docente llega al vector store y el alumno la recupera
+> por RAG.
 >
 > **`docker compose build` + `up -d` verificados el 2026-09-28**: los 5 servicios
 > levantan y responden. Se encontraron y corrigieron 3 bugs que ni el CI ni el

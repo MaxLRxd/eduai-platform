@@ -208,7 +208,9 @@ export async function crearArchivo(
   });
 
   let ragIndexado = false;
-  if (tipo !== "IMAGEN" && tipo !== "VIDEO") {
+  // VIDEO sigue sin indexarse: el RAG trabaja con texto. IMAGEN si se indexa
+  // desde CU-P02, porque el ai-service le pasa OCR antes de embeber.
+  if (tipo !== "VIDEO") {
     const resultado = await indexArchivo(
       seccion.materia_id,
       contenido.id,
