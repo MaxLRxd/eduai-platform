@@ -1,10 +1,163 @@
 # EduAI Platform — Avance del Proyecto
 
-> Snapshot: 2026-09-27 · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+> Snapshot: **2026-09-30** · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
 >
-> **Mapa de arquitectura para el equipo:** `graphify-out/README.md` (arquitectura real, god nodes, puntos de extensión e inventario de pendientes **verificado contra el código**).
+> **Este documento es un traspaso.** Lo que importa para seguir trabajando está en
+> [QUÉ FALTA](#qué-falta). Abajo queda el detalle técnico de lo ya hecho y por qué.
+>
+> **Mapa de arquitectura para el equipo:** `graphify-out/README.md` (arquitectura real, god nodes,
+> puntos de extensión e inventario de pendientes verificado contra el código).
 
-## Stack
+---
+
+# QUÉ FALTA
+
+Todo lo que está ticked (✅) en este documento **ya está implementado y verificado**. Esta sección
+es la lista real de trabajo abierto, ordenada por prioridad. Nada de acá está empezado salvo lo
+indicado.
+
+## 🔴 BLOQUEA LA ENTREGA
+
+### 1. Deploy a cloud — decisión pendiente de reunión
+Es **lo único que bloquea la entrega**. No es un bug, es una decisión de equipo.
+Todo está analizado y escrito en **`DEPLOY.md`**:
+- Comparativa de proveedores (Fly.io / Railway / Render+Vercel / VM propia).
+- La trampa de los **3 cold starts** (3 servicios arrancando en cadena; el molesto es el del
+  `ai-service`, que ya tarda 26 s con el modelo caliente).
+- Requisito de que **la DB y el `ai-service` estén en la misma región**.
+- 7 preguntas abiertas + checklist de lo que falta antes de deployar.
+- **Postgres + `pgvector` sigue sin definir.** Sin esto no hay dónde correr la app en prod.
+
+## 🟠 FUNCIONALIDAD QUE FALTA
+
+### 2. Notificaciones — el frontend no existe (el backend sí)
+El backend está **completo**: 4 endpoints montados en `backend/src/app.ts:27`, todos con
+`requireAuth`, con validación de ownership y de formato UUID.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/notificaciones` (soporta `?noLeidas=true`) | lista las del usuario |
+| GET | `/api/notificaciones/no-leidas` | contador para el badge |
+| PATCH | `/api/notificaciones/leer-todas` | marcar todas leídas |
+| PATCH | `/api/notificaciones/:notificacionId/leida` | marcar una |
+
+Se generan notificaciones reales desde `actividades.service.ts:332,449` y
+`messages.service.ts:119` (vía `crearNoLeidas`).
+
+**Lo que falta es el consumidor, y es el único trabajo de esta entrada:**
+- `frontend/src/components/layout/Header.tsx:26-32` tiene un `<button aria-label="Notificaciones">`
+  con `Icon name="bell"` y **un punto rojo hardcodeado en la línea 31**. Sin `onClick`, sin estado,
+  sin fetch. Hay que reemplazar ese punto por el contador real.
+- No existe `frontend/src/services/notificaciones.service.ts` ni `hooks/useNotificaciones.ts`.
+- No hay ruta de notificaciones en `frontend/src/App.tsx`. Falta el panel o página de lista con
+  "marcar como leída".
+- `frontend/src/router/navConfig.ts:18` tiene un comentario que lo admite: *"quedan para uso
+  dinámico cuando haya una fuente de notificaciones"*.
+- Ojo: las tarjetas de preferencias de notificación en `StudentProfilePage.tsx:83` y
+  `TeacherProfilePage.tsx:86` son **estáticas, sin conexión al backend**. No cuentan como esto.
+
+### 3. Email — no existe nada
+`EMAIL_API_KEY` y `EMAIL_FROM` están declarados en `.env` y `.env.example` y **no tienen ningún
+consumidor**: cero resultados de `EMAIL` en `backend/src` y en `ai-services/src`. No hay
+`nodemailer`, `sendgrid`, `resend` ni `smtplib` en ningún `package.json` / `requirements.txt`.
+El módulo de notificaciones es **solo in-app**. Falta elegir proveedor y agregar el canal.
+
+### 4. R2 / object storage — no existe cliente S3
+Cero clientes S3-compatible: no hay `aws-sdk`, `@aws-sdk/client-s3`, `minio` ni `boto3` en ningún
+`package.json` / `requirements.txt`. Estado actual:
+- `backend/src/config/env.ts:9` declara `R2_ACCESS_KEY_ID` (zod, opcional) y **nadie lo lee**.
+  `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT` y `R2_BUCKET_NAME` no están ni en el schema.
+- Declaraciones huérfanas en `.env.example:26-30`, `.env:23-26` y `backend/.env.example:7`.
+- Los uploads usan `multer.memoryStorage()` (`contenidos.routes.ts:11-12` y
+  `actividades.routes.ts:18-19`) y después se escriben a disco con `guardarArchivo()` de
+  `config/storage.ts`.
+
+**Falta:** cliente S3 + enrutar el multer a ese storage. La interfaz `storage.ts` ya está
+separada para que el cambio sea un swap. Es parte del paso de deploy cloud (ver entrada 1).
+
+### 5. Export PDF de reportes
+**No existe generación de PDF en el proyecto.** No hay `pdfkit`, `jspdf`, `puppeteer`,
+`playwright` ni `weasyprint` instalado. Lo único con "pdf" es **lectura** (OCR en
+`ai-services/src/services/ocr_service.py`) y el enum de tipos de contenido.
+El export real es **solo CSV**: `GET /api/admin/reports/:type/export` →
+`admin.service.ts:537-547` (`exportarReporteCsv`), consumido por
+`frontend/src/services/adminReports.service.ts:31-41`.
+
+### 6. Branding — 2 detalles chicos (la pantalla YA existe)
+Ojo, esto **ya está implementado**: pantalla `frontend/src/pages/admin/AdminSettingsPage.tsx`
+(nombre de institución, colores, logo, botón "Aplicar apariencia"), ruta `/admin/settings` en
+`App.tsx:315`, service `adminSettings.service.ts` con `getBranding()`/`saveBranding()`, hook
+`useAdminSettings` con invalidación de query, y endpoint `GET/PUT /api/admin/branding`
+(`config.routes.ts:9,10`, montado en `app.ts:36`).
+
+Lo que falta son solo these dos detalles:
+- **Presets de color hardcodeados en el front:** `adminSettings.service.ts:3,29-31` importa
+  `MOCK_COLOR_PRESETS` de `frontend/src/data/mock/adminSettings.mock.ts:3` y lo devuelve con
+  `Promise.resolve(...)`. No hay endpoint de presets en backend (cero resultados de `presets`).
+- **El logo se manda como data URL base64** (`AdminSettingsPage.tsx:28-35` usa
+  `FileReader.readAsDataURL` y lo manda directo en el PUT), no se sube a storage. Ver entrada 4.
+
+## 🟡 DEUDA TÉCNICA Y RIESGOS CONOCIDOS
+
+### 7. Cobertura de tests del frontend — casi nula
+`frontend` tiene **1 solo archivo de tests**: `src/tests/login.test.tsx` con **3 tests**. No hay
+ningún test de páginas, hooks ni servicios. Es la deuda de cobertura más grande del proyecto,
+por encima de la del backend (que pasó de 2 archivos/18 tests a 5 archivos/56 tests).
+
+### 8. `mensajeIA` no persiste el modo con el que respondió
+El `modo` ya viaja en cada request y el backend lo prioriza sobre el de la sesión, y
+`sincronizarModo()` persiste el cambio de modo a mitad de sesión (hecho 2026-09-28, con 4 tests).
+Lo que queda desalineado es el registro: **`sesionIA.modo` y `mensajeIA` siguen sin guardar el
+modo con el que se respondió cada mensaje**, así que los analytics por modo y el fallback cuando
+un cliente omite `modo` no son del todo confiables. **Requiere una migración de Prisma.**
+
+### 9. El índice HNSW nunca se crea
+`EMBEDDING_DIMENSIONS=3072` pero pgvector no indexa más de 2000 dimensiones con HNSW. La
+**búsqueda funciona igual** (escaneo secuencial) y el examen recupera material correctamente,
+pero **degrada con volumen**. El warning ahora dice la causa y el arreglo. Arreglo de fondo: bajar
+`EMBEDDING_DIMENSIONS` a ≤2000 y **reindexar el material**, o migrar a un índice IVF. No se hizo.
+
+### 10. Cambiar de vector store no migra datos
+pgvector (`ai_materials`) y Pinecone son índices independientes: al switchear hay que **reindexar
+todo el material** a mano.
+
+### 11. `pinecone_service.py` bloquea el event loop
+Usa el cliente **síncrono** de Pinecone dentro de métodos `async`. Aceptable para probar; revisar
+si se apuesta a Pinecone en prod.
+
+### 12. Gemini intermitente
+`gemini-3.6-flash` (y 3.7/3.8/3.5-flash, `flash-latest`) devuelven **503 "high demand"** en cuentas
+gratuitas; `gemini-2.5-flash` da 404. Los que responden son `gemini-3.5-flash-lite` y
+`gemini-3.1-flash-lite` (default: **`gemini-3.5-flash-lite`**). El 503 es ** intermitente, no
+permanente**, así que lo que hace confiable la app es el **retry**, no el cambio de modelo.
+Mitigado con backoff exponencial (ver más abajo); el riesgo residual sigue latente.
+
+### 13. `CHROMA_URL` es una variable muerta
+Está en el schema de `backend/src/config/env.ts:6` y en dos documentos, y **no se usa en ninguna
+línea de código**. No está en `.env` ni en `.env.example` (el doc anterior decía que sí, mal).
+Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
+
+### 14. Faltan algunos E2E
+- El **camino feliz de la corrección con Gemini** ya se verificó (ver entrada P04/A07 abajo).
+- Lo que **no** se ejecutó nunca es el **E2E del OCR de PDF escaneado** (sí está verificado el de
+  imagen, y los tests del servicio mockean tesseract, así que pasan aunque falte el binario).
+
+---
+
+## PRÓXIMOS PASOS SUGERIDOS (resumen accionable)
+
+1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
+2. 🟠 **Badge + panel de notificaciones** en el front (entrada 2) — es el trabajo más concreto y
+   con el backend ya listo.
+3. 🟠 Elegir proveedor de **email** y agregar el canal (entrada 3).
+4. 🟠 **Cliente S3 + multer a storage** cuando se defina el deploy (entrada 4).
+5. 🟡 Tests del **frontend** (entrada 7) y migración de `modo` en `mensajeIA` (entrada 8).
+6. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
+7. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
+
+---
+
+## STACK
 
 - **Frontend:** React 18 + TypeScript + Vite + Tailwind + @tanstack/react-query
 - **Backend:** Node + Express + TypeScript + Prisma (PostgreSQL) + JWT (access/refresh)
@@ -20,8 +173,9 @@
 - Docente: asistencias
 - Docente: correcciones
 - Docente: plan de materia
-- Docente: contenido de las materias (solo texto, ver pendientes)
-- Alumno: entregas, enrolamiento a materias (claves), perfil, progreso
+- Docente: contenido de las materias (subida de archivos real, ver "Subida y almacenamiento")
+- Docente: **actividades** (crear/editar/archivar/borrar — CU-P03) y **rúbricas** (CU-P04)
+- Alumno: entregas (CU-A03), enrolamiento a materias (claves), perfil, progreso
 - Alumno: contenido de las materias + chat del Tutor IA contextual por materia
 - Analytics: conexión con backend
 
@@ -31,11 +185,11 @@
 - **Materias:** listado, alta, edición, asignación de docente — `/api/admin/materias` (GET/POST/PUT) y `/:id/profesores`
   - Fix: `profesor_id` agregado al DTO de usuario (la asignación usa la tabla `Profesor`, no el id de usuario)
 - **Claves de matriculación:** listado con inscriptos, generación y revocación — `GET/POST /api/admin/enrollment-keys` + `PATCH /:id/revocar`
-- **Ajustes/Branding:** `GET/PUT /api/admin/branding` — nombre y colores de la institución
-  - Los presets de color siguen siendo estáticos de la UI (`MOCK_COLOR_PRESETS`), no viven en backend
+- **Ajustes/Branding:** `GET/PUT /api/admin/branding` — pantalla `AdminSettingsPage` + hook reales.
+  - Pendiente: presets de color estáticos de la UI (`MOCK_COLOR_PRESETS`) y logo como data URL (ver entrada 6)
 - **Reportes:** `GET /api/admin/reports` — 6 reportes con datos reales (asistencia, notas, tutor IA, retención, MAU, resumen ejecutivo)
-  - Exportación CSV real por reporte: `GET /api/admin/reports/:type/export`
-- **Logo/escudo:** subida por data URL (migración `logo_url` → TEXT), preview y "quitar logo"
+  - Exportación CSV real por reporte: `GET /api/admin/reports/:type/export` (PDF falta, entrada 5)
+- **Logo/escudo:** preview y "quitar logo" funcionan; la subida va como data URL (migración `logo_url` → TEXT)
 
 ## Servicio de IA (ai-service) — integrado
 
@@ -48,289 +202,220 @@ Endpoint y use case por cada caso de uso (el `main.py` monta `tutor_router` + `r
 | Simulacro de examen (CU-A08) | `POST /tutor/examen` | ✅ **Cableado desde 2026-09-27** — `POST /api/materias/:materiaId/tutor/examen` (solo ALUMNO + inscripción, usa RAG de la materia) con panel propio en `SimulacroPanel.tsx`: cantidad + dificultad, respuestas ocultas hasta que las pide |
 | Modo estudio socrático (CU-A09) / pistas (CU-A06) | modos del `ask_tutor` (`MODE_PROMPTS`) | ✅ **UI dedicada desde 2026-09-27** — selector de modo en el chat del alumno (`StudentCourseDetailPage.tsx`), el `modo` viaja en el body del POST y del stream |
 | Generar material docente (CU-P10) | `POST /tutor/generar-material` | OK — frontend `TeacherAIPage` |
-| Corrección de entregas (CU-P05) | `POST /tutor/corregir-entrega` | OK — frontend `TeacherCorrectionsPage` |
+| Corrección de entregas con IA (CU-A07) | `POST /tutor/corregir-entrega` | ✅ **Conectado a producción (2026-09-30)** — `POST /api/entregas/:entregaId/corregir-ia` (PROFESOR) guarda `calificacion_ia`/`feedback_ia` como borrador (`revision_tipo: "IA"`, `publicado: false`). El docente revisa y publica; no se publica sola |
 | Depurar prompt (CU-SYS01) | `POST /tutor/depurar` | OK |
 | Indexar/borrar material RAG | `POST /rag/material` + `DELETE` + `POST /rag/material/archivo` | OK — texto y archivos (PDF/DOCX/PPTX/TXT) desde 2026-09-25 |
-| OCR de imágenes (CU-P02) | `POST /rag/material/archivo` (vía `DocumentService`) | ✅ **Implementado 2026-09-30** — `OcrService` con tesseract: extrae texto de JPG/PNG/GIF/WEBP/BMP/TIFF y de **PDF escaneados** (rasteriza con poppler y transcribe página por página, marcando `[pagina N]`). El backend ya no saltea `IMAGEN` al indexar, así que una foto de apunte entra al RAG. Sin tesseract el servicio degrada a texto vacío en vez de romper el arranque |
+| OCR de imágenes (CU-P02) | `POST /rag/material/archivo` (vía `DocumentService`) | ✅ **Implementado 2026-09-30** — `OcrService` con tesseract: extrae texto de JPG/PNG/GIF/WEBP/BMP/TIFF y de **PDF escaneados** (rasteriza con poppler y transcribe página por página, marcando `[pagina N]`). El backend ya no saltea `IMAGEN` al indexar. Sin tesseract el servicio degrada a texto vacío en vez de romper el arranque |
 
-Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTutor`, `streamTutor`, `indexMaterial`, `indexArchivo`, `generarMaterialDocente`, `corregirEntregaIA`, `resumirDocumento`, `generarExamen`. Todas con degradación elegante si `AI_SERVICE_URL` no está configurado (devuelven `null` → 501/502 con mensaje claro).
+Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTutor`, `streamTutor`,
+`indexMaterial`, `indexArchivo`, `generarMaterialDocente`, `corregirEntregaIA`, `resumirDocumento`,
+`generarExamen`. Todas con degradación elegante si `AI_SERVICE_URL` no está configurado (devuelven
+`null` → 501/502 con mensaje claro).
 
-> Los 4 endpoints de `tutor/` del `tutor_router` de Python están proxeyaados desde Node. `resumen` y `examen` se agregaron el 2026-09-27 con sus tests en `backend/src/tests/tutor-tools.test.ts` (11 casos: pertenencia del contenido a la materia, binarios sin texto, no inscripto, rol docente, 502 de la IA, validación del body).
+> Los endpoints de `tutor/` del `tutor_router` de Python están proxeyaados desde Node. `resumen` y
+> `examen` se agregaron el 2026-09-27 con sus tests en `backend/src/tests/tutor-tools.test.ts`
+> (15 casos: pertenencia del contenido a la materia, binarios sin texto, no inscripto, rol docente,
+> 502 de la IA, validación del body).
 
-## FALTA / PENDIENTE
+---
 
-### 1. Subida y almacenamiento de archivos (✅ hecho 2026-09-25)
+# Detalle de lo hecho (contexto técnico)
 
-- **Endpoint multipart real en backend:** `POST /api/secciones/:seccionId/contenidos/archivo` con `multer` (memoryStorage, límite `MAX_FILE_SIZE_MB`=50 por defecto) y `requireRole("PROFESOR")` — `contenidos.routes.ts`.
-- **Destino:** disco local en `UPLOAD_DIR` (default `data/uploads`, gitignoreado; en compose `/data/uploads` con volumen `uploads`) — `config/storage.ts` (sanitiza nombre, `archivo_url` = `/uploads/<nombre>`).
-- **Descarga/visualización:** `app.use("/uploads", express.static(...))` → los `archivo_url` ahora sirven contenido real. El frontend muestra el material como link descargable.
-- **Tipos soportados:** PDF, DOCX/PPTX, TXT/MD, imágenes (JPG/PNG/GIF/WEBP/SVG) y video (MP4/MOV/WEBM); inferidos por extensión (`inferirTipo`). Formato no soportado → 400.
-- **Errores de multer** (archivo muy grande) resueltos como 413/400 claros vía `errorHandler`.
-- **Seed:** ya no usa URLs falsas `/materiales/<n>/guia.pdf` (404); ahora crea contenidos TEXTO reales indexables.
-- **R2:** sigue sin consumidor; la decisión queda para el paso de deploy cloud (el interfaz `storage.ts` está listo para intercambiarlo por un cliente S3-compatible).
+## Subida y almacenamiento de archivos (✅ 2026-09-25)
 
-### 2. RAG para archivos (✅ hecho 2026-09-25)
+- **Endpoint multipart real:** `POST /api/secciones/:seccionId/contenidos/archivo` con `multer`
+  (memoryStorage, `MAX_FILE_SIZE_MB`=50) y `requireRole("PROFESOR")` — `contenidos.routes.ts`.
+- **Destino:** disco local en `UPLOAD_DIR` (default `data/uploads`, gitignoreado; en compose
+  `/data/uploads` con volumen `uploads`) — `config/storage.ts` (sanitiza nombre, `archivo_url` =
+  `/uploads/<nombre>`). `UPLOAD_DIR` se resuelve en `storage.ts:5` desde `env.UPLOAD_DIR`.
+- **Descarga/visualización:** `app.use("/uploads", express.static(...))`.
+- **Tipos soportados:** PDF, DOCX/PPTX, TXT/MD, imágenes (JPG/PNG/GIF/WEBP/SVG) y video
+  (MP4/MOV/WEBM), inferidos por extensión. Formato no soportado → 400.
+- **Errores de multer** (archivo muy grande) resueltos como 413/400 vía `errorHandler`.
+- **Seed:** usa contenidos TEXTO reales indexables (ya no URLs falsas `/materiales/<n>/guia.pdf`).
+- **R2:** sigue sin consumidor (ver entrada 4 de QUÉ FALTA).
 
-- **Nuevo endpoint en ai-service:** `POST /rag/material/archivo` (multipart: `subject_id`, `material_id`, `archivo`) que extrae texto con `DocumentService` (ya cableado en app.state) y lo indexa con `IndexMaterialUseCase` — `rag_router.py`.
-- **Backend:** `aiClient.indexArchivo` envía el binario como FormData; `contenidos.service.crearArchivo` crea el contenido e intenta indexar (degradación elegante si `AI_SERVICE_URL` no está configurado). Imágenes/video se guardan pero no se indexan.
-- **UI docente:** `TeacherContentPage` sube archivos de verdad (FormData vía `useUploadMaterialFile`), muestra estado "⏳ RAG/🤖 RAG/— RAG" y permitir descargar el material. Se eliminó el alert "pendiente".
+## RAG para archivos (✅ 2026-09-25)
+
+- **Endpoint en ai-service:** `POST /rag/material/archivo` (multipart: `subject_id`, `material_id`,
+  `archivo`) que extrae texto con `DocumentService` y lo indexa con `IndexMaterialUseCase` —
+  `rag_router.py`.
+- **Backend:** `aiClient.indexArchivo` manda el binario como FormData;
+  `contenidos.service.crearArchivo` crea el contenido e intenta indexar (degradación elegante).
+  Imágenes/video se guardan pero no se indexan (salvo IMAGEN con OCR, ver P02).
+- **UI docente:** `TeacherContentPage` sube archivos reales (FormData), muestra estado
+  "⏳ RAG/🤖 RAG/— RAG" y permite descargar.
 - **Tests:** `test_router.py` cubre el endpoint de archivo (indexación + archivo vacío).
-
-### 3. Configuración / infra / deploy
-
-- **Deploy cloud:** ⬜ **abierto, requiere reunión (2026-09-28).** Es lo único que bloquea la
-  entrega. Se escribió **`DEPLOY.md`** como documento de decisión para discutirlo en equipo:
-  comparativa de proveedores (Fly.io / Railway / Render+Vercel / VM propia), la trampa de los
-  **3 cold starts** (3 servicios = 3 arranques en cadena; el que molesta es el del `ai-service`,
-  que ya tarda 26 s con el modelo caliente), el requisito de que **DB y `ai-service` estén en la
-  misma región**, 7 preguntas abiertas y un checklist de lo que falta antes de deployar.
-  Postgres + `pgvector` **queda sin definir**.
-- **Bug en `backend/Dockerfile` (target `prod`):** ~~`CMD` llama `npm run db:deploy` que **no existe**~~ → ✅ **resuelto (2026-09-17):** se agregó el script `db:deploy` = `prisma migrate deploy`, el CMD pasó a `sh -c "npm run db:deploy && node dist/index.js"` (el exec-form con `&&` no funciona sin shell) y el CLI `prisma` se movió de `devDependencies` a `dependencies` para que `npm ci --omit=dev` lo incluya en la imagen prod.
-- **`ai-service` exige `GEMINI_API_KEY` al arrancar** → ✅ **resuelto (2026-09-17):** `gemini_api_key` ahora tiene default `""` y el cliente se crea **de forma perezosa** (`genai.get_genai_client` + propiedad `client` en `LLMService`/`EmbeddingsService`). Sin clave el servicio bootea, `/healthz` y `/tutor/depurar` funcionan, y el primer uso del LLM/embeddings falla con `502` y mensaje claro (`GEMINI_API_KEY no configurada…`).
-- **`pinecone_service.py`:** usa el cliente síncrono de Pinecone dentro de métodos `async` (bloquea el event loop). Aceptable para probar, revisar si se apuesta a Pinecone en prod.
-- **Cambiar de vector store no migra datos:** pgvector (`ai_materials`) y Pinecone son índices independientes; al switchear hay que re-indexar el material.
-- **CI:** ✅ **arreglado (2026-09-27).** El pipeline estaba roto en 2 de 3 jobs: `backend` corría `npm run lint` sin que ese script existiera (ni `eslint`/`typescript-eslint` en devDeps), y `ai-service` corría `ruff check src tests` sobre un directorio inexistente. Agregado el `lint` del backend, sus devDeps, y corregido el path de ruff. Ahora `npm run lint` y `npm test` de la raíz funcionan. Opcional: agregar un job de `docker compose build`.
-- **Scripts cross-platform:** ✅ **arreglados 2026-09-28.** `dev:local`, `ai:setup` y `ai:test` ya no hardcodean `.venv\Scripts\`: delegan en `scripts/venv.mjs` y `scripts/venv-setup.mjs`, que resuelven `Scripts/` vs `bin/` según `process.platform`. Verificado levantando uvicorn en Windows; en Linux/macOS eligen `bin/`.
-- **Tests del backend: 2 archivos** (`health.test.ts`, `tutor-tools.test.ts`) con 18 tests para 17 módulos. Sigue siendo la deuda de cobertura más grande del proyecto.
-
-### 4. IA — modos y flujo
-
-- **UI del alumno:** ✅ **modo socrático y pistas tienen UI dedicada (2026-09-27).** El selector de modo vive en `StudentCourseDetailPage.tsx` y el `modo` viaja en el body de `POST /mensajes` y del stream. El **resumen de documentos (CU-A05) también quedó cableado** con panel propio (`ResumenPanel.tsx`).
-- **Simulacro de examen (CU-A08):** ✅ **cableado (2026-09-27).** El botón viejo que mandaba un prompt de texto al chat se reemplazó por `SimulacroPanel.tsx`, que llama a `POST /api/materias/:materiaId/tutor/examen` con cantidad y dificultad elegibles.
-- **OCR de imágenes (CU-P02):** ✅ **hecho (2026-09-30).** `src/services/ocr_service.py`.
-  - Dependencias de sistema en el `Dockerfile`: `tesseract-ocr`, `tesseract-ocr-spa`, `tesseract-ocr-eng`
-    y `poppler-utils`. Python: `pytesseract`, `pdf2image`, `Pillow`.
-  - **PDF escaneado:** si `pypdf` saca menos de 24 caracteres, se considera escaneado y se
-    rasterizan hasta 10 páginas (`pdf2image` + poppler) y se transcriben.
-  - **SVG queda fuera a propósito**: es XML vectorial, PIL no lo renderiza. Antes de este cambio
-    el SVG caía al `decode` final y **el XML crudo terminaba indexado en el vector store**; ahora
-    devuelve vacío. Lo mismo para video.
-  - **Filtro de binarios:** el fallback a `decode("utf-8")` ahora rechaza texto con >5% de
-    caracteres de reemplazo o de control, así que un `.bin` o `.zip` desconocido no se indexa.
-  - Idioma: `spa+eng`. Testado en Docker con tesseract 5.5.0: una imagen de apunte y el mismo
-    contenido en JPG dan 206 caracteres, y el PDF escaneado 217. El texto llega al chunking
-    correctamente (1 chunk listo para embeber).
-  - ✅ **E2E verificado (2026-09-30)** con `GEMINI_API_KEY` puesta: un docente sube un PNG por
-    `POST /api/secciones/:id/contenidos/archivo` → `tipo=IMAGEN`, `rag_indexado=True` en 1,3 s.
-    Se puso una marca única (`39CECD`) solo en esa imagen y el alumno la recupera por RAG con
-    score 0.808. La cadena completa funciona: imagen → OCR → chunks → embeddings → pgvector → RAG.
-  - Tests: 21 casos nuevos en `test_ocr_service.py` (motor ausente, formatos, limpieza, binarios).
-    Ojo: **mocks**ean tesseract, así que pasan aunque falte el binario. La prueba real es el E2E.
-- **Registro de sesiones IA:** ✅ **corregido (2026-09-28).** El `modo` viaja en **cada** request
-  y el backend lo prioriza sobre el de la sesión (`modo ? modoAMin(modo) : modoAMin(sesion.modo)`),
-  así que la IA siempre respondía en el modo pedido — el chat funcionaba bien. Lo que quedaba
-  desalineado era el **registro**: `sesionIA.modo` se quedaba clavado en el modo del primer mensaje,
-  lo que rompía los analytics por modo y el fallback cuando un cliente omite `modo`.
-  Ahora `sincronizarModo()` persiste el cambio (sin escribir si el modo no cambió).
-  4 tests nuevos cubren el caso. **Pendiente menor:** `mensajeIA` sigue sin guardar el modo con el
-  que se respondió cada mensaje; para eso hace falta una migración de Prisma.
-
-### 5. Licencias, email y extras
-
-- **Licencias:** sin proveedor de billing. `PLANES_LICENCIA` está hardcodeado en `admin.service.ts:551` con `LIMITE_MAU = 5000`; el único dato real es el count de alumnos activos.
-- **Export PDF** de reportes: falta (la exportación CSV ya es real, `admin.service.ts:520`).
-- **Email:** `EMAIL_API_KEY`/`EMAIL_FROM` en `.env` sin consumidor; el módulo `notificaciones` del backend es solo in-app. Falta el canal email.
-- **ChromaDB:** `CHROMA_URL` sigue en el `.env` sin uso — solo hay pgvector (default) y Pinecone. Decidir y borrar la variable.
-
-## PRÓXIMOS PASOS SUGERIDOS
-
-1. ✅ Implementar subida de archivos (multipart + destino local) y ruta de descarga (**hecho, 2026-09-25**). Resta reemplazar disco local por R2 cuando se defina el deploy.
-2. ✅ Cablear RAG de archivos (con `DocumentService`) para tipos no-TEXTO (**hecho, 2026-09-25**).
-3. ✅ Arreglar `db:deploy` en el Dockerfile prod (**hecho, 2026-09-17**) y validar `docker compose up --build` completo (**hecho, 2026-09-28** — ver "Docker verificado").
-4. ✅ Arreglar el CI y verificar lint/test/build de los tres módulos (**hecho, 2026-09-27**).
-5. ✅ Exponer los modos socrático y pistas en la UI del alumno (**hecho, 2026-09-27**).
-6. ⬜ **Definir el deploy cloud** — es lo que bloquea la entrega. **Abierto y documentado para
-   discutir en `DEPLOY.md`** (proveedores, cold starts, región de la DB, preguntas abiertas).
-7. ✅ Cablear los endpoints muertos: resumen (CU-A05) y examen (CU-A08) (**hecho, 2026-09-27** — `aiClient.ts` + módulo backend + service/hook/UI + 11 tests).
-8. **Cubrir el backend con tests** — 2 archivos para 17 módulos; el de tutorTools cubre el flujo nuevo, el resto sigue sin tests.
-9. ✅ Arreglar los scripts Windows-only de la raíz (**hecho, 2026-09-28** — `scripts/venv.mjs` + `scripts/venv-setup.mjs`).
-10. ✅ Persistir el cambio de modo del tutor a mitad de sesión (**hecho, 2026-09-28** — `sincronizarModo()` en `tutor.service.ts` + 4 tests).
-11. ✅ OCR de imágenes y PDF escaneado, CU-P02 (**hecho y verificado E2E, 2026-09-30** — `OcrService` con tesseract + poppler; una imagen subida por el docente llega al RAG y el alumno la recupera).
-12. ✅ Entrega de actividades por el alumno, CU-A03 (**hecho y verificado E2E, 2026-09-30** — ver "Entregas del alumno" abajo).
-13. ✅ **Configuración de rúbricas por el docente (CU-P04)** (**hecho y verificado E2E, 2026-09-30** — ver "Rúbricas y corrección IA" abajo).
-14. ✅ **Creación de actividades por el docente (CU-P03)** (**hecho y verificado E2E, 2026-09-30** — ver "Gestión de actividades del docente" abajo).
-15. Evaluar Licencias, email, export PDF.
 
 ## Entregas del alumno (CU-A03, 2026-09-30)
 
-El backend de entregas estaba completo desde antes (`POST|PUT /api/actividades/:id/entrega`,
-los 4 tipos del enum `TipoActividad`, upsert por `@@unique([actividad_id, alumno_id])` y
-notificación al docente) pero **el frontend no lo invocaba**: `useAssignments` era un `useQuery`
-de 6 líneas y el botón "Enviar" de la tabla no tenía `onClick`. El alumno no podía entregar nada.
+El backend de entregas estaba completo desde antes pero **el frontend no lo invocaba**:
+`useAssignments` era un `useQuery` de 6 líneas y el botón "Enviar" no tenía `onClick`. El alumno
+no podía entregar nada.
 
 Qué se agregó:
-
-- `POST /api/actividades/:actividadId/entrega/archivo` (ALUMNO, `multer.memoryStorage()`),
-  valida inscripción y la extensión contra `actividad.formatos_permitidos`, y persiste con
-  `guardarArchivo()` de `config/storage.ts` (nombre sanitizado).
-- `mi_entrega` ahora devuelve `respuesta_texto`, `respuesta_codigo`, `archivo_url` y
-  `archivo_nombre` para que el formulario pueda precargarse al editar.
-- `AssignmentSubmitModal` con las 4 variantes: MC (radio), desarrollo (textarea), código
-  (textarea mono) y archivo (input con `accept` derivado de los formatos permitidos).
+- `POST /api/actividades/:actividadId/entrega/archivo` (ALUMNO), valida inscripción y la extensión
+  contra `actividad.formatos_permitidos`, y persiste con `guardarArchivo()`.
+- `mi_entrega` devuelve `respuesta_texto`, `respuesta_codigo`, `archivo_url` y `archivo_nombre`.
+- `AssignmentSubmitModal` con las 4 variantes: MC (radio), desarrollo (textarea), código (textarea
+  mono) y archivo (input con `accept` derivado de los formatos permitidos).
 - El botón quedó cableado; muestra la nota cuando el docente publica la corrección.
 - `InfoBox` ganó las variantes `success` y `error` (antes solo `info|warning`).
-- 6 tests en `backend/src/tests/entrega-archivo.test.ts`.
+- 7 tests en `backend/src/tests/entrega-archivo.test.ts` (último: actividad archivada → 409).
 
-Verificado E2E contra el stack real: los 4 tipos entregan, el reenvío reemplaza sin duplicar,
-un `.png` es rechazado con 400 en una actividad que solo acepta `pdf,txt`, el archivo subido
-es servible en `/uploads`, y un alumno sin inscripción recibe 403 tanto al subir como al
-entregar.
+Verificado E2E: los 4 tipos entregan, el reenvío reemplaza sin duplicar, un `.png` es rechazado con
+400 en una actividad que solo acepta `pdf,txt`, el archivo es servible en `/uploads`, y un alumno sin
+inscripción recibe 403 al subir y al entregar.
 
-**Nota de alcance:** la entrega no dispara la corrección IA. El auto-correction (CU-A07)
-sigue siendo un paso manual del docente desde `TeacherCorrectionsPage`.
+**Nota de alcance:** la entrega no dispara la corrección IA (CU-A07 sigue siendo paso manual del
+docente desde `TeacherCorrectionsPage`).
 
 ## Gestión de actividades del docente (CU-P03, 2026-09-30)
 
-El backend ya tenía `crear` y `actualizar`, pero **no había forma de borrar una actividad ni de
-sacarla de la lista del alumno sin borrarla**, y el frontend no tenía ninguna pantalla de
-actividades: el docente solo podía verlas desde el listado. Para poder entregar, el alumno
-necesitaba actividades que el profesor pudiera dar de alta y sacar de circulation.
+El backend tenía `crear`/`actualizar` pero **no había forma de borrar una actividad ni de sacarla
+de la lista del alumno sin borrarla**, y no había ninguna pantalla de actividades.
 
-Regla de producto acordada: **no se borra una actividad que ya tiene entregas, se archiva.**
+Regla de producto: **no se borra una actividad que ya tiene entregas, se archiva.**
 
 Qué se agregó:
-
-- `Actividad.activo Boolean @default(true)` + migración `20260930120000_actividad_activo`.
-  El alumno solo lista activas; el docente lista activas y archivadas, con `_count.entregas`
-  para saber cuántas hay antes de decidir.
-- `DELETE /api/actividades/:actividadId`: borra solo con cero entregas; si hay entregas
-  devuelve 409 con el mensaje `No se puede eliminar: la actividad tiene N entrega(s).
-  Archivala en su lugar.`
-- Archivar/restaurar es `PUT` con `{ activo: false|true }`; una actividad archivada tampoco
-  acepta nuevas entregas ni subidas de archivo (409), para que nadie entregue sin ver el
-  aviso.
-- Frontend nuevo: `activities.service.ts`, `useActivities.ts`, `ActivityFormModal` (los 4 tipos,
-  fecha límite, corrección manual y rúbrica opcional) y `TeacherActivitiesPage`, con ruta
+- `Actividad.activo Boolean @default(true)` + migración `20260930120000_actividad_activo`. El alumno
+  solo lista activas; el docente lista activas y archivadas, con `_count.entregas`.
+- `DELETE /api/actividades/:actividadId`: borra solo con cero entregas; si hay entregas devuelve
+  409 con el mensaje `No se puede eliminar: la actividad tiene N entrega(s). Archivala en su lugar.`
+- Archivar/restaurar es `PUT` con `{ activo: false|true }`; una actividad archivada tampoco acepta
+  nuevas entregas ni subidas (409).
+- Frontend nuevo: `activities.service.ts`, `useActivities.ts`, `ActivityFormModal` (4 tipos, fecha
+  límite, corrección manual, rúbrica opcional) y `TeacherActivitiesPage`, con ruta
   `/teacher/activities` y entrada en la nav del profesor.
 - `apiErrorMessage()` en `services/api.ts`: el backend responde `{ error }` y el parseo estaba
   triplicado en tres componentes con una copia mal formada.
-- 12 tests en `backend/src/tests/actividades-ciclo.test.ts` (archivar, restaurar, borrar con y
-  sin entregas, orden de validación de permisos, guards de rol) + 1 test de actividad archivada
-  en `entrega-archivo.test.ts`.
+- 13 tests en `backend/src/tests/actividades-ciclo.test.ts` (archivar, restaurar, borrar con y sin
+  entregas, orden de validación de permisos, guards de rol, desvincular rúbrica).
 
-Verificado E2E contra el stack real (33 checks): el docente crea los 4 tipos, el alumno los ve,
-entrega, el docente archiva y el alumno deja de verlos y recibe 409 al entregar, restaura y el
-alumno los vuelve a ver, el docente de otra materia recibe 403, y borrar funciona solo cuando no
-hay entregas. Suite: backend 36/36, frontend 3/3, lint sin errores.
+Verificado E2E (33 checks): el docente crea los 4 tipos, el alumno los ve, entrega, el docente
+archiva y el alumno deja de verlos y recibe 409 al entregar, restaura y el alumno los vuelve a ver,
+el docente de otra materia recibe 403, y borrar funciona solo cuando no hay entregas.
 
-**Pendiente:** el selector de rúbrica del formulario queda vacío hasta que exista la UI de
-CU-P04, y `esperado` (el contenido clave que debería usar la IA para corregir) todavía no forma
-parte de `Rubrica.criterios`.
+> El "Pendiente" que anotaba la versión anterior de este doc (selector de rúbrica vacío hasta que
+> existiera la UI de CU-P04, y `esperado` fuera de `Rubrica.criterios`) **quedó resuelto** por
+> CU-P04, documentado abajo.
 
 ## Rúbricas y corrección IA (CU-P04 + CU-A07, 2026-09-30)
 
-La pantalla de correcciones tenía un card "Gestionar rúbricas" con los botones "Editar" y
-"+ Nueva rúbrica" **sin handler**: no había forma de crear ni editar una rúbrica desde la
-interfaz. Peor: `Rubrica.criterios` solo guardaba `{nombre, peso}`, así que la rúbrica le decía
-a la IA cuánto pesaba cada criterio pero **nada sobre qué tenía que encontrar**. El modelo
+La pantalla de correcciones tenía un card "Gestionar rúbricas" con "Editar" y "+ Nueva rúbrica"
+**sin handler**. Peor: `Rubrica.criterios` solo guardaba `{nombre, peso}`, así que la rúbrica le
+decía a la IA cuánto pesaba cada criterio pero **nada sobre qué tenía que encontrar**. El modelo
 corrigía a ciegas.
 
 Qué se agregó:
-
-- **`esperado` en el criterio de rúbrica.** Es el campo que hace útil la rúbrica: el docente
-  escribe qué tiene que aparecer en la entrega y eso viaja al prompt
-  (`ai-services/src/prompts/correccion.py` gained a regla explícita para usarlo).
-- Validación: `esperado` es obligatorio y **los pesos deben sumar 100** (`criteriosSchema`).
-  Ojo con `.trim()`: sin él, `esperado: "   "` pasaba el `min(1)`.
-- `PUT /api/rubricas/:rubricaId` y `DELETE /api/rubricas/:rubricaId`. Borrar una rúbrica en
-  uso por actividades devuelve 409 y pide desvincularla primero.
-- **Desvincular una rúbrica ahora es posible**: `rubrica_id` acepta `null` en la actualización
-  de actividad. Antes no había forma, así que la regla de "sacala primero" era imposible de
-  cumplir y la rúbrica quedaba bloqueada para siempre.
-- **CU-A07 conectado de verdad**: `POST /api/entregas/:entregaId/corregir-ia` (PROFESOR) llama
-  al ai-service con la rúbrica de la actividad y guarda `calificacion_ia` / `feedback_ia`
-  como **borrador** (`revision_tipo: "IA"`, `publicado: false`). El docente igual tiene que
-  revisarla y publicarla; no se publica sola. Si el ai-service no contesta, degrada a 502 en
-  vez de romper la request. Una entrega ya publicada no se puede volver a corregir (409).
-- Frontend: `RubricFormModal` (criterios dinámicos, botón "Repartir 100", indicador de suma y
-  aviso si falta un `esperado`), los botones de la tarjeta ahora funcionan, y un botón
-  "Volver a corregir con IA" en el panel de revisión.
+- **`esperado` en el criterio de rúbrica.** El docente escribe qué tiene que aparecer en la entrega
+  y eso viaja al prompt (`ai-services/src/prompts/correccion.py` ganó una regla explícita).
+- Validación: `esperado` es obligatorio y **los pesos deben sumar 100** (`criteriosSchema`). Con
+  `.trim()`: sin él, `esperado: "   "` pasaba el `min(1)`.
+- `PUT /api/rubricas/:rubricaId` y `DELETE /api/rubricas/:rubricaId`. Borrar una rúbrica en uso por
+  actividades devuelve 409 y pide desvincularla primero.
+- **Desvincular una rúbrica ahora es posible**: `rubrica_id` acepta `null` en la actualización de
+  actividad. Antes no había forma, así que la rúbrica quedaba bloqueada para siempre.
+- **CU-A07 conectado de verdad:** `POST /api/entregas/:entregaId/corregir-ia` (PROFESOR) llama al
+  ai-service con la rúbrica de la actividad y guarda `calificacion_ia`/`feedback_ia` como
+  **borrador** (`revision_tipo: "IA"`, `publicado: false`). Si el ai-service no contesta, degrada a
+  502. Una entrega ya publicada no se puede volver a corregir (409).
+- Frontend: `RubricFormModal` (criterios dinámicos, "Repartir 100", indicador de suma, aviso si
+  falta un `esperado`), los botones de la tarjeta ahora funcionan, y "Volver a corregir con IA" en
+  el panel de revisión.
 - `useRubrics` pasó a ser la única fuente de rúbricas: la pantalla de actividades usaba una
-  `queryKey` distinta (`["rubrics", id]` vs `["corrections","rubrics", id]`), así que al
-  borrar una rúbrica el selector de la actividad ofrecía una que ya no existía.
-- 14 tests en `backend/src/tests/rubricas.test.ts` + 2 de desvinculación en
+  `queryKey` distinta, así que al borrar una rúbrica el selector ofrecía una que ya no existía.
+- 18 tests en `backend/src/tests/rubricas.test.ts` + 2 de desvinculación en
   `actividades-ciclo.test.ts` + 2 en el lado IA que verifican que `esperado` llegue al prompt.
 
-Verificado E2E contra el stack real: se crea, edita, vincula a una actividad, no se puede
-borrar en uso (409), se desvincula con `rubrica_id: null` y ahí sí se borra; el alumno y el
-docente ajeno reciben 403; y sin clave de IA el flujo degrada a 502 con un mensaje usable.
+Verificado E2E: se crea, edita, vincula a una actividad, no se puede borrar en uso (409), se
+desvincula con `rubrica_id: null` y ahí sí se borra; el alumno y el docente ajeno reciben 403.
 
-**Lo que no quedó verificado:** el camino feliz de la corrección con Gemini, porque
-`GEMINI_API_KEY` está vacía en `.env` (el valor es un espacio). El 502 se comprobó de punta a
-punta, y el camino exitoso está cubierto por tests con el cliente del ai-service mockeado. Con
-la clave cargada, `POST /api/entregas/:id/corregir-ia` es el comando a probar.
+**Camino feliz con Gemini (corregido en este snapshot):** la versión anterior decía que
+`GEMINI_API_KEY` estaba vacía y que el éxito no se había probado. **Ya se verificó:** con la clave
+cargada, `POST /api/entregas/:id/corregir-ia` devolvió 200 en ~9 s, calificación 5, `feedback_ia`
+que referencia explícitamente el `esperado`, `revision_tipo=IA` y `publicado=false`.
 
+## OCR de imágenes y PDF escaneado (CU-P02, 2026-09-30)
+
+`ai-services/src/services/ocr_service.py`:
+- Dependencias de sistema en el `Dockerfile`: `tesseract-ocr`, `tesseract-ocr-spa`,
+  `tesseract-ocr-eng`, `poppler-utils`. Python: `pytesseract`, `pdf2image`, `Pillow`.
+- **PDF escaneado:** si `pypdf` saca menos de 24 caracteres, se considera escaneado, se rasterizan
+  hasta 10 páginas y se transcriben.
+- **SVG queda fuera a propósito:** es XML vectorial, PIL no lo renderiza. Antes caía al `decode`
+  final y **el XML crudo terminaba indexado**; ahora devuelve vacío. Igual para video.
+- **Filtro de binarios:** el fallback `decode("utf-8")` rechaza texto con >5% de caracteres de
+  reemplazo o control, así que un `.bin`/`.zip` desconocido no se indexa.
+- Idioma `spa+eng`. Testado en Docker con tesseract 5.5.0: imagen 206 caracteres, PDF escaneado 217.
+- **E2E verificado:** un docente sube un PNG → `tipo=IMAGEN`, `rag_indexado=True` en 1,3 s. Con una
+  marca única (`39CECD`) en esa imagen, el alumno la recupera por RAG con score 0.808. Cadena
+  completa: imagen → OCR → chunks → embeddings → pgvector → RAG.
+- 21 casos en `test_ocr_service.py` (motor ausente, formatos, limpieza, binarios). **Mockean
+  tesseract**, así que pasan aunque falte el binario; la prueba real es el E2E (de imagen, hecho).
+
+## Gemini en producción (2026-09-28) — modelo y reintentos
+
+- Modelo default **`gemini-3.5-flash-lite`** (ver riesgo 12 en QUÉ FALTA para el detalle de 503).
+- **Reintentos con backoff exponencial** en `llm_service.py`: hasta 4 reintentos (2s, 4s, 8s, 16s,
+  tope 30s) con jitter, solo ante errores transitorios (503, 429, `UNAVAILABLE`,
+  `RESOURCE_EXHAUSTED`, timeouts). Los permanentes (400 de prompt, 401 de key, 404 de modelo) **no**
+  se reintentan. Configurable con `LLM_MAX_RETRIES`, `LLM_RETRY_BASE_DELAY_SECONDS`,
+  `LLM_RETRY_MAX_DELAY_SECONDS`. El streaming reintenta **solo al abrir** el stream, nunca a mitad
+  (duplicaría tokens). Cubierto por `test_llm_retry.py` (10 casos).
+- **Prompts corregidos** según lo que devolvió el modelo real: el resumen arrancaba con "¡Hola! Soy
+  tu tutor IA..." (ahora arranca directo en "Resumen general"), y en el examen una respuesta de
+  desarrollo era filtrar una instrucción del prompt en vez de dar la respuesta (ahora se pide
+  explícitamente la respuesta en sí).
+- **Registro de sesiones IA** (parcial): el `modo` viaja en cada request y el backend lo prioriza
+  sobre el de la sesión; `sincronizarModo()` persiste el cambio (sin escribir si no cambió), 4
+  tests. Pendiente menor: `mensajeIA` sigue sin guardar el modo de cada respuesta (ver entrada 8).
 
 ## Docker verificado (2026-09-28)
 
-`docker compose build` + `up -d` levantan los 5 servicios y responden:
-`backend /api/healthz` → `{"status":"ok","db":"ok"}`, `ai-service /healthz` → `{"status":"ok"}`,
-`frontend :5173` → 200. Seed: 10 alumnos, 1 admin, 6 profesores, clave `Clave1234`.
+`docker compose build` + `up -d` levantan los 5 servicios y responden: `backend /api/healthz` →
+`{"status":"ok","db":"ok"}`, `ai-service /healthz` → `{"status":"ok"}`, `frontend :5173` → 200.
+Seed: 10 alumnos, 1 admin, 6 profesores, clave `Clave1234`.
 
-Tres bugs reales que aparecieron al validar, ya corregidos:
+Tres bugs reales, ya corregidos:
+1. **`docker compose build` fallaba con `ERESOLVE`.** `backend/package.json` pedía
+   `typescript: ^7.0.2`, pero `typescript-eslint@8` exige `>=4.8.4 <6.1.0`. Localmente no se notaba
+   porque el root del workspace hoistea el TS 5.9.3 del frontend. **El CI no lo detectaba** porque
+   usa `npm ci` (respeta el lock). Bajado a `^5.9.3`.
+2. **`backend/package-lock.json`** era un lock standalone obsoleto (pinned a TS 7) y **no está
+   versionado**: vestigio de antes de los workspaces. Era lo que disparaba el ERESOLVE.
+3. **El ai-service moría al arrancar:** `RuntimeError: Form data requires "python-multipart"`. El
+   culpable era el volumen `aipy_venv`, que monta `/app/.venv` encima del venv horneado. Se resuelve
+   con `docker volume rm eduai_aipy_venv` (o `docker compose down -v`). **Ojo: cada vez que cambie
+   `requirements.txt` hay que rehacer ese volumen.**
 
-1. **`docker compose build` fallaba con `ERESOLVE`.** `backend/package.json` pedía `typescript: ^7.0.2`, pero `typescript-eslint@8` exige `>=4.8.4 <6.1.0`. Localmente no se notaba porque el root del workspace hoistea el TS 5.9.3 del frontend y `typescript-eslint` resolvía contra ese; en la imagen no hay hoist y el peer check fallaba. **El CI no lo detectaba** porque usa `npm ci` (respeta el lock, no re-resuelve peers). Bajado a `^5.9.3`, la misma versión que ya usaban el root y el frontend.
-2. **`backend/package-lock.json` era un lock standalone obsoleto** (pinned a TS 7) y **no está versionado**: vestigio de antes de los workspaces. El `Dockerfile` lo copiaba (`COPY package.json package-lock.json* ./`) y era el que disparaba el ERESOLVE. npm escribe el lock del root, nunca uno por subdirectorio.
-3. **El ai-service moría al arrancar:** `RuntimeError: Form data requires "python-multipart"`. `python-multipart` ya estaba en `requirements.txt`; el culpable era el volumen `aipy_venv`, que monta `/app/.venv` encima del venv horneado en la imagen y quedó con las deps de un build anterior. Se resuelve con `docker volume rm eduai_aipy_venv` (o `docker compose down -v`). **Ojo: cada vez que cambie `requirements.txt` hay que rehacer ese volumen.**
+---
 
-> El flujo resumen/examen se validó end-to-end contra el stack: login → `/api/materias/mias` →
-> `/api/materias/:id/secciones` → `/api/secciones/:id/contenidos` → `POST .../tutor/resumen`.
-> Los guards responden bien (400 por enviar ambos `contenido_id` y `texto` o ninguno,
-> 404 si el contenido es de otra materia, 502 si la IA no está disponible).
+# CÓMO CORRER
 
-## Gemini en producción (2026-09-28)
-
-Con `GEMINI_API_KEY` real se encontró que el modelo por defecto no servía:
-
-- **`gemini-3.6-flash` devuelve 503 "high demand" de forma constante** en cuentas gratuitas.
-  Lo mismo con `3.7-flash`, `3.8-flash`, `3.5-flash` y `flash-latest`; `gemini-2.5-flash` da 404.
-  Los que sí responden son **`gemini-3.5-flash-lite`** y `gemini-3.1-flash-lite`.
-  **Default cambiado a `gemini-3.5-flash-lite`** en `settings.py` y en los dos `.env.example`.
-  Ojo: el 503 es intermitente, no permanente — `3.6-flash` a veces responde. Por eso el retry
-  (abajo) es lo que hace que la app sea confiable, y no el cambio de modelo solo.
-- **Reintentos con backoff exponencial** en `llm_service.py`: hasta 4 reintentos
-  (2s, 4s, 8s, 16s, tope 30s) con jitter, solo ante errores transitorios
-  (503, 429, `UNAVAILABLE`, `RESOURCE_EXHAUSTED`, timeouts). Los errores permanentes
-  (400 de prompt, 401 de key, 404 de modelo) **no** se reintentan: gastarían cuota sin chances.
-  Configurable con `LLM_MAX_RETRIES`, `LLM_RETRY_BASE_DELAY_SECONDS`, `LLM_RETRY_MAX_DELAY_SECONDS`.
-  El streaming reintenta **solo al abrir** el stream, nunca a mitad (duplicaría tokens).
-  Cubierto por `test_llm_retry.py` (10 casos).
-- **Prompts corregidos** según lo que devolvió el modelo en la prueba real:
-  el resumen arrancaba con "¡Hola! Soy tu tutor IA..." (ahora arranca directo en "Resumen general"),
-  y en el examen la respuesta de una pregunta de desarrollo era
-  *"La guía de corrección debe indicar que..."* — el modelo se filtraba una instrucción del prompt
-  en vez de dar la respuesta (ahora se pide explícitamente la respuesta en sí).
-- **El índice HNSW nunca se crea** y el warning era silencioso: `EMBEDDING_DIMENSIONS=3072`
-  pero pgvector no indexa más de 2000 dimensiones con HNSW. La búsqueda **funciona igual**
-  (escaneo secuencial) y el examen recupera material correctamente, pero degrada con volumen.
-  El warning ahora dice la causa y el arreglo. Arreglo de fondo: bajar `EMBEDDING_DIMENSIONS`
-  a ≤2000 y reindexar, o migrar a un índice IVF. **Requiere reindexar el material, no se hizo.**
-
-## CÓMO CORRER
-
-### Docker (recomendado)
+## Docker (recomendado)
 
 ```bash
 # 1. Completar .env (raíz): GEMINI_API_KEY obligatoria para el ai-service
 #    (usar un modelo *-flash-lite: los flash "grandes" dan 503 en cuentas gratuitas)
 # 2. Levantar todo
-docker compose up --build -d #el -d es para que se levanten en segundo plano y no quede la consola ahí, opcional
+docker compose up --build -d
 # 3. Migraciones + seed (el CMD dev no los corre solo)
-
 docker compose exec backend npx prisma db seed
-#4. Verificar estado
+# 4. Verificar estado
 docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
-
-#5. Para limpiar docker
+# 5. Para limpiar (OJO: destruye volúmenes y la base local)
 docker compose down -v --rmi all --remove-orphans
 docker builder prune -a -f
 ```
 
-Credenciales de prueba (`seed.ts`): `admin@ies.edu` (ADMIN) · `profe1@ies.edu` (PROFESOR) · `alumno1@ies.edu` (ALUMNO) — password `Clave1234`.
+Credenciales de prueba (`seed.ts`): `admin@ies.edu` (ADMIN) · `profe1@ies.edu` (PROFESOR) ·
+`alumno1@ies.edu` (ALUMNO) — password `Clave1234`.
 
-Servicios: frontend `http://localhost:5173` · backend `http://localhost:3000` · ai-service `http://localhost:8000` (`/docs`) · Postgres `localhost:5433` · Redis `localhost:6379`.
+Servicios: frontend `http://localhost:5173` · backend `http://localhost:3000` · ai-service
+`http://localhost:8000` (`/docs`) · Postgres `localhost:5433` · Redis `localhost:6379`.
 
-### Local (sin contenedores de app)
+## Local (sin contenedores de app)
 
 ```bash
 npm install                # workspaces raíz
@@ -340,6 +425,10 @@ npm run db:migrate && npm run db:seed   # (con backend/.env propio)
 npm run dev:local          # backend + ai + frontend con concurrently
 ```
 
-### Verificación
+## Verificación
 
-- `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (istan las suites de backend, ai-services y frontend)
+- `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
+
+**Conteo actual de tests:** backend **56** en **5** archivos (`health` 3, `tutor-tools` 15,
+`entrega-archivo` 7, `actividades-ciclo` 13, `rubricas` 18) · ai-services **68 pasan, 1 skip** ·
+frontend **3** (solo login). Lint del backend: 0 errores.
