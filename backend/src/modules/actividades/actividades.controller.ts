@@ -61,6 +61,24 @@ export async function enviar(
   res.status(201).json({ entrega });
 }
 
+export async function subirArchivo(
+  req: Request<{ actividadId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  if (!req.file) {
+    throw new AppError(400, "No se recibio ningun archivo");
+  }
+  const archivo = await actividadesService.subirArchivoEntrega(
+    req.params.actividadId,
+    req.user.id,
+    req.file
+  );
+  res.status(201).json({ archivo });
+}
+
 export async function listarEntregas(
   req: Request<{ actividadId: string }>,
   res: Response

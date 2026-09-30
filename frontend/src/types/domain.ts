@@ -28,11 +28,36 @@ export interface Course {
 
 export type AssignmentStatus = "Pendiente" | "En revisión" | "Entregado";
 
+export type AssignmentType = "MULTIPLE_CHOICE" | "DESARROLLO" | "ARCHIVO" | "CODIGO";
+
+export interface AssignmentOption {
+  texto: string;
+  correcta: boolean;
+}
+
+export interface SubmittedAssignment {
+  respuesta_texto: string | null;
+  respuesta_codigo: string | null;
+  archivo_url: string | null;
+  archivo_nombre: string | null;
+  entregado_en: string;
+  calificacion_final: number | null;
+  feedback_final: string | null;
+  publicado: boolean;
+}
+
 export interface Assignment {
+  id: string;
   title: string;
   course: string;
+  consigna: string;
+  tipo: AssignmentType;
+  opciones: AssignmentOption[];
+  formatosPermitidos: string[];
   dueDate: string;
+  dueDateIso: string;
   status: AssignmentStatus;
+  submitted: SubmittedAssignment | null;
 }
 
 export interface CourseGradeSummary {

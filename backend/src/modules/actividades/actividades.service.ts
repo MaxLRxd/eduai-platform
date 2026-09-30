@@ -1,5 +1,7 @@
+import path from "node:path";
 import type { Prisma, Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { guardarArchivo } from "../../config/storage";
 import { AppError } from "../../middlewares/error";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
 import {
@@ -119,6 +121,10 @@ export async function listarPorMateria(materiaId: string, usuarioId: string, rol
       mi_entrega: entrega
         ? {
             id: entrega.id,
+            respuesta_texto: entrega.respuesta_texto,
+            respuesta_codigo: entrega.respuesta_codigo,
+            archivo_url: entrega.archivo_url,
+            archivo_nombre: entrega.archivo_nombre,
             entregado_en: entrega.entregado_en,
             publicado: entrega.publicado,
             calificacion_final: entrega.calificacion_final?.toNumber() ?? null,
@@ -272,6 +278,44 @@ export async function enviar(actividadId: string, alumnoId: string, input: Envia
   );
 
   return toEntregaDto(entrega);
+}
+
+export async function subirArchivoEntrega(
+  actividadId: string,
+  alumnoId: string,
+  archivo: { originalname: string; buffer: Buffer }
+) {
+  const actividad = await obtenerActividadODefecto(actividadId);
+
+  const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
+
+  const inscripcion = await obtenerInscripcion(materiaId, alumnoId);
+
+  if (!inscripcion) {
+    throw new AppError(403, "No estas inscripto a esta materia");
+  }
+
+  const formato = path.extname(archivo.originalname).replace(".", "").toLowerCase();
+
+  if (actividad.formatos_permitidos) {
+    const permitidos = actividad.formatos_permitidos
+      .split(",")
+      .map((f) => f.trim().replace(/^\./, "").toLowerCase())
+      .filter(Boolean);
+
+    if (permitidos.length > 0 && !permitidos.includes(formato)) {
+      throw new AppError(400, `Formato no permitido. Se aceptan: ${permitidos.join(", ")}`);
+    }
+  }
+
+  const guardado = guardarArchivo(archivo.buffer, archivo.originalname);
+
+  return {
+    archivo_url: guardado.url,
+    archivo_nombre: guardado.nombre,
+    formato: guardado.formato,
+    tamano_kb: guardado.tamanoKb,
+  };
 }
 
 export async function listarEntregas(actividadId: string, usuarioId: string) {

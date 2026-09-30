@@ -1,6 +1,8 @@
 import { Router } from "express";
+import multer from "multer";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { validateBody } from "../../middlewares/validate";
+import { env } from "../../config/env";
 import * as actividadesController from "./actividades.controller";
 import {
   actualizarActividadSchema,
@@ -11,6 +13,11 @@ import {
 } from "./actividades.schemas";
 
 const router = Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024 },
+});
 
 router.get("/materias/:materiaId/actividades", requireAuth, actividadesController.listarPorMateria);
 router.post(
@@ -59,6 +66,13 @@ router.put(
   requireRole("ALUMNO"),
   validateBody(enviarEntregaSchema),
   actividadesController.enviar
+);
+router.post(
+  "/actividades/:actividadId/entrega/archivo",
+  requireAuth,
+  requireRole("ALUMNO"),
+  upload.single("archivo"),
+  actividadesController.subirArchivo
 );
 router.patch(
   "/entregas/:entregaId/correccion",

@@ -146,7 +146,39 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
 9. ✅ Arreglar los scripts Windows-only de la raíz (**hecho, 2026-09-28** — `scripts/venv.mjs` + `scripts/venv-setup.mjs`).
 10. ✅ Persistir el cambio de modo del tutor a mitad de sesión (**hecho, 2026-09-28** — `sincronizarModo()` en `tutor.service.ts` + 4 tests).
 11. ✅ OCR de imágenes y PDF escaneado, CU-P02 (**hecho y verificado E2E, 2026-09-30** — `OcrService` con tesseract + poppler; una imagen subida por el docente llega al RAG y el alumno la recupera).
-12. Evaluar Licencias, email, export PDF.
+12. ✅ Entrega de actividades por el alumno, CU-A03 (**hecho y verificado E2E, 2026-09-30** — ver "Entregas del alumno" abajo).
+13. ⬜ **Configuración de rúbricas por el docente (CU-P04)** — el backend expone `GET/POST /api/materias/:id/rubricas` pero no hay UI para crearlas ni editarlas; hoy solo se leen para la corrección (CU-A07).
+14. ⬜ **Creación de actividades por el docente (CU-P03)** — no hay UI para crear actividades, solo el listado. Sin esto el alumno no tiene nada que entregar desde la interfaz.
+15. Evaluar Licencias, email, export PDF.
+
+## Entregas del alumno (CU-A03, 2026-09-30)
+
+El backend de entregas estaba completo desde antes (`POST|PUT /api/actividades/:id/entrega`,
+los 4 tipos del enum `TipoActividad`, upsert por `@@unique([actividad_id, alumno_id])` y
+notificación al docente) pero **el frontend no lo invocaba**: `useAssignments` era un `useQuery`
+de 6 líneas y el botón "Enviar" de la tabla no tenía `onClick`. El alumno no podía entregar nada.
+
+Qué se agregó:
+
+- `POST /api/actividades/:actividadId/entrega/archivo` (ALUMNO, `multer.memoryStorage()`),
+  valida inscripción y la extensión contra `actividad.formatos_permitidos`, y persiste con
+  `guardarArchivo()` de `config/storage.ts` (nombre sanitizado).
+- `mi_entrega` ahora devuelve `respuesta_texto`, `respuesta_codigo`, `archivo_url` y
+  `archivo_nombre` para que el formulario pueda precargarse al editar.
+- `AssignmentSubmitModal` con las 4 variantes: MC (radio), desarrollo (textarea), código
+  (textarea mono) y archivo (input con `accept` derivado de los formatos permitidos).
+- El botón quedó cableado; muestra la nota cuando el docente publica la corrección.
+- `InfoBox` ganó las variantes `success` y `error` (antes solo `info|warning`).
+- 6 tests en `backend/src/tests/entrega-archivo.test.ts`.
+
+Verificado E2E contra el stack real: los 4 tipos entregan, el reenvío reemplaza sin duplicar,
+un `.png` es rechazado con 400 en una actividad que solo acepta `pdf,txt`, el archivo subido
+es servible en `/uploads`, y un alumno sin inscripción recibe 403 tanto al subir como al
+entregar.
+
+**Nota de alcance:** la entrega no dispara la corrección IA. El auto-correction (CU-A07)
+sigue siendo un paso manual del docente desde `TeacherCorrectionsPage`.
+
 
 ## Docker verificado (2026-09-28)
 
