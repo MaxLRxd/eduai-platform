@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Icon } from "../ui/icons";
+import { useNoLeidasCount } from "../../hooks/useNotificaciones";
 
 const PROFILE_PATH_BY_ROLE: Record<string, string> = {
   ALUMNO: "/student/profile",
@@ -12,6 +13,7 @@ const PROFILE_PATH_BY_ROLE: Record<string, string> = {
 export function Header({ title }: { title: string }): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: noLeidas = 0 } = useNoLeidasCount();
 
   return (
     <header className="h-header shrink-0 bg-surface border-b border-border flex items-center justify-between px-7 shadow-xs">
@@ -25,10 +27,15 @@ export function Header({ title }: { title: string }): React.ReactElement {
         />
         <button
           aria-label="Notificaciones"
+          onClick={() => navigate('/notificaciones')}
           className="relative w-9 h-9 bg-surface-2 border-[1.5px] border-border rounded flex items-center justify-center text-text-2 hover:bg-primary-light hover:border-primary hover:text-primary transition-colors"
         >
           <Icon name="bell" className="w-4 h-4" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full border-2 border-surface" />
+          {noLeidas > 0 && (
+            <span className="absolute top-1 right-1 min-h-[14px] min-w-[14px] px-0.5 bg-danger rounded-full border-2 border-surface text-[9px] font-medium leading-none text-white flex items-center justify-center">
+              {noLeidas > 99 ? '99+' : noLeidas}
+            </span>
+          )}
         </button>
         <button
           aria-label="Perfil"

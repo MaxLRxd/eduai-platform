@@ -26,6 +26,22 @@ export function Th({ children }: { children: React.ReactNode }): React.ReactElem
   );
 }
 
+export function Tr({
+  children,
+  className = "",
+  onClick,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+}): React.ReactElement {
+  return (
+    <tr onClick={onClick} className={className}>
+      {children}
+    </tr>
+  );
+}
+
 export function Td({
   children,
   className = "",

@@ -32,6 +32,7 @@ import { AdminUsuariosPage } from "./pages/admin/AdminUsuariosPage";
 import { AdminLicenciasPage } from "./pages/admin/AdminLicenciasPage";
 import { AdminReportsPage } from "./pages/admin/AdminReportsPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import NotificacionesPage from "./pages/common/NotificacionesPage";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return <AppShell title={title}>{children}</AppShell>;
@@ -317,6 +318,16 @@ export function App(): React.ReactElement {
           <ProtectedRoute allow="ADMIN">
             <Shell title="Apariencia">
               <AdminSettingsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notificaciones"
+        element={
+          <ProtectedRoute>
+            <Shell title="Notificaciones">
+              <NotificacionesPage />
             </Shell>
           </ProtectedRoute>
         }

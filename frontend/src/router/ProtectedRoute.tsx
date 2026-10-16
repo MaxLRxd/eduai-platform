@@ -8,14 +8,14 @@ export function ProtectedRoute({
   allow,
 }: {
   children: React.ReactNode;
-  allow: Role;
+  allow?: Role;
 }): React.ReactElement {
   const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  if (user.role !== allow) {
+  if (allow && user.role !== allow) {
     return <Navigate to={DEFAULT_PATH_BY_ROLE[user.role]} replace />;
   }
   return <>{children}</>;
