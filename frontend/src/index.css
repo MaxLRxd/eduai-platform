@@ -5,6 +5,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Valores por defecto; BrandingProvider los sobreescribe en runtime con los colores institucionales. */
+    --color-primary: #003d7a;
+    --color-secondary: #0369a1;
+    --color-primary-light: #dbeafe;
+  }
   html {
     font-size: 14px;
   }

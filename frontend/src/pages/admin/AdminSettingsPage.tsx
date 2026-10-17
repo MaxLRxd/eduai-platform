@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useAdminSettings, useSaveBranding } from "../../hooks/useAdminSettings";
+import { uploadBrandingLogo } from "../../services/adminSettings.service";
+import { apiErrorMessage } from "../../services/api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 
@@ -14,6 +16,8 @@ export function AdminSettingsPage(): React.ReactElement {
   const [lighter, setLighter] = useState("#dbeafe");
   const [logo, setLogo] = useState<string | null>(null);
   const [logoDirty, setLogoDirty] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   React.useEffect(() => {
     const b = branding.data;
@@ -21,17 +25,26 @@ export function AdminSettingsPage(): React.ReactElement {
     if (b.nombre) setName(b.nombre);
     if (b.colorPrimario) setPrimary(b.colorPrimario);
     if (b.colorSecundario) setSecondary(b.colorSecundario);
+    if (b.colorClaro) setLighter(b.colorClaro);
     setLogo(b.logoUrl);
     setLogoDirty(false);
   }, [branding.data]);
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setLogoDirty(true);
-    const reader = new FileReader();
-    reader.onload = (): void => setLogo(reader.result as string);
-    reader.readAsDataURL(file);
+    setLogoError(null);
+    setUploadingLogo(true);
+    try {
+      const url = await uploadBrandingLogo(file);
+      setLogo(url);
+      setLogoDirty(true);
+    } catch (err) {
+      setLogoError(apiErrorMessage(err, "No se pudo subir el logo"));
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
   };
 
   const applyPreset = (id: string): void => {
@@ -77,7 +90,16 @@ export function AdminSettingsPage(): React.ReactElement {
               <label htmlFor="inst-logo" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Escudo o logo
               </label>
-              <input id="inst-logo" type="file" accept="image/*" onChange={handleLogoChange} className="w-full text-sm" />
+              <input
+                id="inst-logo"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                disabled={uploadingLogo}
+                className="w-full text-sm"
+              />
+              {uploadingLogo && <span className="text-xs text-text-2">Subiendo logo…</span>}
+              {logoError && <span className="text-xs text-danger">{logoError}</span>}
             </div>
             <div>
               <Button variant="secondary" size="sm" onClick={() => { setLogo(null); setLogoDirty(true); }}>
@@ -164,7 +186,7 @@ export function AdminSettingsPage(): React.ReactElement {
       </Card>
 
       <div className="flex items-center gap-2">
-        <Button onClick={() => saveBranding.mutate({ nombre: name, colorPrimario: primary, colorSecundario: secondary, logoUrl: logoDirty ? logo : undefined })} disabled={saveBranding.isPending}>
+        <Button onClick={() => saveBranding.mutate({ nombre: name, colorPrimario: primary, colorSecundario: secondary, colorClaro: lighter, logoUrl: logoDirty ? logo : undefined })} disabled={saveBranding.isPending || uploadingLogo}>
           {saveBranding.isPending ? "Aplicando…" : "Aplicar apariencia"}
         </Button>
         <Button variant="secondary" onClick={() => applyPreset("p-blue")}>

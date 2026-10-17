@@ -4,8 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: "#003d7a", hover: "#004f9e", light: "#dbeafe" },
-        secondary: "#0369a1",
+        primary: {
+          DEFAULT: "var(--color-primary, #003d7a)",
+          hover: "#004f9e",
+          light: "var(--color-primary-light, #dbeafe)",
+        },
+        secondary: "var(--color-secondary, #0369a1)",
         success: { DEFAULT: "#059669", light: "#d1fae5" },
         warning: { DEFAULT: "#d97706", light: "#fef3c7" },
         danger: { DEFAULT: "#dc2626", light: "#fee2e2" },

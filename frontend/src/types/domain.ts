@@ -266,6 +266,14 @@ export interface ColorPreset {
   lighter: string;
 }
 
+export interface InstitutionBranding {
+  nombre: string;
+  logoUrl: string | null;
+  colorPrimario: string | null;
+  colorSecundario: string | null;
+  colorClaro: string | null;
+}
+
 export type RagStatus = "Indexado" | "Sin indexar" | "Indexando…";
 
 export interface UploadedMaterial {

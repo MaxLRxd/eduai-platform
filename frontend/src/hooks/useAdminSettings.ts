@@ -11,6 +11,10 @@ export function useSaveBranding() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveBranding,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "settings", "branding"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "settings", "branding"] });
+      // Refresca el tema/shell global (nombre, logo y colores institucionales).
+      queryClient.invalidateQueries({ queryKey: ["config", "branding"] });
+    },
   });
 }

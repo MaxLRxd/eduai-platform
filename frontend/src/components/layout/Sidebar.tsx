@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useBranding } from "../../contexts/BrandingContext";
 import { NAV_BY_ROLE } from "../../router/navConfig";
 import { Icon } from "../ui/icons";
 
@@ -18,6 +19,7 @@ const BADGE_CLASSES: Record<string, string> = {
 
 export function Sidebar(): React.ReactElement {
   const { user, logout } = useAuth();
+  const { nombre, logoUrl } = useBranding();
   if (!user) return <></>;
 
   const sections = NAV_BY_ROLE[user.role];
@@ -27,12 +29,22 @@ export function Sidebar(): React.ReactElement {
     <aside className="w-sidebar shrink-0 bg-primary text-white flex flex-col overflow-hidden relative">
       <div className="px-4 pt-5 pb-4 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/15 flex items-center justify-center shrink-0">
-            <Icon name="dashboard" className="w-5 h-5" />
-          </div>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={nombre ?? "Logo institucional"}
+              className="w-8 h-8 rounded-lg object-contain bg-white/10 border border-white/15 shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/15 flex items-center justify-center shrink-0">
+              <Icon name="dashboard" className="w-5 h-5" />
+            </div>
+          )}
           <div>
             <div className="font-display text-base font-bold tracking-tight">EduAI</div>
-            <div className="text-[10px] text-white/50 uppercase tracking-wide font-medium">IES Santa Fe</div>
+            {nombre && (
+              <div className="text-[10px] text-white/50 uppercase tracking-wide font-medium">{nombre}</div>
+            )}
           </div>
         </div>
       </div>

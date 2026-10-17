@@ -555,6 +555,7 @@ model Institution {
   logo_url         String?  @db.Text
   color_primario   String?  @db.VarChar(20)
   color_secundario String?  @db.VarChar(20)
+  color_claro      String?  @db.VarChar(20)
   updated_at       DateTime @updatedAt
 
   @@map("institutions")
