@@ -28,52 +28,34 @@ Todo está analizado y escrito en **`DEPLOY.md`**:
 - 7 preguntas abiertas + checklist de lo que falta antes de deployar.
 - **Postgres + `pgvector` sigue sin definir.** Sin esto no hay dónde correr la app en prod.
 
-## 🟠 FUNCIONALIDAD QUE FALTA
+## 🟠 FUNCIONALIDAD (2–4 ✅ hechas 2026-10-16; faltan 5 y 6)
 
-### 2. Notificaciones — el frontend no existe (el backend sí)
-El backend está **completo**: 4 endpoints montados en `backend/src/app.ts:27`, todos con
-`requireAuth`, con validación de ownership y de formato UUID.
+### 2. ✅ Notificaciones — frontend implementado (2026-10-16)
+Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
+- `frontend/src/services/notificaciones.service.ts`, `frontend/src/hooks/useNotificaciones.ts`
+  (incluye `useNoLeidasCount` para el badge). `api.ts` es un wrapper `fetch` (`api<T>(path, init?)`),
+  no axios.
+- Página `frontend/src/pages/common/NotificacionesPage.tsx` con listado y "marcar como leída",
+  ruta `/notificaciones` en `App.tsx`, `ProtectedRoute` con `allow` opcional.
+- `Header.tsx` reemplazó el punto rojo hardcodeado por el contador real.
+- Util `frontend/src/utils/format.ts` (`formatFecha`) y `Tr` expuesto en `Table.tsx`.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/api/notificaciones` (soporta `?noLeidas=true`) | lista las del usuario |
-| GET | `/api/notificaciones/no-leidas` | contador para el badge |
-| PATCH | `/api/notificaciones/leer-todas` | marcar todas leídas |
-| PATCH | `/api/notificaciones/:notificacionId/leida` | marcar una |
+### 3. ✅ Email — servicio base implementado, stub por defecto (2026-10-16)
+- `backend/src/services/email.service.ts` con `EmailService.sendEmail`; proveedor `none` por
+  defecto (no-op), listo para enchufar `resend` / `brevo` / `smtp`.
+- `backend/src/config/env.ts` amplía el schema con `EMAIL_PROVIDER` (enum, default `none`),
+  `EMAIL_FROM`, `EMAIL_API_KEY` y `EMAIL_SMTP_*`; `.env.example` y `backend/.env.example`
+  actualizados. Falta cablear el envío a eventos reales de notificación.
 
-Se generan notificaciones reales desde `actividades.service.ts:332,449` y
-`messages.service.ts:119` (vía `crearNoLeidas`).
-
-**Lo que falta es el consumidor, y es el único trabajo de esta entrada:**
-- `frontend/src/components/layout/Header.tsx:26-32` tiene un `<button aria-label="Notificaciones">`
-  con `Icon name="bell"` y **un punto rojo hardcodeado en la línea 31**. Sin `onClick`, sin estado,
-  sin fetch. Hay que reemplazar ese punto por el contador real.
-- No existe `frontend/src/services/notificaciones.service.ts` ni `hooks/useNotificaciones.ts`.
-- No hay ruta de notificaciones en `frontend/src/App.tsx`. Falta el panel o página de lista con
-  "marcar como leída".
-- `frontend/src/router/navConfig.ts:18` tiene un comentario que lo admite: *"quedan para uso
-  dinámico cuando haya una fuente de notificaciones"*.
-- Ojo: las tarjetas de preferencias de notificación en `StudentProfilePage.tsx:83` y
-  `TeacherProfilePage.tsx:86` son **estáticas, sin conexión al backend**. No cuentan como esto.
-
-### 3. Email — no existe nada
-`EMAIL_API_KEY` y `EMAIL_FROM` están declarados en `.env` y `.env.example` y **no tienen ningún
-consumidor**: cero resultados de `EMAIL` en `backend/src` y en `ai-services/src`. No hay
-`nodemailer`, `sendgrid`, `resend` ni `smtplib` en ningún `package.json` / `requirements.txt`.
-El módulo de notificaciones es **solo in-app**. Falta elegir proveedor y agregar el canal.
-
-### 4. R2 / object storage — no existe cliente S3
-Cero clientes S3-compatible: no hay `aws-sdk`, `@aws-sdk/client-s3`, `minio` ni `boto3` en ningún
-`package.json` / `requirements.txt`. Estado actual:
-- `backend/src/config/env.ts:9` declara `R2_ACCESS_KEY_ID` (zod, opcional) y **nadie lo lee**.
-  `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT` y `R2_BUCKET_NAME` no están ni en el schema.
-- Declaraciones huérfanas en `.env.example:26-30`, `.env:23-26` y `backend/.env.example:7`.
-- Los uploads usan `multer.memoryStorage()` (`contenidos.routes.ts:11-12` y
-  `actividades.routes.ts:18-19`) y después se escriben a disco con `guardarArchivo()` de
-  `config/storage.ts`.
-
-**Falta:** cliente S3 + enrutar el multer a ese storage. La interfaz `storage.ts` ya está
-separada para que el cambio sea un swap. Es parte del paso de deploy cloud (ver entrada 1).
+### 4. ✅ R2 / object storage — cliente S3 integrado (2026-10-16)
+- `backend/src/config/storage.ts` ahora enruta `guardarArchivo`/`eliminarArchivo` (ahora `async`)
+  por proveedor: `LocalStorage` (disco, default) o `S3Storage` (R2/S3 vía `@aws-sdk/client-s3` +
+  `lib-storage`) según `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_BUCKET_NAME`. Expone
+  `getStorageProvider()`.
+- Deps agregadas: `@aws-sdk/client-s3` y `@aws-sdk/lib-storage` (`backend/package.json`).
+- Los llamadores (`contenidos.service.ts`, `actividades.service.ts`) hacen `await`.
+- multer sigue en `memoryStorage` (correcto: el buffer se sube/guarda después). Falta un test de
+  integración con un bucket real y definir `R2_ENDPOINT`/bucket público en deploy (entrada 1).
 
 ### 5. Export PDF de reportes
 **No existe generación de PDF en el proyecto.** No hay `pdfkit`, `jspdf`, `puppeteer`,
@@ -147,10 +129,9 @@ Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
 ## PRÓXIMOS PASOS SUGERIDOS (resumen accionable)
 
 1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
-2. 🟠 **Badge + panel de notificaciones** en el front (entrada 2) — es el trabajo más concreto y
-   con el backend ya listo.
-3. 🟠 Elegir proveedor de **email** y agregar el canal (entrada 3).
-4. 🟠 **Cliente S3 + multer a storage** cuando se defina el deploy (entrada 4).
+2. 🟠 **Export PDF de reportes** (entrada 5) — hoy solo hay CSV.
+3. 🟠 **Branding**: presets de color en backend (entrada 6) y subir el logo a storage (entrada 4 ya lista).
+4. 🟠 Cablear **email** a eventos reales de notificación (entrada 3 base ya está).
 5. 🟡 Tests del **frontend** (entrada 7) y migración de `modo` en `mensajeIA` (entrada 8).
 6. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
 7. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
@@ -233,7 +214,8 @@ Backend cableado en `backend/src/config/aiClient.ts` — llama 8 rutas: `chatTut
   (MP4/MOV/WEBM), inferidos por extensión. Formato no soportado → 400.
 - **Errores de multer** (archivo muy grande) resueltos como 413/400 vía `errorHandler`.
 - **Seed:** usa contenidos TEXTO reales indexables (ya no URLs falsas `/materiales/<n>/guia.pdf`).
-- **R2:** sigue sin consumidor (ver entrada 4 de QUÉ FALTA).
+- **R2/S3:** integrado desde 2026-10-16 (ver entrada 4): `config/storage.ts` conmuta a
+  `S3Storage` cuando hay credenciales R2, si no sigue en disco local.
 
 ## RAG para archivos (✅ 2026-09-25)
 

@@ -375,7 +375,7 @@ export async function subirArchivoEntrega(
     }
   }
 
-  const guardado = guardarArchivo(archivo.buffer, archivo.originalname);
+  const guardado = await guardarArchivo(archivo.buffer, archivo.originalname);
 
   return {
     archivo_url: guardado.url,

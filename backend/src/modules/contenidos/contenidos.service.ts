@@ -193,7 +193,7 @@ export async function crearArchivo(
 ) {
   const seccion = await obtenerSeccionYVerificarEscritura(seccionId, usuarioId);
   const tipo = inferirTipo(archivo.nombreOriginal);
-  const guardado = guardarArchivo(archivo.buffer, archivo.nombreOriginal);
+  const guardado = await guardarArchivo(archivo.buffer, archivo.nombreOriginal);
 
   const contenido = await prisma.contenido.create({
     data: {
@@ -279,7 +279,7 @@ export async function eliminar(contenidoId: string, usuarioId: string) {
 
   await prisma.contenido.delete({ where: { id: contenidoId } });
 
-  eliminarArchivo(contenido.archivo_url);
+  await eliminarArchivo(contenido.archivo_url);
 
   return { ok: true };
 }
