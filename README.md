@@ -203,7 +203,7 @@ La selección tecnológica se realizó priorizando el conocimiento previo del eq
 | Backend | JWT + bcrypt | Autenticación stateless segura con tokens firmados y contraseñas hasheadas. |
 | Base de datos | PostgreSQL | BD relacional robusta para datos estructurados (usuarios, materias, notas, asistencia). |
 | Base de datos | Prisma ORM | Abstracción de BD con tipado TypeScript, migraciones automáticas y queries seguras. |
-| Base de datos | ChromaDB / Pinecone | Base de datos vectorial para almacenar embeddings del material educativo (RAG Pipeline). |
+| Base de datos | pgvector (PostgreSQL) / Pinecone | Base de datos vectorial para almacenar embeddings del material educativo (RAG Pipeline). |
 | Inteligencia Artificial | OpenAI API (GPT-4o) / Claude API | LLM base para el AI Tutor Engine y el Auto-correction Engine. Selección final según costo/rendimiento. |
 | Inteligencia Artificial | LangChain / LlamaIndex | Framework para implementar el RAG Pipeline: chunking, embedding, recuperación y generación. |
 | Inteligencia Artificial | text-embedding-3-small (OpenAI) | Modelo de embeddings para indexar el material educativo en la BD vectorial. |
@@ -226,7 +226,7 @@ La selección tecnológica se realizó priorizando el conocimiento previo del eq
 
 | Ambiente | Descripción | Configuración |
 |---|---|---|
-| Desarrollo | Ambiente local de cada desarrollador | Docker Compose con PostgreSQL, ChromaDB y servicios Node.js/Python en contenedores locales. |
+| Desarrollo | Ambiente local de cada desarrollador | Docker Compose con PostgreSQL (pgvector) y servicios Node.js/Python en contenedores locales. |
 | Staging | Ambiente de integración y QA | Deploy automático desde rama develop. Usado para validación previa al release. |
 | Producción | Ambiente final de entrega académica | Deploy desde rama main. Railway/Render para backend, Vercel para frontend, RDS para PostgreSQL. |
 

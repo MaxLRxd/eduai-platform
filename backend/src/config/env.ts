@@ -3,7 +3,6 @@ import { z } from "zod";
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().optional(),
-  CHROMA_URL: z.string().optional(),
   AI_SERVICE_URL: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),

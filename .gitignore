@@ -20,8 +20,6 @@ coverage/
 
 # Docker local data / logs
 pgdata/
-chroma/
-chromadb/
 /data/
 *.log
 

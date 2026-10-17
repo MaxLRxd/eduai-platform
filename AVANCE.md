@@ -128,10 +128,11 @@ gratuitas; `gemini-2.5-flash` da 404. Los que responden son `gemini-3.5-flash-li
 permanente**, así que lo que hace confiable la app es el **retry**, no el cambio de modelo.
 Mitigado con backoff exponencial (ver más abajo); el riesgo residual sigue latente.
 
-### 13. `CHROMA_URL` es una variable muerta
-Está en el schema de `backend/src/config/env.ts:6` y en dos documentos, y **no se usa en ninguna
-línea de código**. No está en `.env` ni en `.env.example` (el doc anterior decía que sí, mal).
-Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
+### 13. ✅ `CHROMA_URL` eliminada (2026-10-17)
+Era una variable muerta en el schema de `backend/src/config/env.ts` (no se usaba en ninguna línea).
+Se decidió **borrarla**: los vector stores reales son pgvector (default) y Pinecone. También se
+limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a ChromaDB en el
+`README.md`. (`IMPLEMENTATION.md` y `graphify-out/` son documentos históricos/generados: no se tocan.)
 
 ### 14. Faltan algunos E2E
 - El **camino feliz de la corrección con Gemini** ya se verificó (ver entrada P04/A07 abajo).
@@ -145,9 +146,9 @@ Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
 1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
 2. ✅ **Branding** (entrada 6): presets en backend, logo a storage y theming en runtime — hecho 2026-10-17.
 3. ✅ Cablear **email** a notificaciones (entrada 3) — hecho 2026-10-17.
-4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. Queda: 🟡 tests del **frontend** (entrada 7).
-5. ✅ Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9) — hecho 2026-10-17.
-6. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
+4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. 5. ✅ Rebajar `EMBEDDING_DIMENSIONS` a ≤1536 y reindexar HNSW (entrada 9) — hecho 2026-10-17.
+6. ✅ Limpiar `CHROMA_URL` (entrada 13) y presets de branding (entrada 6) — hechos 2026-10-17.
+7. ✅ Parte F — tests de frontend agregados: `config.service`, `BrandingContext`, `notificaciones.service`, `adminSettings.service` (3 existentes + 15 nuevos, 18 totales) — hechos 2026-10-17.
 
 ---
 
