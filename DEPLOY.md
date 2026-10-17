@@ -90,16 +90,16 @@ Puntos a verificar antes de elegir (no los doy por sentado):
 
 - Si el proveedor elegido es Postgres **gestionado**, confirmar que `pgvector` se puede habilitar
   y qué versión. Nuestro código usa el operador coseno `<=>`, que es estándar en `pgvector`.
-- La columna está declarada `vector(3072)` en el esquema, así que la versión de la extensión
-  tiene que soportar 3.072 dimensiones. Verificar antes de compromisingerse.
-- Límites de storage del plan elegido: cada vector pesa ~13,5 KB (3072 floats). 10.000 chunks
-  ≈ 134 MB. Es el costo que más crece.
+- La columna está declarada `vector(1536)` en el esquema (ver `EMBEDDING_DIMENSIONS`), así que la
+  versión de la extensión tiene que soportar 1.536 dimensiones. Verificar antes de comprometerse.
+- Límites de storage del plan elegido: cada vector pesa ~6 KB (1536 floats). 10.000 chunks
+  ≈ 67 MB. Es el costo que más crece.
 - Si el plan gratuito tiene ventanas de mantenimiento o se pausa, el RAG paga ese arranque en frío.
 
-> **Aclaración importante:** HNSW no funciona hoy (`3072 > 2000`, tope de `pgvector`), pero eso
-> es independiente del proveedor. Hay una migración pendiente a `halfvec` que se decidió
-> **no hacer todavía** por volumen bajo. Si algún día Postgres queda en un servicio que no
-> soporta índices vectoriales, esa opción se vuelve irrelevante y la decisión cambia.
+> **Aclaración:** HNSW ya funciona (`1536 <= 2000`, tope de `pgvector` para `vector_cosine_ops`).
+> Antes estaba en 3072 y el índice no se creaba (quedaba escaneo secuencial). Si en algún momento
+> se vuelve a subir por encima de 2000, `RetrievalService` lo detecta, avisa por log y recrea la
+> tabla reindexando el material.
 
 ---
 

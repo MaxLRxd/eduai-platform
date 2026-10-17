@@ -102,11 +102,16 @@ Ahora el modo efectivo se guarda también en cada mensaje:
 - Con esto los analytics por modo y el fallback (si el cliente omite `modo` se usa el de la sesión)
   quedan confiables. Tests en `backend/src/tests/tutor-tools.test.ts` (no-stream + stream).
 
-### 9. El índice HNSW nunca se crea
-`EMBEDDING_DIMENSIONS=3072` pero pgvector no indexa más de 2000 dimensiones con HNSW. La
-**búsqueda funciona igual** (escaneo secuencial) y el examen recupera material correctamente,
-pero **degrada con volumen**. El warning ahora dice la causa y el arreglo. Arreglo de fondo: bajar
-`EMBEDDING_DIMENSIONS` a ≤2000 y **reindexar el material**, o migrar a un índice IVF. No se hizo.
+### 9. ✅ El índice HNSW ahora se crea (2026-10-17)
+`EMBEDDING_DIMENSIONS` bajó de 3072 a **1536** (≤ 2000, el tope de HNSW con `vector_cosine_ops`):
+- `EmbeddingsService` ahora pasa `output_dimensionality=EMBEDDING_DIMENSIONS` a Gemini, así que el
+  vector devuelto coincide con la columna `vector(n)` (antes se ignoraba y el modelo devolvía 3072).
+- `RetrievalService` detecta si `ai_materials.embedding` quedó con otra dimensión: recrea la tabla
+  y **reindexa el material** con el embedder inyectado desde `build_retrieval_service(embeddings)`
+  (si no hay embedder, loguea `reindex_pendiente`). Con ≤2000 el `CREATE INDEX ... hnsw` ya no falla.
+- `EMBEDDING_DIMENSIONS=1536` en `.env.example` (raíz y ai-services); número actualizado en
+  `DEPLOY.md`. Tests: `ai-services/src/tests/test_retrieval_service.py`.
+- Nota: cambiar de dimensión invalida el índice de Pinecone existente (hay que recrearlo).
 
 ### 10. Cambiar de vector store no migra datos
 pgvector (`ai_materials`) y Pinecone son índices independientes: al switchear hay que **reindexar
@@ -141,7 +146,7 @@ Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
 2. ✅ **Branding** (entrada 6): presets en backend, logo a storage y theming en runtime — hecho 2026-10-17.
 3. ✅ Cablear **email** a notificaciones (entrada 3) — hecho 2026-10-17.
 4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. Queda: 🟡 tests del **frontend** (entrada 7).
-5. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
+5. ✅ Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9) — hecho 2026-10-17.
 6. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
 
 ---

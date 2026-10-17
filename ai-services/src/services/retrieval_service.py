@@ -1,5 +1,8 @@
 """Búsqueda vectorial en PostgreSQL con pgvector."""
 
+import re
+from collections.abc import Awaitable, Callable
+
 import asyncpg
 import structlog
 from pgvector.asyncpg import register_vector
@@ -9,8 +12,10 @@ logger = structlog.get_logger(__name__)
 # pgvector no puede indexar vectores de mas de 2000 dimensiones con HNSW
 # (limite de la implementacion vector_cosine_ops). Con mas dimensiones el
 # CREATE INDEX falla y la busqueda cae a un escaneo secuencial: sigue siendo
-# correcta, pero se degrada con volumen.
+# correcta, pero se degrada con volumen. Por eso EMBEDDING_DIMENSIONS <= 2000.
 HNSW_MAX_DIMENSIONS = 2000
+
+EmbedDocuments = Callable[[list[str]], Awaitable[list[list[float]]]]
 
 
 async def _init_connection(conn: asyncpg.Connection) -> None:
@@ -20,9 +25,16 @@ async def _init_connection(conn: asyncpg.Connection) -> None:
 class RetrievalService:
     """Acceso a la base vectorial de material educativo indexado."""
 
-    def __init__(self, database_url: str, embedding_dimensions: int = 768):
+    def __init__(
+        self,
+        database_url: str,
+        embedding_dimensions: int = 768,
+        embed_documents: EmbedDocuments | None = None,
+    ):
         self._database_url = database_url
         self._dimensions = embedding_dimensions
+        # Callback opcional para reindexar si la tabla existia con otra dimension.
+        self._embed_documents = embed_documents
         self._pool: asyncpg.Pool | None = None
 
     async def _get_pool(self) -> asyncpg.Pool:
@@ -43,6 +55,7 @@ class RetrievalService:
         if self._pool is None:
             return
         async with self._pool.acquire() as conn:
+            pendientes = await self._migrar_dimensiones(conn)
             await conn.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS ai_materials (
@@ -60,27 +73,103 @@ class RetrievalService:
                 "CREATE INDEX IF NOT EXISTS idx_ai_materials_subject "
                 "ON ai_materials (subject_id)"
             )
-            try:
-                await conn.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_ai_materials_embedding "
-                    "ON ai_materials USING hnsw (embedding vector_cosine_ops)"
+            await self._crear_indice_hnsw(conn)
+            if pendientes:
+                await self._reindexar(conn, pendientes)
+
+    async def _dimension_actual(self, conn: asyncpg.Connection) -> int | None:
+        tipo = await conn.fetchval(
+            """
+            SELECT format_type(atttypid, atttypmod)
+            FROM pg_attribute
+            WHERE attrelid = to_regclass('ai_materials')
+              AND attname = 'embedding'
+              AND NOT attisdropped
+            """
+        )
+        if not tipo:
+            return None
+        match = re.search(r"\((\d+)\)", str(tipo))
+        return int(match.group(1)) if match else None
+
+    async def _migrar_dimensiones(self, conn: asyncpg.Connection) -> list[dict]:
+        """Si la tabla existente usa otra dimension, la recrea y devuelve las
+        filas (id, subject_id, material_id, chunk_index, content) para reindexar."""
+        actual = await self._dimension_actual(conn)
+        if actual is None or actual == self._dimensions:
+            return []
+
+        filas = await conn.fetch(
+            "SELECT id, subject_id, material_id, chunk_index, content FROM ai_materials"
+        )
+        logger.warning(
+            "embedding_dimensions_changed",
+            dimension_anterior=actual,
+            dimension_nueva=self._dimensions,
+            filas=len(filas),
+            detalle=(
+                "Se recrea ai_materials con la nueva dimension y se reindexa el "
+                "material (mismo texto, nuevos embeddings)."
+            ),
+        )
+        await conn.execute("DROP TABLE ai_materials")
+        return [dict(fila) for fila in filas]
+
+    async def _crear_indice_hnsw(self, conn: asyncpg.Connection) -> None:
+        try:
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_ai_materials_embedding "
+                "ON ai_materials USING hnsw (embedding vector_cosine_ops)"
+            )
+        except Exception as exc:
+            if self._dimensions > HNSW_MAX_DIMENSIONS:
+                logger.warning(
+                    "hnsw_index_unavailable",
+                    error=str(exc),
+                    dimensions=self._dimensions,
+                    limite=HNSW_MAX_DIMENSIONS,
+                    detalle=(
+                        "pgvector no indexa vectores de mas de 2000 dimensiones con HNSW. "
+                        "La busqueda sigue funcionando con escaneo secuencial, pero "
+                        "conviene bajar EMBEDDING_DIMENSIONS (y reindexar el material) "
+                        "o cambiar a un indice IVF para no perder performance."
+                    ),
                 )
-            except Exception as exc:
-                if self._dimensions > HNSW_MAX_DIMENSIONS:
-                    logger.warning(
-                        "hnsw_index_unavailable",
-                        error=str(exc),
-                        dimensions=self._dimensions,
-                        limite=HNSW_MAX_DIMENSIONS,
-                        detalle=(
-                            "pgvector no indexa vectores de mas de 2000 dimensiones con HNSW. "
-                            "La busqueda sigue funcionando con escaneo secuencial, pero "
-                            "conviene bajar EMBEDDING_DIMENSIONS (y reindexar el material) "
-                            "o cambiar a un indice IVF para no perder performance."
-                        ),
-                    )
-                else:
-                    logger.warning("hnsw_index_unavailable", error=str(exc))
+            else:
+                logger.warning("hnsw_index_unavailable", error=str(exc))
+
+    async def _reindexar(self, conn: asyncpg.Connection, filas: list[dict]) -> None:
+        if not filas:
+            return
+        if self._embed_documents is None:
+            logger.warning(
+                "reindex_pendiente",
+                filas=len(filas),
+                detalle="No hay embedder disponible; reindexar el material a mano.",
+            )
+            return
+        vectores = await self._embed_documents([fila["content"] for fila in filas])
+        await conn.executemany(
+            """
+            INSERT INTO ai_materials
+                (id, subject_id, material_id, chunk_index, content, embedding)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (id) DO UPDATE
+            SET content = EXCLUDED.content, embedding = EXCLUDED.embedding
+            """,
+            [
+                (
+                    fila["id"],
+                    fila["subject_id"],
+                    fila["material_id"],
+                    fila["chunk_index"],
+                    fila["content"],
+                    vectores[index],
+                )
+                for index, fila in enumerate(filas)
+            ],
+        )
+        logger.info("reindex_completado", filas=len(filas), dimensions=self._dimensions)
 
     async def upsert_chunks(
         self,

@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     cache = CacheService(settings.redis_url, settings.redis_cache_ttl_seconds)
     await cache.initialize()
     embeddings = EmbeddingsService()
-    retrieval = build_retrieval_service()
+    retrieval = build_retrieval_service(embeddings)
     chunking = ChunkingService()
     document = DocumentService()
 

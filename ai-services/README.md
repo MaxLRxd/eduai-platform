@@ -90,7 +90,7 @@ ai-services/
 | `GEMINI_API_KEY` | Clave de API de Google Gemini |
 | `GEMINI_MODEL` | Modelo LLM de chat (por defecto `gemini-3.6-flash`) |
 | `GEMINI_EMBEDDING_MODEL` | Modelo de embeddings (por defecto `gemini-embedding-2`) |
-| `EMBEDDING_DIMENSIONS` | Dimensión de los vectores (3072 para `gemini-embedding-2`) |
+| `EMBEDDING_DIMENSIONS` | Dimensión de los vectores (por defecto **1536**; se trunca con `output_dimensionality` y debe ser ≤ 2000 para que pgvector cree el índice HNSW) |
 | `LLM_PROVIDER` | Proveedor LLM (solo `gemini` por ahora) |
 | `DATABASE_URL` | Conexión a PostgreSQL (usada por pgvector) |
 | `REDIS_URL` | Conexión a Redis para el caché |
@@ -172,11 +172,14 @@ Capa que encapsula el acceso a los **recursos externos**. No saben nada de HTTP.
 **`src/services/embeddings_service.py`** — Convierte texto en vectores usando el modelo de embeddings configurado:
 - `embed_documents(texts)` → usa `task_type="RETRIEVAL_DOCUMENT"` (indexación).
 - `embed_query(text)` → usa `task_type="RETRIEVAL_QUERY"` (consultas).
+- Ambos pasan `output_dimensionality=EMBEDDING_DIMENSIONS`, así que el tamaño del vector siempre
+  coincide con la columna `vector(n)` de pgvector (y queda ≤ 2000 para habilitar HNSW).
 - Ambos usan el mismo cliente compartido de `config/genai.py`.
 
 **`src/services/retrieval_service.py`** — Acceso a **pgvector** (PostgreSQL):
 - Crea el pool `asyncpg` y registra el tipo `vector` en cada conexión (`init=register_vector`). Primero se asegura de que exista la extensión `vector` (sin eso, `register_vector` falla con `unknown type: public.vector`).
 - Crea la tabla `ai_materials` (id, subject_id, material_id, chunk_index, content, embedding) e índices: por `subject_id` y HNSW por coseno.
+- **Migración de dimensión:** si la tabla existente tiene la columna `embedding` con otra dimensión (p. ej. pasó de `vector(3072)` a `vector(1536)`), la detecta, recrea la tabla y **reindexa el material** (re-embebe el mismo `content`); si no hay embedder disponible, deja un log `reindex_pendiente`. Con `> 2000` dimensiones, el `CREATE INDEX ... hnsw` falla y solo loguea el warning (queda escaneo secuencial).
 - `upsert_chunks(...)` → inserta/actualiza los fragmentos con su embedding.
 - `delete_material(...)` → borra un material (útil para re-indexar).
 - `search(subject_id, embedding, top_k)` → recupera los `top_k` fragmentos más similares por coseno (`1 - (embedding <=> $vector)`), filtrados por materia.
