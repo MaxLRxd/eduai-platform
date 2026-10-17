@@ -91,12 +91,16 @@ La pantalla ya existía; se resolvieron los dos detalles que faltaban y se hizo 
 ningún test de páginas, hooks ni servicios. Es la deuda de cobertura más grande del proyecto,
 por encima de la del backend (que pasó de 2 archivos/18 tests a 5 archivos/56 tests).
 
-### 8. `mensajeIA` no persiste el modo con el que respondió
-El `modo` ya viaja en cada request y el backend lo prioriza sobre el de la sesión, y
-`sincronizarModo()` persiste el cambio de modo a mitad de sesión (hecho 2026-09-28, con 4 tests).
-Lo que queda desalineado es el registro: **`sesionIA.modo` y `mensajeIA` siguen sin guardar el
-modo con el que se respondió cada mensaje**, así que los analytics por modo y el fallback cuando
-un cliente omite `modo` no son del todo confiables. **Requiere una migración de Prisma.**
+### 8. ✅ `mensajeIA` persiste el modo (2026-10-17)
+El `modo` ya viajaba en cada request y `sincronizarModo()` persiste el cambio a mitad de sesión.
+Ahora el modo efectivo se guarda también en cada mensaje:
+- Migración `20261017130000_mensaje_ia_modo`: `MensajeIA.modo ModoSesionIA?` (nullable; las filas
+  históricas quedan sin modo).
+- `enviarMensaje` resuelve el modo **antes** de crear el mensaje del alumno y guarda `modo` en la
+  pregunta (USER) y en la respuesta (ASSISTANT). El stream hace lo mismo: `prepararStream` devuelve
+  `modoSesion` y el controller lo pasa a `registrarMensajeUsuario` / `registrarRespuestaStream`.
+- Con esto los analytics por modo y el fallback (si el cliente omite `modo` se usa el de la sesión)
+  quedan confiables. Tests en `backend/src/tests/tutor-tools.test.ts` (no-stream + stream).
 
 ### 9. El índice HNSW nunca se crea
 `EMBEDDING_DIMENSIONS=3072` pero pgvector no indexa más de 2000 dimensiones con HNSW. La
@@ -136,7 +140,7 @@ Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
 1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
 2. ✅ **Branding** (entrada 6): presets en backend, logo a storage y theming en runtime — hecho 2026-10-17.
 3. ✅ Cablear **email** a notificaciones (entrada 3) — hecho 2026-10-17.
-4. 🟡 Tests del **frontend** (entrada 7) y migración de `modo` en `mensajeIA` (entrada 8).
+4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. Queda: 🟡 tests del **frontend** (entrada 7).
 5. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
 6. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
 

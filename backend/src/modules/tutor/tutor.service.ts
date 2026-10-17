@@ -66,10 +66,10 @@ async function exigirInscripcion(materiaId: string, alumnoId: string): Promise<v
 }
 
 // El alumno puede cambiar de modo a mitad de conversacion. El request lo manda
-// en cada mensaje, asi que la IA siempre responde en el modo pedido; lo que
-// quedaba desalineado era el registro: sesionIA.modo se quedaba clavado en el
-// modo del primer mensaje. Eso rompe los analytics por modo y el fallback cuando
-// un cliente omite `modo`.
+// en cada mensaje, asi que la IA siempre responde en el modo pedido; el modo
+// efectivo se persiste tanto en `sesionIA.modo` como en cada `mensajeIA`, de
+// modo que los analytics por modo y el fallback cuando un cliente omite `modo`
+// (se usa el modo de la sesion) sean confiables.
 async function sincronizarModo(
   sesionId: string,
   modoSesion: ModoSesionIA,
@@ -158,10 +158,13 @@ export async function enviarMensaje(
     .filter((p) => p.rol === "USER" || p.rol === "ASSISTANT")
     .map((p) => ({ role: p.rol.toLowerCase() as "user" | "assistant", content: p.contenido }));
 
+  const modo = await sincronizarModo(sesionId, sesion.modo, input.modo);
+
   const usuario = await prisma.mensajeIA.create({
     data: {
       sesion_id: sesionId,
       rol: "USER",
+      modo,
       contenido: input.contenido,
       prompt_original: input.contenido,
     },
@@ -172,8 +175,6 @@ export async function enviarMensaje(
   } catch {
     // los analytics no deben interrumpir el flujo del chat
   }
-
-  const modo = await sincronizarModo(sesionId, sesion.modo, input.modo);
 
   const inicio = Date.now();
   const resultado = await chatTutor(
@@ -192,6 +193,7 @@ export async function enviarMensaje(
     data: {
       sesion_id: sesionId,
       rol: "ASSISTANT",
+      modo,
       contenido: resultado.answer,
       prompt_depurado: resultado.prompt_depurado,
       tokens_respuesta: resultado.tokens_ahorrados,
@@ -225,7 +227,12 @@ export async function prepararStream(
   contenido: string,
   alumnoId: string,
   modo: ModoSesionIA | undefined
-): Promise<{ materiaId: string; modo: ModoIA; history: { role: "user" | "assistant"; content: string }[] }> {
+): Promise<{
+  materiaId: string;
+  modo: ModoIA;
+  modoSesion: ModoSesionIA;
+  history: { role: "user" | "assistant"; content: string }[];
+}> {
   const sesion = await obtenerSesionDeAlumno(sesionId, alumnoId);
 
   if (sesion.cerrada_en) {
@@ -247,17 +254,24 @@ export async function prepararStream(
   return {
     materiaId: sesion.materia_id,
     modo: modoAMin(modoEfectivo),
+    modoSesion: modoEfectivo,
     history,
   };
 }
 
-export async function registrarMensajeUsuario(sesionId: string, contenido: string, alumnoId: string) {
+export async function registrarMensajeUsuario(
+  sesionId: string,
+  contenido: string,
+  alumnoId: string,
+  modo?: ModoSesionIA
+) {
   const sesion = await obtenerSesionDeAlumno(sesionId, alumnoId);
 
   const usuario = await prisma.mensajeIA.create({
     data: {
       sesion_id: sesionId,
       rol: "USER",
+      modo,
       contenido,
       prompt_original: contenido,
     },
@@ -281,7 +295,8 @@ export async function registrarRespuestaStream(
   sesionId: string,
   contenido: string,
   tiempoMs: number,
-  alumnoId: string
+  alumnoId: string,
+  modo?: ModoSesionIA
 ) {
   await obtenerSesionDeAlumno(sesionId, alumnoId);
 
@@ -289,6 +304,7 @@ export async function registrarRespuestaStream(
     data: {
       sesion_id: sesionId,
       rol: "ASSISTANT",
+      modo,
       contenido,
       tiempo_respuesta_ms: tiempoMs,
     },

@@ -94,14 +94,19 @@ export async function stream(
     throw new AppError(401, "No autenticado");
   }
 
-  const { materiaId, modo, history } = await tutorService.prepararStream(
+  const { materiaId, modo, modoSesion, history } = await tutorService.prepararStream(
     req.params.sesionId,
     req.body.contenido,
     req.user.id,
     req.body.modo
   );
 
-  await tutorService.registrarMensajeUsuario(req.params.sesionId, req.body.contenido, req.user.id);
+  await tutorService.registrarMensajeUsuario(
+    req.params.sesionId,
+    req.body.contenido,
+    req.user.id,
+    modoSesion
+  );
 
   const upstream = await streamTutor(materiaId, req.body.contenido, modo, history);
 
@@ -144,7 +149,8 @@ export async function stream(
         req.params.sesionId,
         respuestaTexto,
         Date.now() - inicio,
-        req.user.id
+        req.user.id,
+        modoSesion
       );
     } catch {
       // si no se pudo persistir, el cliente ya recibió el streaming

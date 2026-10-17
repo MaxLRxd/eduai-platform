@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { createApp } from "../app";
 import { signAccessToken } from "../middlewares/auth";
 import { prisma } from "../config/prisma";
+import { streamTutor } from "../config/aiClient";
 
 const MATERIA_ID = "11111111-1111-4111-8111-111111111111";
 const CONTENIDO_ID = "22222222-2222-4222-8222-222222222222";
@@ -24,6 +25,8 @@ const prismaMock = prisma as unknown as {
   sesionIA: { findUnique: jest.Mock; update: jest.Mock };
   mensajeIA: { findMany: jest.Mock; create: jest.Mock };
 };
+
+const streamTutorMock = streamTutor as unknown as jest.Mock;
 
 const resumirDocumentoMock = jest.fn();
 const generarExamenMock = jest.fn();
@@ -323,5 +326,97 @@ describe("tutor: cambio de modo a mitad de conversacion", () => {
     expect(res.status).toBe(200);
     expect(chatTutorMock).toHaveBeenCalledWith(MATERIA_ID, "hola", "hints", []);
     expect(prismaMock.sesionIA.update).not.toHaveBeenCalled();
+  });
+
+  it("guarda el modo efectivo en el mensaje del alumno y en la respuesta", async () => {
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("NORMAL"));
+
+    await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/mensajes`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola", modo: "SOCRATIC" });
+
+    expect(prismaMock.mensajeIA.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({ rol: "USER", modo: "SOCRATIC" }),
+    });
+    expect(prismaMock.mensajeIA.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({ rol: "ASSISTANT", modo: "SOCRATIC" }),
+    });
+  });
+
+  it("guarda el modo de la sesion en los mensajes si el request no lo manda", async () => {
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("HINTS"));
+
+    await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/mensajes`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola" });
+
+    expect(prismaMock.mensajeIA.create.mock.calls[0][0].data.modo).toBe("HINTS");
+    expect(prismaMock.mensajeIA.create.mock.calls[1][0].data.modo).toBe("HINTS");
+  });
+});
+
+describe("tutor: streaming persiste el modo", () => {
+  const SESION_ID = "55555555-5555-4555-8555-555555555555";
+
+  let server: ReturnType<typeof createServer>;
+
+  const tokenAlumno = (): string =>
+    signAccessToken({ sub: ALUMNO_ID, email: "alumno@edu.ai", rol: "ALUMNO" });
+
+  const sesionConModo = (modo: "NORMAL" | "SOCRATIC" | "HINTS") => ({
+    id: SESION_ID,
+    alumno_id: ALUMNO_ID,
+    materia_id: MATERIA_ID,
+    modo,
+    iniciada_en: new Date(),
+    cerrada_en: null,
+  });
+
+  const sseResponse = (texto: string): Response => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "token", text: texto })}\n\n`));
+        controller.close();
+      },
+    });
+    return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    server = createServer(createApp() as unknown as import("http").RequestListener);
+    prismaMock.sesionIA.findUnique.mockResolvedValue(sesionConModo("NORMAL"));
+    prismaMock.sesionIA.update.mockResolvedValue(sesionConModo("SOCRATIC"));
+    prismaMock.mensajeIA.findMany.mockResolvedValue([]);
+    prismaMock.mensajeIA.create
+      .mockResolvedValueOnce({ id: "msg-1", rol: "USER", contenido: "hola", creado_en: new Date() })
+      .mockResolvedValueOnce({ id: "msg-2", rol: "ASSISTANT", contenido: "Hola", creado_en: new Date() });
+    streamTutorMock.mockResolvedValue(sseResponse("Hola"));
+  });
+
+  afterEach(() => {
+    server.close();
+  });
+
+  it("persiste el modo del request en el USER y en la ASSISTANT del stream", async () => {
+    const res = await request(server)
+      .post(`/api/tutor/sesiones/${SESION_ID}/stream`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .send({ contenido: "hola", modo: "SOCRATIC" });
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.sesionIA.update).toHaveBeenCalledWith({
+      where: { id: SESION_ID },
+      data: { modo: "SOCRATIC" },
+    });
+    expect(prismaMock.mensajeIA.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({ rol: "USER", modo: "SOCRATIC" }),
+    });
+    expect(prismaMock.mensajeIA.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({ rol: "ASSISTANT", modo: "SOCRATIC" }),
+    });
   });
 });
