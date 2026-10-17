@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import type { TipoProfesor } from "@prisma/client";
+import { renderReportePdf } from "./reportsPdf";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import type {
@@ -546,6 +547,26 @@ export async function exportarReporteCsv(type: string) {
     filename: `reporte-${type}.csv`,
     csv: csvFromReporte(reporte),
   };
+}
+
+export async function exportarReportePdf(type: string) {
+  const reportes = await reportesAdmin();
+  const reporte = reportes.find((r) => r.type === type);
+
+  if (!reporte) {
+    throw new AppError(404, "Reporte no encontrado");
+  }
+
+  const buffer = await renderReportePdf(reporte);
+
+  return {
+    filename: `reporte-${type}.pdf`,
+    pdf: buffer.toString("base64"),
+  };
+}
+
+export async function exportarReporte(type: string, formato: "csv" | "pdf" = "csv") {
+  return formato === "pdf" ? exportarReportePdf(type) : exportarReporteCsv(type);
 }
 
 const PLANES_LICENCIA: {

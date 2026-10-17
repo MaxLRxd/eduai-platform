@@ -1,18 +1,27 @@
 import React, { useState } from "react";
-import { useAdminReports, useExportReport } from "../../hooks/useAdminReports";
-import { downloadCsv } from "../../services/adminReports.service";
+import { useAdminReports, useExportReport, useExportReportPdf } from "../../hooks/useAdminReports";
+import { downloadCsv, downloadPdf } from "../../services/adminReports.service";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 
 export function AdminReportsPage(): React.ReactElement {
   const { data: reports, isLoading } = useAdminReports();
   const exportReport = useExportReport();
+  const exportReportPdf = useExportReportPdf();
   const [generating, setGenerating] = useState<string | null>(null);
 
-  const handleExport = (type: string): void => {
-    setGenerating(type);
+  const handleExportCsv = (type: string): void => {
+    setGenerating(`${type}:csv`);
     exportReport.mutate(type, {
       onSuccess: (result) => downloadCsv(result),
+      onSettled: () => setGenerating(null),
+    });
+  };
+
+  const handleExportPdf = (type: string): void => {
+    setGenerating(`${type}:pdf`);
+    exportReportPdf.mutate(type, {
+      onSuccess: (result) => downloadPdf(result),
       onSettled: () => setGenerating(null),
     });
   };
@@ -41,9 +50,23 @@ export function AdminReportsPage(): React.ReactElement {
               ))}
             </div>
             <div className="text-[10.5px] text-text-3 mb-3">{r.footnote}</div>
-            <Button size="sm" onClick={() => handleExport(r.type)} disabled={generating === r.type}>
-              {generating === r.type ? "Generando…" : `${r.actionLabel}`}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleExportCsv(r.type)}
+                disabled={generating !== null}
+              >
+                {generating === `${r.type}:csv` ? "Generando…" : `${r.actionLabel} CSV`}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleExportPdf(r.type)}
+                disabled={generating !== null}
+              >
+                {generating === `${r.type}:pdf` ? "Generando…" : "Exportar PDF"}
+              </Button>
+            </div>
           </Card>
         ))}
         {!isLoading && (reports ?? []).length === 0 && (

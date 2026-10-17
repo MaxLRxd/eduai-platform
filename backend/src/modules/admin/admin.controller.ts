@@ -138,7 +138,8 @@ export async function exportarReporte(
   res: Response
 ): Promise<void> {
   requireUser(req);
-  const resultado = await adminService.exportarReporteCsv(req.params.type);
+  const formato = req.query.format === "pdf" ? "pdf" : "csv";
+  const resultado = await adminService.exportarReporte(req.params.type, formato);
   res.json(resultado);
 }
 

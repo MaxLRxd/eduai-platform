@@ -28,7 +28,7 @@ Todo está analizado y escrito en **`DEPLOY.md`**:
 - 7 preguntas abiertas + checklist de lo que falta antes de deployar.
 - **Postgres + `pgvector` sigue sin definir.** Sin esto no hay dónde correr la app en prod.
 
-## 🟠 FUNCIONALIDAD (2–4 ✅ hechas 2026-10-16; faltan 5 y 6)
+## 🟠 FUNCIONALIDAD (2–5 ✅ hechas 2026-10-16; falta 6)
 
 ### 2. ✅ Notificaciones — frontend implementado (2026-10-16)
 Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
@@ -57,13 +57,16 @@ Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
 - multer sigue en `memoryStorage` (correcto: el buffer se sube/guarda después). Falta un test de
   integración con un bucket real y definir `R2_ENDPOINT`/bucket público en deploy (entrada 1).
 
-### 5. Export PDF de reportes
-**No existe generación de PDF en el proyecto.** No hay `pdfkit`, `jspdf`, `puppeteer`,
-`playwright` ni `weasyprint` instalado. Lo único con "pdf" es **lectura** (OCR en
-`ai-services/src/services/ocr_service.py`) y el enum de tipos de contenido.
-El export real es **solo CSV**: `GET /api/admin/reports/:type/export` →
-`admin.service.ts:537-547` (`exportarReporteCsv`), consumido por
-`frontend/src/services/adminReports.service.ts:31-41`.
+### 5. ✅ Export PDF de reportes (2026-10-16)
+- Backend: `pdfkit` (+ `@types/pdfkit`) agregado. Renderer `backend/src/modules/admin/reportsPdf.ts`
+  (`renderReportePdf`, A4, tabla Métrica/Valor, limpia emojis de los títulos).
+- `admin.service.ts` expone `exportarReportePdf(type)` y `exportarReporte(type, formato)`; el
+  controller lee `?format=pdf|csv` (default `csv`). `GET /api/admin/reports/:type/export?format=pdf`
+  devuelve `{ filename, pdf: base64 }`.
+- Frontend: `exportReportPdf` + `downloadPdf` (`adminReports.service.ts`), hook
+  `useExportReportPdf`, y `AdminReportsPage` con dos botones (CSV y PDF).
+- Tests: `backend/src/tests/reports-pdf.test.ts` (2 casos: header `%PDF-`, stats vacíos + emojis).
+- Pendiente: no se probó end-to-end contra la base real (el renderer sí, unit test).
 
 ### 6. Branding — 2 detalles chicos (la pantalla YA existe)
 Ojo, esto **ya está implementado**: pantalla `frontend/src/pages/admin/AdminSettingsPage.tsx`
@@ -129,12 +132,11 @@ Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
 ## PRÓXIMOS PASOS SUGERIDOS (resumen accionable)
 
 1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
-2. 🟠 **Export PDF de reportes** (entrada 5) — hoy solo hay CSV.
-3. 🟠 **Branding**: presets de color en backend (entrada 6) y subir el logo a storage (entrada 4 ya lista).
-4. 🟠 Cablear **email** a eventos reales de notificación (entrada 3 base ya está).
-5. 🟡 Tests del **frontend** (entrada 7) y migración de `modo` en `mensajeIA` (entrada 8).
-6. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
-7. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
+2. 🟠 **Branding**: presets de color en backend (entrada 6) y subir el logo a storage (entrada 4 ya lista).
+3. 🟠 Cablear **email** a eventos reales de notificación (entrada 3 base ya está).
+4. 🟡 Tests del **frontend** (entrada 7) y migración de `modo` en `mensajeIA` (entrada 8).
+5. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
+6. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).
 
 ---
 
