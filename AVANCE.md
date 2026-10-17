@@ -28,7 +28,7 @@ Todo está analizado y escrito en **`DEPLOY.md`**:
 - 7 preguntas abiertas + checklist de lo que falta antes de deployar.
 - **Postgres + `pgvector` sigue sin definir.** Sin esto no hay dónde correr la app en prod.
 
-## 🟠 FUNCIONALIDAD (2–5 ✅ hechas 2026-10-16; falta 6)
+## 🟠 FUNCIONALIDAD (2–6 ✅ hechas; 6 cerrada 2026-10-17)
 
 ### 2. ✅ Notificaciones — frontend implementado (2026-10-16)
 Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
@@ -40,12 +40,15 @@ Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
 - `Header.tsx` reemplazó el punto rojo hardcodeado por el contador real.
 - Util `frontend/src/utils/format.ts` (`formatFecha`) y `Tr` expuesto en `Table.tsx`.
 
-### 3. ✅ Email — servicio base implementado, stub por defecto (2026-10-16)
-- `backend/src/services/email.service.ts` con `EmailService.sendEmail`; proveedor `none` por
-  defecto (no-op), listo para enchufar `resend` / `brevo` / `smtp`.
-- `backend/src/config/env.ts` amplía el schema con `EMAIL_PROVIDER` (enum, default `none`),
-  `EMAIL_FROM`, `EMAIL_API_KEY` y `EMAIL_SMTP_*`; `.env.example` y `backend/.env.example`
-  actualizados. Falta cablear el envío a eventos reales de notificación.
+### 3. ✅ Email — servicio implementado y cableado (2026-10-17)
+- `backend/src/services/email.service.ts`: `sendEmail` (lanza ante fallo del proveedor) y
+  `sendEmailSeguro` (best-effort, nunca lanza), `isEmailEnabled`/`getEmailProvider`. Proveedores:
+  `none` (default, no-op), `resend` y `brevo` (HTTP `fetch`) y `smtp` (nodemailer, dep agregada).
+- `backend/src/config/env.ts` con `EMAIL_PROVIDER` (enum, default `none`), `EMAIL_FROM`,
+  `EMAIL_API_KEY` y `EMAIL_SMTP_*`; `.env.example` y `backend/.env.example` documentados.
+- Cableado a notificaciones: `crearNoLeidas` (`notificaciones.service.ts`) dispara el email
+  best-effort (`void`) tras crear la notificación; con `none` no consulta ni el email del usuario.
+  Tests: `backend/src/tests/email.test.ts` y `notificaciones-email.test.ts`.
 
 ### 4. ✅ R2 / object storage — cliente S3 integrado (2026-10-16)
 - `backend/src/config/storage.ts` ahora enruta `guardarArchivo`/`eliminarArchivo` (ahora `async`)
@@ -68,19 +71,18 @@ Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
 - Tests: `backend/src/tests/reports-pdf.test.ts` (2 casos: header `%PDF-`, stats vacíos + emojis).
 - Pendiente: no se probó end-to-end contra la base real (el renderer sí, unit test).
 
-### 6. Branding — 2 detalles chicos (la pantalla YA existe)
-Ojo, esto **ya está implementado**: pantalla `frontend/src/pages/admin/AdminSettingsPage.tsx`
-(nombre de institución, colores, logo, botón "Aplicar apariencia"), ruta `/admin/settings` en
-`App.tsx:315`, service `adminSettings.service.ts` con `getBranding()`/`saveBranding()`, hook
-`useAdminSettings` con invalidación de query, y endpoint `GET/PUT /api/admin/branding`
-(`config.routes.ts:9,10`, montado en `app.ts:36`).
-
-Lo que falta son solo these dos detalles:
-- **Presets de color hardcodeados en el front:** `adminSettings.service.ts:3,29-31` importa
-  `MOCK_COLOR_PRESETS` de `frontend/src/data/mock/adminSettings.mock.ts:3` y lo devuelve con
-  `Promise.resolve(...)`. No hay endpoint de presets en backend (cero resultados de `presets`).
-- **El logo se manda como data URL base64** (`AdminSettingsPage.tsx:28-35` usa
-  `FileReader.readAsDataURL` y lo manda directo en el PUT), no se sube a storage. Ver entrada 4.
+### 6. ✅ Branding — presets en backend + logo a storage (2026-10-17)
+La pantalla ya existía; se resolvieron los dos detalles que faltaban y se hizo el theming real:
+- **Presets:** `COLOR_PRESETS` viven en el backend (`config.schemas.ts`) y se sirven vía
+  `GET /api/admin/branding/presets`. Se eliminó `frontend/src/data/mock/adminSettings.mock.ts`
+  y `adminSettings.service.ts` consume el endpoint.
+- **Logo:** `POST /api/admin/branding/logo` (multer `memoryStorage` → `guardarArchivo`) sube a
+  storage (local o R2) y guarda solo la URL; el logo anterior se borra con `eliminarArchivo`.
+- **Tema en runtime:** `tailwind.config.js`/`index.css` usan CSS vars y `BrandingContext.tsx`
+  (montado en `main.tsx`) las setea desde `GET /api/config/branding` (público). El `Sidebar` ya
+  muestra el nombre/logo reales en vez del hardcodeo. `color_claro` ahora se persiste
+  (`Institution.color_claro`, migración `20261017120000_institution_color_claro`).
+- Tests: `backend/src/tests/config-branding.test.ts`.
 
 ## 🟡 DEUDA TÉCNICA Y RIESGOS CONOCIDOS
 
@@ -132,8 +134,8 @@ Solo hay pgvector (default) y Pinecone. **Decidir y borrar la variable.**
 ## PRÓXIMOS PASOS SUGERIDOS (resumen accionable)
 
 1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
-2. 🟠 **Branding**: presets de color en backend (entrada 6) y subir el logo a storage (entrada 4 ya lista).
-3. 🟠 Cablear **email** a eventos reales de notificación (entrada 3 base ya está).
+2. ✅ **Branding** (entrada 6): presets en backend, logo a storage y theming en runtime — hecho 2026-10-17.
+3. ✅ Cablear **email** a notificaciones (entrada 3) — hecho 2026-10-17.
 4. 🟡 Tests del **frontend** (entrada 7) y migración de `modo` en `mensajeIA` (entrada 8).
 5. 🟡 Rebajar `EMBEDDING_DIMENSIONS` a ≤2000 y reindexar (entrada 9), o migrar a IVF.
 6. 🟡 Limpiar `CHROMA_URL` (entrada 13) y decidir los presets de branding (entrada 6).

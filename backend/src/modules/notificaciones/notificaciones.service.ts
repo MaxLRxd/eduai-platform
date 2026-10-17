@@ -1,5 +1,7 @@
 import type { TipoNotificacion } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { logger } from "../../config/logger";
+import { isEmailEnabled, sendEmailSeguro } from "../../services/email.service";
 import { AppError } from "../../middlewares/error";
 import type { CrearNotificacionInput } from "./notificaciones.schemas";
 
@@ -45,6 +47,30 @@ function toNotificacionDto(n: {
   };
 }
 
+// Envio best-effort del email asociado a la notificacion. No bloquea la
+// respuesta HTTP ni rompe el flujo si falla. Si el proveedor esta en `none`
+// (default) no se consulta siquiera el email del usuario.
+async function notificarPorEmail(input: CrearNotificacionInput): Promise<void> {
+  if (!isEmailEnabled()) return;
+
+  try {
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: input.usuario_id },
+      select: { email: true },
+    });
+
+    if (!usuario?.email) return;
+
+    await sendEmailSeguro({
+      to: usuario.email,
+      subject: input.titulo,
+      text: input.mensaje,
+    });
+  } catch (err) {
+    logger.warn({ err, usuarioId: input.usuario_id }, "no se pudo notificar por email");
+  }
+}
+
 export async function crearNoLeidas(input: CrearNotificacionInput): Promise<Notificacion> {
   const notificacion = await prisma.notificacion.create({
     data: {
@@ -56,6 +82,8 @@ export async function crearNoLeidas(input: CrearNotificacionInput): Promise<Noti
       referencia_id: input.referencia_id,
     },
   });
+
+  void notificarPorEmail(input);
 
   return toNotificacionDto(notificacion);
 }
