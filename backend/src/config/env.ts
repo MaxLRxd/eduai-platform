@@ -9,6 +9,7 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_ENDPOINT: z.string().optional(),
   R2_BUCKET_NAME: z.string().optional(),
+  R2_PUBLIC_URL: z.string().optional(),
   EMAIL_PROVIDER: z.enum(['none', 'resend', 'brevo', 'smtp']).default('none'),
   EMAIL_FROM: z.string().optional(),
   EMAIL_API_KEY: z.string().optional(),

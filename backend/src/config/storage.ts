@@ -42,6 +42,12 @@ function normalizarEndpoint(): string {
 }
 
 function prefijoPublico(): string {
+  // La URL con la que se sirve el archivo puede diferir del endpoint S3 usado
+  // para subir/borrar (Cloudflare R2 no expone el endpoint S3 como público).
+  // Si R2_PUBLIC_URL está definido (dominio custom o dominio r2.dev del bucket)
+  // se usa ese; si no, se cae al formato endpoint/bucket por compatibilidad.
+  const publico = env.R2_PUBLIC_URL?.trim().replace(/\/+$/, "");
+  if (publico) return publico;
   return `${normalizarEndpoint()}/${env.R2_BUCKET_NAME}`;
 }
 
