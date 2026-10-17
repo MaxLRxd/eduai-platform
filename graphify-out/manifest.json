@@ -432,10 +432,10 @@
     "semantic_hash": "412f7c468d72e5f9b8c7ff43467facc7"
   },
   "backend/src/modules/actividades/actividades.service.ts": {
-    "mtime": 1790794683.711594,
-    "seen": 1791158971.004184,
-    "ast_hash": "a2b9c074d5c040b316da7dfe6755346c",
-    "semantic_hash": "a2b9c074d5c040b316da7dfe6755346c"
+    "mtime": 1792200303.1799731,
+    "seen": 1792200527.5834644,
+    "ast_hash": "f2461ffb2b650de9b98e1d809f662878",
+    "semantic_hash": "f2461ffb2b650de9b98e1d809f662878"
   },
   "backend/src/modules/admin/admin.controller.ts": {
     "mtime": 1788904673.5931735,
@@ -600,10 +600,10 @@
     "semantic_hash": "ac406c04739e3c9932e59e33a6668a6c"
   },
   "backend/src/modules/contenidos/contenidos.service.ts": {
-    "mtime": 1790789784.2755475,
-    "seen": 1791158971.004184,
-    "ast_hash": "a302f2c6e1f0de89f7a68927a86129a3",
-    "semantic_hash": "a302f2c6e1f0de89f7a68927a86129a3"
+    "mtime": 1792200300.8649287,
+    "seen": 1792200527.5924952,
+    "ast_hash": "f98c83fee866c026b82ef3704e3535b6",
+    "semantic_hash": "f98c83fee866c026b82ef3704e3535b6"
   },
   "backend/src/modules/correccion/correccion.controller.ts": {
     "mtime": 1788225312.0104678,
@@ -1536,10 +1536,10 @@
     "semantic_hash": "c318be6db5d30ea0de4714e8f22b0f04"
   },
   "backend/src/config/storage.ts": {
-    "mtime": 1792194360.2749946,
-    "seen": 1792194942.0444233,
-    "ast_hash": "e272fef3db2cf683ca4ffb8ce7a86ebe",
-    "semantic_hash": "e272fef3db2cf683ca4ffb8ce7a86ebe"
+    "mtime": 1792200294.0132236,
+    "seen": 1792200527.5814593,
+    "ast_hash": "d5cb8bf08d03169ea912e2ea7ace6c5a",
+    "semantic_hash": "d5cb8bf08d03169ea912e2ea7ace6c5a"
   },
   "backend/src/tests/actividades-ciclo.test.ts": {
     "mtime": 1790795320.5069754,
