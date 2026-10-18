@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  createSection,
+  deleteSection,
   getCourseSections,
   getUploadedMaterials,
   uploadMaterial,
@@ -19,6 +21,26 @@ export function useUploadedMaterials(sectionId: string | null) {
     queryKey: ["content", "materials", sectionId],
     queryFn: () => getUploadedMaterials(sectionId as string),
     enabled: !!sectionId,
+  });
+}
+
+export function useCreateSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, input }: { courseId: string; input: Parameters<typeof createSection>[1] }) =>
+      createSection(courseId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content", "sections"] }),
+  });
+}
+
+export function useDeleteSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSection,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content", "sections"] });
+      queryClient.invalidateQueries({ queryKey: ["content", "materials"] });
+    },
   });
 }
 

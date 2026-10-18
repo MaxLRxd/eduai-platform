@@ -487,6 +487,10 @@ model PlanningClase {
   titulo      String              @db.VarChar(200)
   contenido   String?
   estado      EstadoPlanningClase @default(PLANIFICADO)
+  material_url       String?
+  material_nombre    String?  @db.VarChar(255)
+  material_formato   String?  @db.VarChar(20)
+  material_tamano_kb Int?
   created_at  DateTime            @default(now())
   updated_at  DateTime            @updatedAt
 

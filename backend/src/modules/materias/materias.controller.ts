@@ -22,6 +22,14 @@ export async function mias(req: Request, res: Response): Promise<void> {
   res.json({ materias });
 }
 
+export async function inscriptos(req: Request<{ id: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const alumnos = await materiasService.listarInscriptos(req.params.id, req.user.id, req.user.rol);
+  res.json({ alumnos });
+}
+
 export async function detalle(req: Request<{ id: string }>, res: Response): Promise<void> {
   if (!req.user) {
     throw new AppError(401, "No autenticado");

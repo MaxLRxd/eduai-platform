@@ -28,6 +28,7 @@ router.post(
   validateBody(crearClaveSchema),
   materiasController.crearClave
 );
+router.get("/:id/inscriptos", requireAuth, materiasController.inscriptos);
 router.get("/:id", requireAuth, materiasController.detalle);
 
 export default router;

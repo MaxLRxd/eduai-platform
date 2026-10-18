@@ -67,6 +67,25 @@ export async function getCourseSections(courseId: string): Promise<ContentSectio
   return data.secciones ?? [];
 }
 
+export interface CreateSectionInput {
+  nombre: string;
+  descripcion?: string;
+  tipo: "TEORIA" | "PRACTICA";
+  orden: number;
+}
+
+export async function createSection(courseId: string, input: CreateSectionInput): Promise<ContentSection> {
+  const data = await api<{ seccion: ContentSection }>(`/api/materias/${courseId}/secciones`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return data.seccion;
+}
+
+export async function deleteSection(sectionId: string): Promise<void> {
+  await api(`/api/secciones/${sectionId}`, { method: "DELETE" });
+}
+
 export async function getUploadedMaterials(sectionId: string): Promise<UploadedMaterial[]> {
   const data = await api<{ contenidos: ContenidoApi[] }>(`/api/secciones/${sectionId}/contenidos`);
   return (data.contenidos ?? []).map(toUploadedMaterial);

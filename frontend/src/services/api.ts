@@ -2,6 +2,13 @@ import { getAccessToken, setAccessToken } from "./authToken";
 
 export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
+/** Convierte una ruta relativa de archivo (`/uploads/...`) en URL absoluta hacia el backend. */
+export function apiUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${API_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const res = await fetch(`${API_URL}/api/auth/refresh`, {
     method: "POST",

@@ -7,6 +7,7 @@ import {
   useMarcarTodasLeidas,
   useNotificaciones,
 } from '../../hooks/useNotificaciones';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Notificacion } from '../../services/notificaciones.service';
 import { formatFecha } from '../../utils/format';
 
@@ -15,11 +16,25 @@ export default function NotificacionesPage() {
   const marcarLeida = useMarcarLeida();
   const marcarTodas = useMarcarTodasLeidas();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleClick = async (id: string, enlace?: string | null) => {
-    if (!marcarLeida.isPending) {
-      await marcarLeida.mutateAsync(id);
+  const enlaceDe = (n: Notificacion): string | null => {
+    const esAlumno = user?.role === 'ALUMNO';
+    switch (n.referenciaTipo) {
+      case 'entrega':
+        return esAlumno ? '/student/assignments' : '/teacher/corrections';
+      case 'conversacion':
+        return esAlumno ? null : '/teacher/messages';
+      default:
+        return null;
     }
+  };
+
+  const handleClick = async (n: Notificacion) => {
+    if (!marcarLeida.isPending) {
+      await marcarLeida.mutateAsync(n.id);
+    }
+    const enlace = enlaceDe(n);
     if (enlace) {
       navigate(enlace);
     }
@@ -59,7 +74,7 @@ export default function NotificacionesPage() {
                 <Tr
                   key={n.id}
                   className={`cursor-pointer hover:bg-gray-50 ${n.leida ? 'opacity-70' : ''}`}
-                  onClick={() => handleClick(n.id, n.enlace)}
+                  onClick={() => handleClick(n)}
                 >
                   <Td>
                     {n.leida ? (

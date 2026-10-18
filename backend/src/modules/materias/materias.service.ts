@@ -112,6 +112,35 @@ export async function obtenerInscripcion(materiaId: string, alumnoId: string) {
   });
 }
 
+// Lista de alumnos inscriptos a una materia (para "Mis estudiantes" y Asistencia).
+export async function listarInscriptos(materiaId: string, usuarioId: string, rol: Rol) {
+  await assertUuid(materiaId);
+
+  if (rol === "PROFESOR" || rol === "ADMIN") {
+    const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+    if (!perfil && rol !== "ADMIN") {
+      throw new AppError(403, "No tenes acceso a esta materia");
+    }
+  } else {
+    const inscripcion = await obtenerInscripcion(materiaId, usuarioId);
+    if (!inscripcion) {
+      throw new AppError(403, "No tenes acceso a esta materia");
+    }
+  }
+
+  const inscripciones = await prisma.inscripcion.findMany({
+    where: { materia_id: materiaId },
+    include: { alumno: { select: { id: true, nombre: true, email: true } } },
+    orderBy: { inscripto_en: "asc" },
+  });
+
+  return inscripciones.map((i) => ({
+    id: i.alumno.id,
+    nombre: i.alumno.nombre,
+    email: i.alumno.email,
+  }));
+}
+
 export async function obtenerDetalle(materiaId: string, usuarioId: string, rol: Rol) {
   await assertUuid(materiaId);
 

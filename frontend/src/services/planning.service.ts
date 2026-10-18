@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, API_URL } from "./api";
 import type { PlanningClass } from "../types/domain";
 
 export interface PlanningItemApi {
@@ -7,6 +7,16 @@ export interface PlanningItemApi {
   titulo: string;
   contenido: string | null;
   estado: "PLANIFICADO" | "PUBLICADO";
+  material_url: string | null;
+  material_nombre: string | null;
+  material_formato: string | null;
+  material_tamano_kb: number | null;
+}
+
+function sizeLabel(kb: number | null): string {
+  if (kb == null) return "";
+  if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+  return `${kb} KB`;
 }
 
 function toPlanningClass(item: PlanningItemApi, course: string): PlanningClass {
@@ -18,7 +28,15 @@ function toPlanningClass(item: PlanningItemApi, course: string): PlanningClass {
     material: item.contenido ?? "",
     studentVisible: item.estado === "PUBLICADO",
     aiEnabled: true,
-    attachments: [],
+    attachments: item.material_url
+      ? [
+          {
+            name: item.material_nombre ?? "Material",
+            sizeLabel: sizeLabel(item.material_tamano_kb),
+            url: item.material_url.startsWith("http") ? item.material_url : `${API_URL}${item.material_url}`,
+          },
+        ]
+      : [],
   };
 }
 
@@ -45,4 +63,28 @@ export async function savePlanning(input: {
     }),
   });
   return { success: true };
+}
+
+// POST /api/materias/:materiaId/planning/:fecha/material — sube el material de la clase.
+export async function uploadPlanningMaterial(input: {
+  courseId: string;
+  date: string;
+  file: File;
+}): Promise<void> {
+  const form = new FormData();
+  form.append("archivo", input.file);
+  await api(`/api/materias/${input.courseId}/planning/${input.date}/material`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+// DELETE /api/materias/:materiaId/planning/:fecha/material — quita el material de la clase.
+export async function deletePlanningMaterial(input: {
+  courseId: string;
+  date: string;
+}): Promise<void> {
+  await api(`/api/materias/${input.courseId}/planning/${input.date}/material`, {
+    method: "DELETE",
+  });
 }

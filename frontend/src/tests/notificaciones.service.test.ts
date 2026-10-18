@@ -18,7 +18,7 @@ describe("notificaciones.service", () => {
   });
 
   it("pide todas las notificaciones sin filtro", async () => {
-    mockApi.mockResolvedValue([]);
+    mockApi.mockResolvedValue({ notificaciones: [] });
 
     await getNotificaciones();
 
@@ -26,11 +26,41 @@ describe("notificaciones.service", () => {
   });
 
   it("agrega el query param cuando se piden solo las no leídas", async () => {
-    mockApi.mockResolvedValue([]);
+    mockApi.mockResolvedValue({ notificaciones: [] });
 
     await getNotificaciones(true);
 
     expect(mockApi).toHaveBeenCalledWith("/api/notificaciones?noLeidas=true");
+  });
+
+  it("desenvuelve el envelope y mapea los campos del backend", async () => {
+    mockApi.mockResolvedValue({
+      notificaciones: [
+        {
+          id: "n1",
+          titulo: "Nueva entrega",
+          mensaje: "El alumno subió el TP",
+          leida: false,
+          tipo: "ENTREGA",
+          creada_en: "2026-10-17T12:00:00.000Z",
+          referencia_tipo: "entrega",
+          referencia_id: "e1",
+        },
+      ],
+    });
+
+    const [n] = await getNotificaciones();
+
+    expect(n).toEqual({
+      id: "n1",
+      titulo: "Nueva entrega",
+      mensaje: "El alumno subió el TP",
+      leida: false,
+      tipo: "ENTREGA",
+      createdAt: "2026-10-17T12:00:00.000Z",
+      referenciaTipo: "entrega",
+      referenciaId: "e1",
+    });
   });
 
   it("devuelve el contador de no leídas", async () => {

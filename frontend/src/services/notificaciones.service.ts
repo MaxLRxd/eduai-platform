@@ -7,12 +7,38 @@ export type Notificacion = {
   leida: boolean;
   tipo: string;
   createdAt: string;
-  enlace?: string | null;
+  referenciaTipo?: string | null;
+  referenciaId?: string | null;
 };
 
-export async function getNotificaciones(noLeidas?: boolean) {
+interface NotificacionApi {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  leida: boolean;
+  tipo: string;
+  creada_en: string;
+  referencia_tipo?: string | null;
+  referencia_id?: string | null;
+}
+
+function toNotificacion(n: NotificacionApi): Notificacion {
+  return {
+    id: n.id,
+    titulo: n.titulo,
+    mensaje: n.mensaje,
+    leida: n.leida,
+    tipo: n.tipo,
+    createdAt: n.creada_en,
+    referenciaTipo: n.referencia_tipo ?? null,
+    referenciaId: n.referencia_id ?? null,
+  };
+}
+
+export async function getNotificaciones(noLeidas?: boolean): Promise<Notificacion[]> {
   const query = noLeidas ? '?noLeidas=true' : '';
-  return api<Notificacion[]>(`/api/notificaciones${query}`);
+  const data = await api<{ notificaciones: NotificacionApi[] }>(`/api/notificaciones${query}`);
+  return (data.notificaciones ?? []).map(toNotificacion);
 }
 
 export async function getNoLeidasCount() {

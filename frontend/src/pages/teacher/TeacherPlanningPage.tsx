@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { usePlanning, useSavePlanning } from "../../hooks/usePlanning";
+import {
+  useDeletePlanningMaterial,
+  usePlanning,
+  useSavePlanning,
+  useUploadPlanningMaterial,
+} from "../../hooks/usePlanning";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { apiErrorMessage } from "../../services/api";
 
 function shortDate(iso: string): string {
   const f = new Date(iso);
@@ -17,18 +23,25 @@ export function TeacherPlanningPage(): React.ReactElement {
 
   const { data: planning, isLoading } = usePlanning(activeCourse, activeName);
   const save = useSavePlanning();
+  const uploadMaterial = useUploadPlanningMaterial();
+  const deleteMaterial = useDeletePlanningMaterial();
 
   const [classIndex, setClassIndex] = useState(0);
   const [title, setTitle] = useState("");
-  const [material, setMaterial] = useState("");
   const [visible, setVisible] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [draftDate, setDraftDate] = useState<string | null>(null);
+  const [materialMsg, setMaterialMsg] = useState("");
+  const [materialError, setMaterialError] = useState<string | null>(null);
 
   const current = planning?.[classIndex];
+  const editingDate = draftDate ?? current?.date ?? null;
+  const editingItem = (planning ?? []).find((p) => p.date === editingDate) ?? null;
+  const adjunto = editingItem?.attachments?.[0] ?? null;
 
   useEffect(() => {
     if (current) {
       setTitle(current.title);
-      setMaterial(current.material);
       setVisible(current.studentVisible);
     }
   }, [current]);
@@ -36,17 +49,65 @@ export function TeacherPlanningPage(): React.ReactElement {
   const handleCourseChange = (id: string): void => {
     setCourseId(id);
     setClassIndex(0);
+    setDraftDate(null);
+    setMaterialMsg("");
+    setMaterialError(null);
+  };
+
+  const startNewClass = (): void => {
+    if (!newDate) return;
+    setDraftDate(newDate);
+    setTitle("");
+    setVisible(false);
+    setMaterialMsg("");
+    setMaterialError(null);
+    save.reset();
   };
 
   const handleSave = (): void => {
-    if (!activeCourse || !current) return;
-    save.mutate({
-      courseId: activeCourse,
-      date: current.date,
-      title,
-      material,
-      studentVisible: visible,
-    });
+    if (!activeCourse || !editingDate) return;
+    save.mutate(
+      {
+        courseId: activeCourse,
+        date: editingDate,
+        title,
+        material: editingItem?.material ?? "",
+        studentVisible: visible,
+      },
+      { onSuccess: () => setDraftDate(null) }
+    );
+  };
+
+  const handleUploadMaterial = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!activeCourse || !editingDate) {
+      setMaterialError("Primero elegí o creá una clase.");
+      return;
+    }
+    setMaterialMsg("");
+    setMaterialError(null);
+    uploadMaterial.mutate(
+      { courseId: activeCourse, date: editingDate, file },
+      {
+        onSuccess: () => setMaterialMsg("✅ Material cargado."),
+        onError: (err) => setMaterialError(apiErrorMessage(err, "No se pudo subir el material")),
+      }
+    );
+  };
+
+  const handleDeleteMaterial = (): void => {
+    if (!activeCourse || !editingDate) return;
+    setMaterialMsg("");
+    setMaterialError(null);
+    deleteMaterial.mutate(
+      { courseId: activeCourse, date: editingDate },
+      {
+        onSuccess: () => setMaterialMsg("🗑️ Material eliminado."),
+        onError: (err) => setMaterialError(apiErrorMessage(err, "No se pudo eliminar el material")),
+      }
+    );
   };
 
   return (
@@ -85,13 +146,18 @@ export function TeacherPlanningPage(): React.ReactElement {
               {(planning ?? []).map((p, idx) => (
                 <button
                   key={p.date}
-                  onClick={() => setClassIndex(idx)}
+                  onClick={() => {
+                    setClassIndex(idx);
+                    setDraftDate(null);
+                    setMaterialMsg("");
+                    setMaterialError(null);
+                  }}
                   className={`flex-1 min-w-[110px] flex flex-col items-center gap-0.5 py-3 px-1.5 rounded text-center transition-colors ${
-                    classIndex === idx ? "bg-primary text-white" : "bg-surface border border-border text-text-1"
+                    classIndex === idx && !draftDate ? "bg-primary text-white" : "bg-surface border border-border text-text-1"
                   }`}
                 >
                   <span className="text-sm font-extrabold">{shortDate(p.date)}</span>
-                  <span className={`text-[10px] font-semibold ${classIndex === idx ? "text-white/70" : "text-text-3"}`}>
+                  <span className={`text-[10px] font-semibold ${classIndex === idx && !draftDate ? "text-white/70" : "text-text-3"}`}>
                     {p.title ? `${p.title.slice(0, 16)}${p.title.length > 16 ? "…" : ""}` : "Sin cargar"}
                   </span>
                 </button>
@@ -101,8 +167,26 @@ export function TeacherPlanningPage(): React.ReactElement {
             !isLoading && <p className="text-xs text-text-2 mb-4">No hay clases planificadas para esta materia.</p>
           )}
 
+          <div className="flex gap-2 items-end mb-4 mt-2">
+            <div className="flex-1">
+              <label htmlFor="planning-new-date" className="block text-xs font-semibold text-text-1 mb-1.5">
+                Agregar clase por fecha
+              </label>
+              <input
+                id="planning-new-date"
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface-2"
+              />
+            </div>
+            <Button variant="secondary" onClick={startNewClass} disabled={!newDate || !activeCourse}>
+              + Agregar clase
+            </Button>
+          </div>
+
           <div className="mb-2.5 px-3 py-2 bg-primary-light rounded text-xs font-semibold text-primary">
-            📌 Editando: {current ? shortDate(current.date) : "—"}
+            📌 {draftDate ? "Nueva clase" : "Editando"}: {editingDate ? shortDate(editingDate) : "—"}
           </div>
 
           <div className="mb-3.5">
@@ -119,17 +203,56 @@ export function TeacherPlanningPage(): React.ReactElement {
           </div>
 
           <div className="mb-3.5">
-            <label htmlFor="planning-material" className="block text-xs font-semibold text-text-1 mb-1.5">
-              Material para estudiantes
-            </label>
-            <textarea
-              id="planning-material"
-              rows={5}
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
-              placeholder="Agregá enlaces, consignas, videos o indicaciones que los alumnos podrán observar."
-              className="w-full px-3 py-2 border border-border rounded text-sm"
+            <span className="block text-xs font-semibold text-text-1 mb-1.5">Material para estudiantes</span>
+            <p className="text-[11px] text-text-2 mb-2">
+              Subí un archivo (PDF, PPTX, DOCX, etc.) que los alumnos podrán ver con esta clase.
+            </p>
+            {adjunto ? (
+              <div className="flex items-center gap-2 px-3 py-2 border border-border rounded bg-surface-2">
+                <span className="text-lg">📎</span>
+                <div className="flex-1 min-w-0">
+                  {adjunto.url ? (
+                    <a href={adjunto.url} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-primary truncate block hover:underline">
+                      {adjunto.name}
+                    </a>
+                  ) : (
+                    <span className="text-[13px] font-semibold text-text-1 truncate block">{adjunto.name}</span>
+                  )}
+                  {adjunto.sizeLabel && <span className="text-[11px] text-text-3">{adjunto.sizeLabel}</span>}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={deleteMaterial.isPending}
+                  onClick={handleDeleteMaterial}
+                  aria-label="Eliminar material"
+                >
+                  🗑️
+                </Button>
+              </div>
+            ) : (
+              <label
+                htmlFor="planning-material-file"
+                className={`w-full px-3 py-6 border-2 border-dashed border-border-strong rounded flex flex-col items-center justify-center text-center gap-1 ${
+                  !activeCourse || !editingDate ? "opacity-50" : "cursor-pointer hover:border-primary hover:bg-primary-light"
+                }`}
+              >
+                <span className="text-2xl">📎</span>
+                <span className="text-[13px] font-semibold text-text-1">
+                  {uploadMaterial.isPending ? "Subiendo…" : "Cargar archivo"}
+                </span>
+                <span className="text-[11px] text-text-3">o arrastralo y soltalo acá</span>
+              </label>
+            )}
+            <input
+              id="planning-material-file"
+              type="file"
+              className="hidden"
+              onChange={handleUploadMaterial}
+              disabled={!activeCourse || !editingDate || uploadMaterial.isPending}
             />
+            {materialMsg && <p className="text-xs text-success mt-2">{materialMsg}</p>}
+            {materialError && <p className="text-xs text-danger mt-2">{materialError}</p>}
           </div>
 
           <label className="bg-info-light border border-blue-200 rounded px-3 py-2.5 text-xs text-blue-900 flex items-center gap-2 cursor-pointer mb-3.5">
@@ -137,7 +260,7 @@ export function TeacherPlanningPage(): React.ReactElement {
           </label>
 
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={handleSave} disabled={save.isPending || !current || !title.trim()}>
+            <Button onClick={handleSave} disabled={save.isPending || !editingDate || title.trim().length < 2}>
               {save.isPending ? "Guardando…" : "Guardar planificación"}
             </Button>
           </div>
@@ -150,7 +273,21 @@ export function TeacherPlanningPage(): React.ReactElement {
             {visible ? (
               <>
                 <div className="font-semibold text-text-1 mb-1">{title || "Sin título"}</div>
-                <div>{material || "Sin material cargado todavía."}</div>
+                {editingItem?.material && <div className="mb-2">{editingItem.material}</div>}
+                {adjunto ? (
+                  <div className="flex items-center gap-2 mt-1 text-text-1">
+                    <span>📎</span>
+                    {adjunto.url ? (
+                      <a href={adjunto.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                        {adjunto.name}
+                      </a>
+                    ) : (
+                      <span>{adjunto.name}</span>
+                    )}
+                  </div>
+                ) : (
+                  !editingItem?.material && <div>Sin material cargado todavía.</div>
+                )}
               </>
             ) : (
               "Esta clase todavía no es visible para los alumnos."

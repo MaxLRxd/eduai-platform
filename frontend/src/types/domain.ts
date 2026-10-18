@@ -182,6 +182,7 @@ export interface FrequentQuestion {
 export interface PlanningAttachment {
   name: string;
   sizeLabel: string;
+  url?: string;
 }
 
 export interface PlanningClass {

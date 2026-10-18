@@ -32,3 +32,34 @@ export async function upsertPlanning(
   );
   res.json({ item });
 }
+
+export async function subirMaterial(
+  req: Request<{ materiaId: string; fecha: string }>,
+  res: Response
+): Promise<void> {
+  const user = requireUser(req);
+  const archivo = req.file as Express.Multer.File | undefined;
+  if (!archivo) {
+    throw new AppError(400, "Archivo requerido (campo 'archivo')");
+  }
+  const item = await planningService.subirMaterial(
+    req.params.materiaId,
+    req.params.fecha,
+    user.id,
+    { buffer: archivo.buffer, nombreOriginal: archivo.originalname }
+  );
+  res.status(201).json({ item });
+}
+
+export async function eliminarMaterial(
+  req: Request<{ materiaId: string; fecha: string }>,
+  res: Response
+): Promise<void> {
+  const user = requireUser(req);
+  const item = await planningService.eliminarMaterial(
+    req.params.materiaId,
+    req.params.fecha,
+    user.id
+  );
+  res.json({ item });
+}

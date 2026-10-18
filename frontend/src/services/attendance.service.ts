@@ -17,7 +17,10 @@ const FRONT_TO_BACK: Record<DailyAttendanceStatus, "PRESENTE" | "AUSENTE" | "TAR
 };
 
 export async function getAttendanceState(courseId: string): Promise<StudentAttendanceState[]> {
-  const data = await api<{ asistencias: AsistenciaApi[] }>(`/api/materias/${courseId}/asistencias`);
+  const [inscriptosRes, data] = await Promise.all([
+    api<{ alumnos: { id: string; nombre: string; email: string }[] }>(`/api/materias/${courseId}/inscriptos`),
+    api<{ asistencias: AsistenciaApi[] }>(`/api/materias/${courseId}/asistencias`),
+  ]);
   const registros = data.asistencias ?? [];
 
   const porAlumno = new Map<
@@ -30,6 +33,10 @@ export async function getAttendanceState(courseId: string): Promise<StudentAtten
       fechas: Map<string, "PRESENTE" | "AUSENTE" | "TARDANZA" | "JUSTIFICADO">;
     }
   >();
+
+  for (const a of inscriptosRes.alumnos ?? []) {
+    porAlumno.set(a.id, { id: a.id, name: a.nombre, presentCount: 0, total: 0, fechas: new Map() });
+  }
 
   for (const r of registros) {
     const entry = porAlumno.get(r.alumno_id) ?? {

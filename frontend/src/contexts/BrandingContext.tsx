@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getConfigBranding } from "../services/config.service";
+import { apiUrl } from "../services/api";
 
 interface BrandingContextValue {
   nombre: string | null;
@@ -29,7 +30,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }): R
   }, [data]);
 
   return (
-    <BrandingContext.Provider value={{ nombre: data?.nombre ?? null, logoUrl: data?.logoUrl ?? null }}>
+    <BrandingContext.Provider value={{ nombre: data?.nombre ?? null, logoUrl: apiUrl(data?.logoUrl) }}>
       {children}
     </BrandingContext.Provider>
   );

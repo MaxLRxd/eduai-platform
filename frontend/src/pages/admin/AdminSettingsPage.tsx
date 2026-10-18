@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAdminSettings, useSaveBranding } from "../../hooks/useAdminSettings";
 import { uploadBrandingLogo } from "../../services/adminSettings.service";
-import { apiErrorMessage } from "../../services/api";
+import { apiErrorMessage, apiUrl } from "../../services/api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 
@@ -28,7 +28,15 @@ export function AdminSettingsPage(): React.ReactElement {
     if (b.colorClaro) setLighter(b.colorClaro);
     setLogo(b.logoUrl);
     setLogoDirty(false);
-  }, [branding.data]);
+    // El preset no se persiste: se infiere comparando los colores guardados.
+    const presetGuardado = presets.data?.find(
+      (p) =>
+        p.primary.toLowerCase() === (b.colorPrimario ?? "").toLowerCase() &&
+        p.secondary.toLowerCase() === (b.colorSecundario ?? "").toLowerCase() &&
+        p.lighter.toLowerCase() === (b.colorClaro ?? "").toLowerCase()
+    );
+    setSelectedPreset(presetGuardado?.id ?? "");
+  }, [branding.data, presets.data]);
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
@@ -67,7 +75,7 @@ export function AdminSettingsPage(): React.ReactElement {
         <CardHeader title="🏫 Identidad institucional" />
         <div className="flex gap-5 items-start flex-wrap">
           {logo ? (
-            <img src={logo} alt="Logo de la institución" className="w-[72px] h-[72px] rounded-lg border border-border object-contain bg-surface-2 shrink-0" />
+            <img src={apiUrl(logo) ?? ""} alt="Logo de la institución" className="w-[72px] h-[72px] rounded-lg border border-border object-contain bg-surface-2 shrink-0" />
           ) : (
             <div className="w-[72px] h-[72px] rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center text-2xl bg-surface-2 shrink-0">
               🏫

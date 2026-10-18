@@ -1,9 +1,17 @@
 import React, { useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useCourseSections, useUploadedMaterials, useUploadMaterial, useUploadMaterialFile } from "../../hooks/useContent";
+import {
+  useCourseSections,
+  useCreateSection,
+  useDeleteSection,
+  useUploadedMaterials,
+  useUploadMaterial,
+  useUploadMaterialFile,
+} from "../../hooks/useContent";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
+import { apiErrorMessage } from "../../services/api";
 import type { RagStatus, UploadedMaterial } from "../../types/domain";
 
 const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "📄", pptx: "📊", docx: "📝", txt: "🗒️", img: "🖼️", video: "🎬" };
@@ -18,6 +26,7 @@ export function TeacherContentPage(): React.ReactElement {
   const { data: sections } = useCourseSections(activeCourse);
   const [sectionId, setSectionId] = useState<string | null>(null);
   const activeSection = sectionId ?? sections?.[0]?.id ?? null;
+  const activeSectionName = (sections ?? []).find((s) => s.id === activeSection)?.nombre ?? null;
 
   const { data: materials, isLoading } = useUploadedMaterials(activeSection);
   const upload = useUploadMaterial();
@@ -26,6 +35,48 @@ export function TeacherContentPage(): React.ReactElement {
   const [resourceTitle, setResourceTitle] = useState("");
   const [resourceBody, setResourceBody] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
+
+  const createSection = useCreateSection();
+  const deleteSection = useDeleteSection();
+  const [sectionName, setSectionName] = useState("");
+  const [sectionTipo, setSectionTipo] = useState<"TEORIA" | "PRACTICA">("TEORIA");
+  const [sectionMsg, setSectionMsg] = useState("");
+  const [sectionError, setSectionError] = useState<string | null>(null);
+
+  const handleCreateSection = (): void => {
+    if (!activeCourse || !sectionName.trim()) return;
+    setSectionError(null);
+    setSectionMsg("");
+    createSection.mutate(
+      {
+        courseId: activeCourse,
+        input: {
+          nombre: sectionName.trim(),
+          tipo: sectionTipo,
+          orden: (sections ?? []).length,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSectionMsg("✅ Sección creada.");
+          setSectionName("");
+        },
+        onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo crear la sección")),
+      }
+    );
+  };
+
+  const handleDeleteSection = (id: string): void => {
+    setSectionError(null);
+    setSectionMsg("");
+    deleteSection.mutate(id, {
+      onSuccess: () => {
+        setSectionMsg("🗑️ Sección eliminada.");
+        if (sectionId === id) setSectionId(null);
+      },
+      onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo eliminar la sección")),
+    });
+  };
 
   const handleUpload = (file: File): void => {
     if (!activeSection) {
@@ -73,8 +124,8 @@ export function TeacherContentPage(): React.ReactElement {
       <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
         <div className="flex flex-col gap-4.5">
           <Card>
-            <CardHeader title="Seleccionar destino" />
-            <div className="mb-3.5">
+            <CardHeader title="Seleccionar materia" />
+            <div>
               <label htmlFor="content-course" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Materia
               </label>
@@ -94,30 +145,96 @@ export function TeacherContentPage(): React.ReactElement {
                 ))}
               </select>
             </div>
-            <div>
-              <label htmlFor="content-section" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Sección destino
-              </label>
-              <select
-                id="content-section"
-                value={activeSection ?? ""}
-                onChange={(e) => setSectionId(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
-              >
-                {(sections ?? []).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre}
-                  </option>
-                ))}
-              </select>
+          </Card>
+
+          <Card>
+            <CardHeader title="🧩 Secciones de la materia" />
+            <p className="text-xs text-text-2 mb-3">
+              Creá las secciones (unidades) de la materia y elegí el destino de subida haciendo clic en una.
+            </p>
+            <div className="flex flex-col gap-2 mb-3">
+              {(sections ?? []).map((s) => {
+                const esDestino = activeSection === s.id;
+                return (
+                  <div key={s.id} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSectionId(s.id)}
+                      className={`flex-1 min-w-0 flex items-center gap-2 py-1.5 px-2.5 rounded border text-left transition-colors ${
+                        esDestino ? "border-primary bg-primary-light" : "border-border bg-surface hover:border-primary"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-text-1 truncate">{s.nombre}</div>
+                        <div className="text-[11px] text-text-3">{s.tipo === "PRACTICA" ? "Práctica" : "Teoría"}</div>
+                      </div>
+                      {esDestino && <span className="text-[10px] font-bold text-primary uppercase">Destino</span>}
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={deleteSection.isPending}
+                      onClick={() => handleDeleteSection(s.id)}
+                      aria-label={`Eliminar sección ${s.nombre}`}
+                    >
+                      🗑️
+                    </Button>
+                  </div>
+                );
+              })}
+              {!activeCourse && <p className="text-xs text-text-2">Seleccioná una materia.</p>}
+              {activeCourse && (sections ?? []).length === 0 && (
+                <p className="text-xs text-text-2">Esta materia todavía no tiene secciones.</p>
+              )}
             </div>
+            <div className="grid md:grid-cols-[1fr_auto_auto] gap-2 items-end">
+              <div>
+                <label htmlFor="section-name" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Nueva sección
+                </label>
+                <input
+                  id="section-name"
+                  value={sectionName}
+                  onChange={(e) => setSectionName(e.target.value)}
+                  placeholder="Ej.: Unidad 1 — Introducción"
+                  className="w-full px-3 py-2 border border-border rounded text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="section-tipo" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Tipo
+                </label>
+                <select
+                  id="section-tipo"
+                  value={sectionTipo}
+                  onChange={(e) => setSectionTipo(e.target.value as "TEORIA" | "PRACTICA")}
+                  className="px-3 py-2 border border-border rounded text-sm bg-surface"
+                >
+                  <option value="TEORIA">Teoría</option>
+                  <option value="PRACTICA">Práctica</option>
+                </select>
+              </div>
+              <Button
+                onClick={handleCreateSection}
+                disabled={!activeCourse || !sectionName.trim() || createSection.isPending}
+              >
+                {createSection.isPending ? "Creando…" : "+ Crear sección"}
+              </Button>
+            </div>
+            {sectionMsg && <p className="text-xs text-success mt-2">{sectionMsg}</p>}
+            {sectionError && <p className="text-xs text-danger mt-2">{sectionError}</p>}
           </Card>
 
           <Card>
             <CardHeader title="📎 Subir archivo" />
+            <p className="text-xs text-text-2 mb-3">
+              Destino: {activeSectionName ? <strong className="text-text-1">{activeSectionName}</strong> : <span className="text-danger">elegí una sección en 🧩 Secciones de la materia</span>}
+            </p>
             <label
               htmlFor="content-file-input"
-              className="block border-2 border-dashed border-border-strong rounded p-7 bg-surface-2 text-center cursor-pointer"
+              className={`block border-2 border-dashed border-border-strong rounded p-7 bg-surface-2 text-center ${
+                activeSection ? "cursor-pointer" : "opacity-50"
+              }`}
             >
               <div className="text-2xl mb-2">📂</div>
               <div className="font-semibold text-text-1 mb-1">Hacé click o arrastrá un archivo aquí</div>
@@ -128,7 +245,7 @@ export function TeacherContentPage(): React.ReactElement {
                 className="hidden"
                 multiple={false}
                 accept=".pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp,.svg,.txt,.md,.mp4,.mov,.webm"
-                disabled={uploadFile.isPending}
+                disabled={uploadFile.isPending || !activeSection}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleUpload(file);

@@ -8,6 +8,7 @@ import {
   useRubrics,
   useUpdateRubric,
 } from "../../hooks/useCorrections";
+import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
@@ -19,6 +20,7 @@ import type { RubricInput } from "../../services/corrections.service";
 
 export function TeacherCorrectionsPage(): React.ReactElement {
   const { data: queue, isLoading } = useCorrectionQueue();
+  const { data: courses } = useTeacherCourses();
   const publish = usePublishCorrection();
   const correctWithAi = useCorrectWithAi();
 
@@ -43,13 +45,19 @@ export function TeacherCorrectionsPage(): React.ReactElement {
 
   const selected = queue?.find((q) => q.id === selectedId);
   const selectedMateriaId = selected?.materiaId;
-  const { data: rubrics } = useRubrics(selectedMateriaId);
+
+  // La gestión de rúbricas no depende de una entrega: por defecto toma la materia
+  // de la entrega seleccionada, pero el docente puede elegir cualquier materia propia.
+  const [rubricMateriaId, setRubricMateriaId] = useState("");
+  const materiaRubricas = rubricMateriaId || selectedMateriaId || courses?.[0]?.id || "";
+
+  const { data: rubrics } = useRubrics(materiaRubricas);
   const primaryRubric = rubrics?.[0];
   const criteria = primaryRubric?.criterios ?? [];
 
-  const crearRubrica = useCreateRubric(selectedMateriaId);
-  const actualizarRubrica = useUpdateRubric(selectedMateriaId);
-  const eliminarRubrica = useDeleteRubric(selectedMateriaId);
+  const crearRubrica = useCreateRubric(materiaRubricas);
+  const actualizarRubrica = useUpdateRubric(materiaRubricas);
+  const eliminarRubrica = useDeleteRubric(materiaRubricas);
   const savingRubric = crearRubrica.isPending || actualizarRubrica.isPending;
 
   useEffect(() => {
@@ -255,6 +263,23 @@ export function TeacherCorrectionsPage(): React.ReactElement {
 
           <Card className="border-[1.5px] border-primary">
             <CardHeader title={<span className="text-primary">📋 Gestionar rúbricas</span>} />
+            <div className="mb-3">
+              <label htmlFor="rubric-materia" className="block text-xs font-semibold text-text-1 mb-1.5">
+                Materia
+              </label>
+              <select
+                id="rubric-materia"
+                value={materiaRubricas}
+                onChange={(e) => setRubricMateriaId(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+              >
+                {(courses ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-col gap-2">
               {(rubrics ?? []).map((r) => (
                 <div key={r.id} className="p-2 bg-surface-2 rounded-sm">
@@ -297,14 +322,14 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               ))}
               {rubrics !== undefined && rubrics.length === 0 && (
                 <div className="py-4 text-center text-[12px] text-text-3">
-                  {selected ? "Esta materia no tiene rúbricas todavía." : "Seleccioná una entrega para ver sus rúbricas."}
+                  {materiaRubricas ? "Esta materia no tiene rúbricas todavía." : "No tenés materias asignadas."}
                 </div>
               )}
               {rubricError && <InfoBox variant="error">{rubricError}</InfoBox>}
               {rubricNotice && <InfoBox variant="success">{rubricNotice}</InfoBox>}
               <Button
                 className="justify-center mt-1"
-                disabled={!selectedMateriaId}
+                disabled={!materiaRubricas}
                 onClick={() => {
                   setRubricError(null);
                   setRubricNotice(null);
@@ -313,9 +338,9 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               >
                 + Nueva rúbrica
               </Button>
-              {!selectedMateriaId && (
+              {!materiaRubricas && (
                 <div className="text-[11px] text-text-3 text-center">
-                  Seleccioná una entrega para ver la materia de sus rúbricas.
+                  No tenés materias asignadas para gestionar rúbricas.
                 </div>
               )}
             </div>

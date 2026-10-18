@@ -42,18 +42,38 @@ async function getDatosMateria(courseId: string): Promise<{ notas: NotaApi[]; as
   return { notas: notasRes.notas ?? [], asistencias: asistRes.asistencias ?? [] };
 }
 
+export interface EnrolledStudent {
+  id: string;
+  nombre: string;
+  email: string;
+}
+
+export async function getCourseEnrolledStudents(courseId: string): Promise<EnrolledStudent[]> {
+  const data = await api<{ alumnos: EnrolledStudent[] }>(`/api/materias/${courseId}/inscriptos`);
+  return data.alumnos ?? [];
+}
+
 export async function getTeacherCourseStudents(courseId: string): Promise<TeacherStudentRow[]> {
-  const { notas, asistencias } = await getDatosMateria(courseId);
+  const [inscriptos, { notas, asistencias }] = await Promise.all([
+    getCourseEnrolledStudents(courseId),
+    getDatosMateria(courseId),
+  ]);
 
   const porAlumno = new Map<
     string,
     { name: string; email: string; califs: number[]; total: number; presentes: number }
   >();
 
+  for (const a of inscriptos) {
+    porAlumno.set(a.id, { name: a.nombre, email: a.email, califs: [], total: 0, presentes: 0 });
+  }
+
   for (const n of notas) {
-    const entry = porAlumno.get(n.alumno_id) ?? { name: "", email: "", califs: [], total: 0, presentes: 0 };
-    entry.name = n.alumno?.nombre ?? "—";
-    entry.email = n.alumno?.email ?? "—";
+    const entry =
+      porAlumno.get(n.alumno_id) ??
+      { name: n.alumno?.nombre ?? "—", email: n.alumno?.email ?? "—", califs: [], total: 0, presentes: 0 };
+    if (!entry.name) entry.name = n.alumno?.nombre ?? "—";
+    if (!entry.email) entry.email = n.alumno?.email ?? "—";
     entry.califs.push(n.calificacion);
     porAlumno.set(n.alumno_id, entry);
   }
@@ -76,8 +96,8 @@ export async function getTeacherCourseStudents(courseId: string): Promise<Teache
     filas.push({
       name: e.name,
       legajo: e.email,
-      average: fmtNum(promedio),
-      attendance: `${attendance}%`,
+      average: e.califs.length ? fmtNum(promedio) : "—",
+      attendance: e.total ? `${attendance}%` : "—",
       standing,
     });
   }

@@ -65,10 +65,11 @@ export async function getCourses(): Promise<Course[]> {
 
 export async function getCourseById(id: string): Promise<Course | undefined> {
   try {
-    const [materia, secciones] = await Promise.all([
-      api<MateriaDto>(`/api/materias/${id}`),
+    const [respuesta, secciones] = await Promise.all([
+      api<{ materia: MateriaDto }>(`/api/materias/${id}`),
       api<{ secciones: SeccionDto[] }>(`/api/materias/${id}/secciones`),
     ]);
+    const materia = respuesta.materia;
 
     const unidades: CourseUnit[] = [];
     const materiales: CourseMaterial[] = [];
