@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useCourse } from "../../hooks/useCourses";
 import { useTutorChat } from "../../hooks/useTutorChat";
 import type { ModoTutor } from "../../services/tutor.service";
+import type { CourseUnit } from "../../types/domain";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
@@ -35,6 +36,23 @@ const MODO_BANNER: Record<ModoTutor, string> = {
   HINTS:
     "Modo pistas activo: el tutor te encamina paso a paso con pistas progresivas, sin revelar la respuesta completa.",
 };
+
+/**
+ * Arma la consulta de "Explicame fácil" con la unidad en curso y sus temas.
+ * Antes se mandaba literal "la unidad actual": el tutor no sabia cual era y el
+ * RAG recuperaba fragmentos sobre "unidades" de medida.
+ */
+export function preguntaUnidadActual(units: CourseUnit[]): string {
+  const unidad =
+    units.find((u) => u.status === "En curso") ??
+    units.find((u) => u.status === "Disponible") ??
+    units.find((u) => u.items.length > 0) ??
+    units[0];
+  if (!unidad) return "Explicame con palabras simples los temas principales de la materia";
+
+  const temas = unidad.items.length > 0 ? ` (temas: ${unidad.items.join(", ")})` : "";
+  return `Explicame con palabras simples la unidad "${unidad.title}"${temas}`;
+}
 
 export function StudentCourseDetailPage(): React.ReactElement {
   const { courseId } = useParams<{ courseId: string }>();
@@ -138,10 +156,10 @@ export function StudentCourseDetailPage(): React.ReactElement {
             )}
 
             <div className="flex gap-2 flex-wrap mb-2.5">
-              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Explicame la unidad actual con palabras simples", "NORMAL")}>
+              <Button variant="secondary" size="sm" disabled={pending} onClick={() => submitQuestion(preguntaUnidadActual(course.units), "NORMAL")}>
                 Explicame fácil
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => submitQuestion("Dame preguntas para practicar", "NORMAL")}>
+              <Button variant="secondary" size="sm" disabled={pending} onClick={() => submitQuestion("Dame preguntas para practicar", "NORMAL")}>
                 Practicar
               </Button>
             </div>
@@ -199,7 +217,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                   <div>
                     <div className="text-[13px] text-text-1 font-medium">{m.titulo}</div>
                     <div className="text-[11px] text-text-3 mt-0.5">
-                      {m.resumible ? "Disponible para el Tutor IA" : "Archivo · no indexado"}
+                      {m.ragIndexado ? "Disponible para el Tutor IA" : "Pendiente de indexar"}
                     </div>
                   </div>
                 </div>

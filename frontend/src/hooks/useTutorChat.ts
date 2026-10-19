@@ -6,6 +6,12 @@ export function useTutorChat(course: Course | undefined) {
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const [pending, setPending] = useState(false);
   const sesionIdRef = useRef<string | null>(null);
+  // Ref y no solo estado: dos clicks seguidos llegan antes de que React
+  // re-renderice con pending=true, y cada uno abria su propio streaming que
+  // escribia tokens mezclados en la misma burbuja.
+  const enCursoRef = useRef(false);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   useEffect(() => {
     sesionIdRef.current = null;
@@ -19,37 +25,36 @@ export function useTutorChat(course: Course | undefined) {
     return id;
   }
 
-  async function ask(question: string, modo: ModoTutor = "NORMAL"): Promise<void> {
-    if (!course || !question.trim()) return;
+  function actualizarRespuesta(indice: number, cambio: (actual: string) => string): void {
+    setMessages((prev) => {
+      const actual = prev[indice];
+      if (!actual || actual.role !== "tutor") return prev;
+      const next = [...prev];
+      next[indice] = { role: "tutor", content: cambio(actual.content) };
+      return next;
+    });
+  }
 
-    const sesionId = await obtenerSesion(course.id, modo);
-    setMessages((prev) => [...prev, { role: "user", content: question }, { role: "tutor", content: "" }]);
+  async function ask(question: string, modo: ModoTutor = "NORMAL"): Promise<void> {
+    if (!course || !question.trim() || enCursoRef.current) return;
+    enCursoRef.current = true;
     setPending(true);
 
+    // Cada respuesta escribe en su propia burbuja (por indice), no en "la ultima".
+    const indice = messagesRef.current.length + 1;
+    setMessages((prev) => [...prev, { role: "user", content: question }, { role: "tutor", content: "" }]);
+
     try {
+      const sesionId = await obtenerSesion(course.id, modo);
       await askTutorStream(sesionId, question, (token) => {
-        setMessages((prev) => {
-          const next = [...prev];
-          const last = next[next.length - 1];
-          if (last && last.role === "tutor") {
-            next[next.length - 1] = { role: "tutor", content: last.content + token };
-          }
-          return next;
-        });
+        actualizarRespuesta(indice, (actual) => actual + token);
       }, modo);
     } catch {
-      setMessages((prev) => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last && last.role === "tutor" && !last.content) {
-          next[next.length - 1] = {
-            role: "tutor",
-            content: "No se pudo obtener respuesta del tutor en este momento. Intentalo de nuevo.",
-          };
-        }
-        return next;
-      });
+      actualizarRespuesta(indice, (actual) =>
+        actual || "No se pudo obtener respuesta del tutor en este momento. Intentalo de nuevo."
+      );
     } finally {
+      enCursoRef.current = false;
       setPending(false);
     }
   }

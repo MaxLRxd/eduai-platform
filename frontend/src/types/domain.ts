@@ -10,6 +10,8 @@ export interface CourseMaterial {
   tipo: string;
   /** El backend solo puede resumir materiales con texto, no archivos binarios. */
   resumible: boolean;
+  /** true cuando el contenido ya está vectorizado en el RAG del tutor. */
+  ragIndexado: boolean;
 }
 
 export interface Course {

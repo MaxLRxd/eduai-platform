@@ -24,10 +24,13 @@ class TutorRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list)
     max_tokens: int = Field(default=1024, ge=64, le=8192)
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    # material_id -> titulo, para rotular las fuentes con el nombre que ve el alumno.
+    material_titles: dict[str, str] = Field(default_factory=dict)
 
 
 class Source(BaseModel):
     material_id: str
+    titulo: str | None = None
     chunk_index: int
     content: str
     score: float
@@ -86,6 +89,7 @@ class IndexMaterialResponse(BaseModel):
 class MaterialRequest(BaseModel):
     subject_id: str = Field(..., min_length=1)
     prompt: str = Field(..., min_length=1, max_length=4000)
+    material_titles: dict[str, str] = Field(default_factory=dict)
 
 
 class MaterialResponse(BaseModel):

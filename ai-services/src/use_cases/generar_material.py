@@ -19,15 +19,17 @@ class GenerarMaterialUseCase:
         self.embeddings = embeddings
         self.retrieval = retrieval
 
-    async def execute(self, subject_id: str, prompt: str) -> dict:
+    async def execute(
+        self, subject_id: str, prompt: str, material_titles: dict[str, str] | None = None
+    ) -> dict:
         embedding = await self.embeddings.embed_query(prompt)
         results = await self.retrieval.search(subject_id, embedding, settings.retrieval_top_k)
-        sources = build_sources(results)
-        context = format_context(results)
+        sources = build_sources(results, material_titles)
+        context = format_context(results, material_titles)
 
         user_content = (
             f"Pedido del docente:\n{prompt}\n\n"
-            f"CONTEXTO (material de la cátedra):\n"
+            f"CONTEXTO (material de la cátedra; si citás, nombrá la fuente por su título):\n"
             f"{context or '(no hay material indexado disponible para esta materia)'}"
         )
         material = await self.llm.generate(

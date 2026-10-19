@@ -2,6 +2,7 @@ import http from "node:http";
 import https from "node:https";
 import { env } from "./env";
 import { logger } from "./logger";
+import { prisma } from "./prisma";
 
 function baseUrl(): string {
   return (env.AI_SERVICE_URL ?? "").replace(/\/+$/, "");
@@ -9,6 +10,23 @@ function baseUrl(): string {
 
 function aiDisponible(): boolean {
   return Boolean(env.AI_SERVICE_URL);
+}
+
+/**
+ * id -> titulo de los contenidos de la materia. El ai-service rotula con esto
+ * los fragmentos del RAG; sin el mapa, el LLM citaba el UUID del material.
+ */
+async function titulosDeMateria(materiaId: string): Promise<Record<string, string>> {
+  try {
+    const contenidos = await prisma.contenido.findMany({
+      where: { seccion: { materia_id: materiaId } },
+      select: { id: true, titulo: true },
+    });
+    return Object.fromEntries(contenidos.map((c) => [c.id, c.titulo]));
+  } catch (err) {
+    logger.warn({ err, materiaId }, "No se pudieron obtener los titulos de los materiales");
+    return {};
+  }
 }
 
 export interface IndexMaterialResult {
@@ -128,7 +146,7 @@ export interface ChatMessageInput {
 export interface TutorResult {
   answer: string;
   mode: "normal" | "socratic" | "hints";
-  sources: { material_id: string; chunk_index: number; content: string; score: number }[];
+  sources: { material_id: string; titulo?: string | null; chunk_index: number; content: string; score: number }[];
   prompt_depurado: string | null;
   tokens_ahorrados: number;
   cached: boolean;
@@ -149,7 +167,13 @@ export async function chatTutor(
     const res = await fetch(`${baseUrl()}/tutor/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject_id: subjectId, question, mode, history }),
+      body: JSON.stringify({
+        subject_id: subjectId,
+        question,
+        mode,
+        history,
+        material_titles: await titulosDeMateria(subjectId),
+      }),
       signal: AbortSignal.timeout(120_000),
     });
 
@@ -180,7 +204,13 @@ export async function streamTutor(
     return await fetch(`${baseUrl()}/tutor/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject_id: subjectId, question, mode, history }),
+      body: JSON.stringify({
+        subject_id: subjectId,
+        question,
+        mode,
+        history,
+        material_titles: await titulosDeMateria(subjectId),
+      }),
       signal: AbortSignal.timeout(120_000),
     });
   } catch (err) {
@@ -209,7 +239,7 @@ export async function indexMaterial(
 
 export interface MaterialDocenteResult {
   material: string;
-  sources: { material_id: string; chunk_index: number; content: string; score: number }[];
+  sources: { material_id: string; titulo?: string | null; chunk_index: number; content: string; score: number }[];
 }
 
 export async function generarMaterialDocente(
@@ -225,7 +255,11 @@ export async function generarMaterialDocente(
     const res = await fetch(`${baseUrl()}/tutor/generar-material`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject_id: subjectId, prompt }),
+      body: JSON.stringify({
+        subject_id: subjectId,
+        prompt,
+        material_titles: await titulosDeMateria(subjectId),
+      }),
       signal: AbortSignal.timeout(120_000),
     });
 

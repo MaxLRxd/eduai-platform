@@ -45,12 +45,12 @@ class AskTutorUseCase:
 
         embedding = await self.embeddings.embed_query(query)
         results = await self.retrieval.search(req.subject_id, embedding, settings.retrieval_top_k)
-        sources = build_sources(results)
-        context = format_context(results)
+        sources = build_sources(results, req.material_titles)
+        context = format_context(results, req.material_titles)
 
         history = normalize_messages([{"role": m.role, "content": m.content} for m in req.history])
         user_content = (
-            f"CONTEXTO (material de la cátedra):\n"
+            f"CONTEXTO (material de la cátedra; si citás, nombrá la fuente por su título):\n"
             f"{context or '(no hay material indexado disponible para esta materia)'}\n\n"
             f"Consulta del alumno:\n{query}"
         )

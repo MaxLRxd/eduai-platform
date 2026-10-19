@@ -3,25 +3,32 @@
 import hashlib
 
 
-def format_context(results: list[dict]) -> str:
-    """Convierte los fragmentos recuperados en un bloque de contexto legible."""
+def format_context(results: list[dict], titles: dict[str, str] | None = None) -> str:
+    """Convierte los fragmentos recuperados en un bloque de contexto legible.
+
+    Cada fragmento se rotula con el titulo del material (el que ve el alumno).
+    Nunca con el material_id: el LLM lo copiaba tal cual en las citas
+    ("Material 24108a35-..., fragmento 129").
+    """
     if not results:
         return ""
+    titles = titles or {}
     parts = []
     for result in results:
-        parts.append(
-            f"[Material {result['material_id']} · fragmento {result['chunk_index']}]"
-            f"\n{result['content']}"
-        )
+        titulo = titles.get(result["material_id"])
+        etiqueta = f'[Fuente: "{titulo}"]' if titulo else "[Fuente: material de la cátedra]"
+        parts.append(f"{etiqueta}\n{result['content']}")
     return "\n\n".join(parts)
 
 
-def build_sources(results: list[dict]) -> list[dict]:
+def build_sources(results: list[dict], titles: dict[str, str] | None = None) -> list[dict]:
+    titles = titles or {}
     sources = []
     for result in results:
         sources.append(
             {
                 "material_id": result["material_id"],
+                "titulo": titles.get(result["material_id"]),
                 "chunk_index": result["chunk_index"],
                 "content": result["content"],
                 "score": float(result["score"]),

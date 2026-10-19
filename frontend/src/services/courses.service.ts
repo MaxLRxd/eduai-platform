@@ -25,6 +25,7 @@ interface ContenidoDto {
   titulo: string;
   tipo: string;
   texto_contenido: string | null;
+  rag_indexado: boolean;
 }
 
 const COLOR_PALETTE = ["#003d7a", "#059669", "#2563eb", "#d97706", "#7c3aed", "#db2777"];
@@ -83,6 +84,7 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
           titulo: c.titulo,
           tipo: c.tipo,
           resumible: Boolean(c.texto_contenido?.trim()),
+          ragIndexado: c.rag_indexado,
         }))
       );
       unidades.push({
