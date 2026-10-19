@@ -1,8 +1,9 @@
 import type { Rol, TipoContenido } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { indexArchivo, indexMaterial } from "../../config/aiClient";
+import { eliminarMaterialRag } from "../../config/aiClient";
 import { eliminarArchivo, guardarArchivo } from "../../config/storage";
+import { indexarEnSegundoPlano } from "./rag-indexer";
 import {
   obtenerInscripcion,
   obtenerProfesorAsignado,
@@ -170,20 +171,14 @@ export async function crear(
     },
   });
 
-  let ragIndexado = false;
   if (input.tipo === "TEXTO" && input.texto_contenido) {
-    const resultado = await indexMaterial(seccion.materia_id, contenido.id, input.texto_contenido);
-    ragIndexado = resultado?.indexed ?? false;
-  }
-
-  if (ragIndexado) {
-    await prisma.contenido.update({
-      where: { id: contenido.id },
-      data: { rag_indexado: true },
+    indexarEnSegundoPlano(contenido.id, seccion.materia_id, {
+      tipo: "texto",
+      texto: input.texto_contenido,
     });
   }
 
-  return toContenidoDto({ ...contenido, rag_indexado: contenido.rag_indexado || ragIndexado });
+  return toContenidoDto(contenido);
 }
 
 export async function crearArchivo(
@@ -207,27 +202,18 @@ export async function crearArchivo(
     },
   });
 
-  let ragIndexado = false;
   // VIDEO sigue sin indexarse: el RAG trabaja con texto. IMAGEN si se indexa
   // desde CU-P02, porque el ai-service le pasa OCR antes de embeber.
+  // El indexado corre en segundo plano: un PDF grande tarda minutos.
   if (tipo !== "VIDEO") {
-    const resultado = await indexArchivo(
-      seccion.materia_id,
-      contenido.id,
-      archivo.buffer,
-      archivo.nombreOriginal
-    );
-    ragIndexado = resultado?.indexed ?? false;
-
-    if (ragIndexado) {
-      await prisma.contenido.update({
-        where: { id: contenido.id },
-        data: { rag_indexado: true },
-      });
-    }
+    indexarEnSegundoPlano(contenido.id, seccion.materia_id, {
+      tipo: "archivo",
+      buffer: archivo.buffer,
+      nombre: archivo.nombreOriginal,
+    });
   }
 
-  return toContenidoDto({ ...contenido, rag_indexado: contenido.rag_indexado || ragIndexado });
+  return toContenidoDto(contenido);
 }
 
 export async function actualizar(
@@ -239,6 +225,12 @@ export async function actualizar(
 
   const seccion = await prisma.seccion.findUnique({ where: { id: contenido.seccion_id } });
 
+  const tipoFinal = input.tipo ?? contenido.tipo;
+  const textoFinal = input.texto_contenido !== undefined
+    ? input.texto_contenido
+    : contenido.texto_contenido;
+  const reindexar = tipoFinal === "TEXTO" && Boolean(textoFinal) && Boolean(seccion);
+
   const actualizado = await prisma.contenido.update({
     where: { id: contenidoId },
     data: {
@@ -249,37 +241,30 @@ export async function actualizar(
       archivo_nombre: input.archivo_nombre,
       archivo_formato: input.archivo_formato,
       archivo_tamano_kb: input.archivo_tamano_kb,
-      rag_indexado: input.tipo === "TEXTO" ? false : contenido.rag_indexado,
+      rag_indexado: reindexar || input.tipo === "TEXTO" ? false : contenido.rag_indexado,
     },
   });
 
-  const tipoFinal = input.tipo ?? contenido.tipo;
-  const textoFinal = input.texto_contenido !== undefined
-    ? input.texto_contenido
-    : contenido.texto_contenido;
-
-  let ragIndexado = actualizado.rag_indexado;
-  if (tipoFinal === "TEXTO" && textoFinal && seccion) {
-    const resultado = await indexMaterial(seccion.materia_id, contenidoId, textoFinal);
-    ragIndexado = resultado?.indexed ?? false;
-
-    if (ragIndexado) {
-      await prisma.contenido.update({
-        where: { id: contenidoId },
-        data: { rag_indexado: true },
-      });
-    }
+  if (reindexar && seccion && textoFinal) {
+    indexarEnSegundoPlano(contenidoId, seccion.materia_id, { tipo: "texto", texto: textoFinal });
   }
 
-  return toContenidoDto({ ...actualizado, rag_indexado: ragIndexado });
+  return toContenidoDto(actualizado);
 }
 
 export async function eliminar(contenidoId: string, usuarioId: string) {
   const contenido = await obtenerContenidoYVerificarEscritura(contenidoId, usuarioId);
 
+  const seccion = await prisma.seccion.findUnique({ where: { id: contenido.seccion_id } });
+
   await prisma.contenido.delete({ where: { id: contenidoId } });
 
   await eliminarArchivo(contenido.archivo_url);
+
+  // Sin esto el tutor seguia citando material que ya no existe.
+  if (seccion) {
+    await eliminarMaterialRag(seccion.materia_id, contenidoId);
+  }
 
   return { ok: true };
 }

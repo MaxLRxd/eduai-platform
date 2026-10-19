@@ -1,5 +1,6 @@
 """Búsqueda vectorial en PostgreSQL con pgvector."""
 
+import asyncio
 import re
 from collections.abc import Awaitable, Callable
 
@@ -36,12 +37,22 @@ class RetrievalService:
         # Callback opcional para reindexar si la tabla existia con otra dimension.
         self._embed_documents = embed_documents
         self._pool: asyncpg.Pool | None = None
+        self._pool_lock = asyncio.Lock()
 
     async def _get_pool(self) -> asyncpg.Pool:
-        if self._pool is None:
-            await self._ensure_extension()
-            self._pool = await asyncpg.create_pool(self._database_url, init=_init_connection)
-            await self._init_schema()
+        async with self._pool_lock:
+            if self._pool is None:
+                await self._ensure_extension()
+                pool = await asyncpg.create_pool(self._database_url, init=_init_connection)
+                self._pool = pool
+                try:
+                    await self._init_schema()
+                except Exception:
+                    # Sin esto el pool quedaba creado con el esquema a medio
+                    # migrar y no se volvia a intentar hasta reiniciar.
+                    self._pool = None
+                    await pool.close()
+                    raise
         return self._pool
 
     async def _ensure_extension(self) -> None:
@@ -54,7 +65,9 @@ class RetrievalService:
     async def _init_schema(self) -> None:
         if self._pool is None:
             return
-        async with self._pool.acquire() as conn:
+        # Todo en una transaccion: si el reindexado tras un cambio de dimension
+        # falla, el DROP TABLE se revierte y no se pierde el material indexado.
+        async with self._pool.acquire() as conn, conn.transaction():
             pendientes = await self._migrar_dimensiones(conn)
             await conn.execute(
                 f"""
@@ -117,10 +130,12 @@ class RetrievalService:
 
     async def _crear_indice_hnsw(self, conn: asyncpg.Connection) -> None:
         try:
-            await conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ai_materials_embedding "
-                "ON ai_materials USING hnsw (embedding vector_cosine_ops)"
-            )
+            # Savepoint: un fallo aca no debe abortar la transaccion del esquema.
+            async with conn.transaction():
+                await conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_ai_materials_embedding "
+                    "ON ai_materials USING hnsw (embedding vector_cosine_ops)"
+                )
         except Exception as exc:
             if self._dimensions > HNSW_MAX_DIMENSIONS:
                 logger.warning(
@@ -149,6 +164,10 @@ class RetrievalService:
             )
             return
         vectores = await self._embed_documents([fila["content"] for fila in filas])
+        if len(vectores) != len(filas):
+            raise RuntimeError(
+                f"Reindexado: {len(vectores)} vectores para {len(filas)} filas."
+            )
         await conn.executemany(
             """
             INSERT INTO ai_materials

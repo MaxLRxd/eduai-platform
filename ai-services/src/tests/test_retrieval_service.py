@@ -22,6 +22,19 @@ class FakeConn:
     async def executemany(self, sql, rows):
         self.executemany_calls.append((sql, list(rows)))
 
+    def transaction(self):
+        conn = self
+
+        class _Tx:
+            async def __aenter__(self):
+                conn.executed.append("BEGIN")
+
+            async def __aexit__(self, exc_type, *exc):
+                conn.executed.append("ROLLBACK" if exc_type else "COMMIT")
+                return False
+
+        return _Tx()
+
 
 class FakePool:
     def __init__(self, conn):
@@ -90,3 +103,29 @@ async def test_migra_y_reindexa_si_cambia_la_dimension():
     assert embedidos == [["texto"]]
     assert len(conn.executemany_calls) == 1
     assert conn.executemany_calls[0][1][0][0] == "m:0"
+
+
+async def test_si_el_reindexado_falla_la_migracion_se_revierte():
+    conn = FakeConn()
+    conn.fetchval_result = "vector(3072)"
+    conn.fetch_result = [
+        {"id": "m:0", "subject_id": "s", "material_id": "m", "chunk_index": 0, "content": "a"},
+        {"id": "m:1", "subject_id": "s", "material_id": "m", "chunk_index": 1, "content": "b"},
+    ]
+
+    async def embed_documents(texts):
+        # Simula gemini-embedding-2 agregando todo en un solo vector.
+        return [[0.1] * 1536]
+
+    service = RetrievalService("postgresql://x", 1536, embed_documents=embed_documents)
+    service._pool = FakePool(conn)
+
+    try:
+        await service._init_schema()
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("debia fallar")
+
+    assert conn.executed[-1] == "ROLLBACK"
+    assert conn.executemany_calls == []

@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = "gemini-embedding-2"
     # <= 2000 para que pgvector pueda crear el indice HNSW (ver retrieval_service).
     embedding_dimensions: int = 1536
+    # Llamadas de embedding en paralelo (una por chunk) y reintentos ante 429/503.
+    # Valores bajos priorizan no chocar con la cuota sobre la velocidad.
+    embedding_concurrency: int = 4
+    embedding_max_retries: int = 8
+    # Tope de llamadas por minuto (0 = sin tope). El plan gratuito de Gemini
+    # corta con 429 cerca de las 100/min; 40 deja margen tambien para el TPM.
+    embedding_requests_per_minute: int = 40
+    # La cuota por minuto se libera recien al minuto: el backoff debe llegar ahi.
+    embedding_retry_max_delay_seconds: float = 65.0
 
     # Reintentos ante errores transitorios del proveedor (503 high demand, 429).
     llm_max_retries: int = 4

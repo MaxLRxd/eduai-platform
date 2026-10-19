@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { env } from "./env";
 
@@ -123,4 +123,25 @@ export async function eliminarArchivo(url: string | null): Promise<void> {
   if (ruta.startsWith(UPLOADS_DIR)) {
     fs.unlink(ruta, () => {});
   }
+}
+
+/** Lee un archivo guardado con `guardarArchivo` a partir de su URL. */
+export async function leerArchivo(url: string | null): Promise<Buffer | null> {
+  if (!url) return null;
+
+  if (usarS3) {
+    const prefijo = `${prefijoPublico()}/`;
+    if (!url.startsWith(prefijo)) return null;
+    const key = decodeURIComponent(url.slice(prefijo.length));
+    const res = await clienteS3().send(
+      new GetObjectCommand({ Bucket: env.R2_BUCKET_NAME as string, Key: key })
+    );
+    if (!res.Body) return null;
+    return Buffer.from(await res.Body.transformToByteArray());
+  }
+
+  if (!url.startsWith("/uploads/")) return null;
+  const ruta = path.join(UPLOADS_DIR, path.basename(url));
+  if (!ruta.startsWith(UPLOADS_DIR) || !fs.existsSync(ruta)) return null;
+  return fs.promises.readFile(ruta);
 }

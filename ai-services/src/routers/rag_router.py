@@ -2,9 +2,12 @@
 
 import asyncio
 
+import structlog
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from src.schemas.tutor import IndexMaterialRequest, IndexMaterialResponse
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -18,6 +21,7 @@ async def index_material(req: IndexMaterialRequest, request: Request) -> IndexMa
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("indexado_error", material_id=req.material_id)
         raise HTTPException(status_code=502, detail=f"Error al indexar el material: {exc}") from exc
     return IndexMaterialResponse(**result)
 
@@ -41,6 +45,9 @@ async def index_material_file(
     document = request.app.state.document_service
     text = await asyncio.to_thread(document.extract_text, data, filename)
 
+    logger.info(
+        "archivo_texto_extraido", archivo=filename, bytes=len(data), caracteres=len(text)
+    )
     if not text.strip():
         raise HTTPException(
             status_code=422,
@@ -54,6 +61,7 @@ async def index_material_file(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("indexado_error", material_id=material_id, archivo=filename)
         raise HTTPException(status_code=502, detail=f"Error al indexar el archivo: {exc}") from exc
     return IndexMaterialResponse(**result)
 
