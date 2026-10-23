@@ -4,6 +4,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().optional(),
   AI_SERVICE_URL: z.string().optional(),
+  // Secreto compartido backend <-> ai-service. Si se define, el ai-service rechaza llamadas sin él.
+  AI_SERVICE_TOKEN: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

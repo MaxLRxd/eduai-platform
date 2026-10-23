@@ -11,7 +11,7 @@ export interface AccessTokenPayload {
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: "15m" } as jwt.SignOptions);
+  return jwt.sign(payload, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "15m" } as jwt.SignOptions);
 }
 
 export function requireAuth(
@@ -26,7 +26,9 @@ export function requireAuth(
   }
 
   try {
-    const payload = jwt.verify(header.slice(7), env.JWT_SECRET) as AccessTokenPayload;
+    const payload = jwt.verify(header.slice(7), env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    }) as AccessTokenPayload;
     req.user = { id: payload.sub, email: payload.email, rol: payload.rol };
     next();
   } catch {

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { DeleteObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
@@ -67,7 +68,8 @@ function sanitizarBase(original: string): string {
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
-  return `${base || "archivo"}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${ext}`;
+  // /uploads es público: el sufijo aleatorio criptográfico (128 bits) evita que se adivinen URLs.
+  return `${base || "archivo"}-${randomBytes(16).toString("hex")}${ext}`;
 }
 
 function formatoDe(nombre: string): string {

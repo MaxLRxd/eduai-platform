@@ -1,4 +1,13 @@
-import cookieParser from "cookie-parser"; import cors from "cors"; import express from "express"; import pinoHttp from "pino-http"; import { env } from "./config/env"; import { logger } from "./config/logger"; import { asegurarDirectorioUploads, UPLOADS_DIR } from "./config/storage"; import { errorHandler, notFound } from "./middlewares/error"; import authRoutes from "./modules/auth/auth.routes";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import express from "express";
+import pinoHttp from "pino-http";
+import { env } from "./config/env";
+import { logger } from "./config/logger";
+import { asegurarDirectorioUploads, UPLOADS_DIR } from "./config/storage";
+import { errorHandler, notFound } from "./middlewares/error";
+import { securityHeaders } from "./middlewares/security";
+import authRoutes from "./modules/auth/auth.routes";
 import materiasRoutes from "./modules/materias/materias.routes";
 import notasRoutes from "./modules/notas/notas.routes";
 import asistenciasRoutes from "./modules/asistencias/asistencias.routes";
@@ -15,9 +24,37 @@ import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 import planningRoutes from "./modules/planning/planning.routes";
 import messagesRoutes from "./modules/messages/messages.routes";
 import configRoutes from "./modules/config/config.routes";
-import healthRoutes from "./routes/health.routes";  export function createApp(): express.Express {   const app = express();    app.use(pinoHttp({ logger }));   app.use(     cors({       origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),       credentials: true,     })   );   app.use(express.json({ limit: "1mb" }));   app.use(cookieParser());
+import healthRoutes from "./routes/health.routes";
+
+export function createApp(): express.Express {
+  const app = express();
+
+  // No anunciar el framework en cada respuesta.
+  app.disable("x-powered-by");
+  // Detrás del proxy del proveedor (Fly/Railway/etc.) req.ip tiene que salir de X-Forwarded-For.
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
+  app.use(pinoHttp({ logger }));
+  app.use(securityHeaders);
+  app.use(
+    cors({
+      origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),
+      credentials: true,
+    })
+  );
+  app.use(express.json({ limit: "1mb" }));
+  app.use(cookieParser());
+
   asegurarDirectorioUploads();
-  app.use("/uploads", express.static(UPLOADS_DIR, { fallthrough: true }));    app.get("/", (_req, res) => {     res.json({ service: "eduai-backend", status: "ok" });   });    app.use("/api/auth", authRoutes);
+  app.use("/uploads", express.static(UPLOADS_DIR, { fallthrough: true }));
+
+  app.get("/", (_req, res) => {
+    res.json({ service: "eduai-backend", status: "ok" });
+  });
+
+  app.use("/api/auth", authRoutes);
   app.use("/api/materias", materiasRoutes);
   app.use("/api", notasRoutes);
   app.use("/api", asistenciasRoutes);
@@ -34,4 +71,10 @@ import healthRoutes from "./routes/health.routes";  export function createApp():
   app.use("/api", planningRoutes);
   app.use("/api", messagesRoutes);
   app.use("/api", configRoutes);
-  app.use("/api", healthRoutes);    app.use(notFound);   app.use(errorHandler);    return app; }
+  app.use("/api", healthRoutes);
+
+  app.use(notFound);
+  app.use(errorHandler);
+
+  return app;
+}

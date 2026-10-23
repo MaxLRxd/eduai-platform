@@ -1,7 +1,8 @@
+import hmac
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 
 from src.config.settings import settings
 from src.routers import rag_router, tutor_router
@@ -29,10 +30,20 @@ structlog.configure(
 )
 
 
+def verificar_token_interno(x_internal_token: str | None = Header(default=None)) -> None:
+    """Solo el backend puede usar el servicio: evita que terceros consuman la cuota del LLM."""
+    esperado = settings.ai_service_token
+    if not esperado:
+        return
+    if not x_internal_token or not hmac.compare_digest(x_internal_token, esperado):
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="EduAI AI Service", version="1.0.0", lifespan=lifespan)
-    app.include_router(tutor_router.router)
-    app.include_router(rag_router.router)
+    protegido = [Depends(verificar_token_interno)]
+    app.include_router(tutor_router.router, dependencies=protegido)
+    app.include_router(rag_router.router, dependencies=protegido)
     return app
 
 

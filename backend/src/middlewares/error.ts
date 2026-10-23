@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import multer from "multer";
+import { logger } from "../config/logger";
 
 export class AppError extends Error {
   statusCode: number;
@@ -38,5 +39,9 @@ export function errorHandler(
     return;
   }
   const { statusCode, message } = resolverError(err);
+  if (statusCode >= 500) {
+    // Al cliente solo le llega un mensaje genérico; el detalle queda en el log del servidor.
+    logger.error({ err }, "Error no controlado");
+  }
   res.status(statusCode).json({ error: message });
 }

@@ -51,7 +51,9 @@ export function refreshCookieOptions() {
 }
 
 export async function register(input: RegisterInput): Promise<PublicUsuario> {
-  const existe = await prisma.usuario.findUnique({ where: { email: input.email } });
+  const existe = await prisma.usuario.findFirst({
+    where: { email: { equals: input.email, mode: "insensitive" } },
+  });
 
   if (existe) {
     throw new AppError(409, "Ya existe una cuenta con ese email");
@@ -72,7 +74,10 @@ export async function register(input: RegisterInput): Promise<PublicUsuario> {
 }
 
 export async function login(input: LoginInput): Promise<AuthResult> {
-  const usuario = await prisma.usuario.findUnique({ where: { email: input.email } });
+  // Insensible a mayúsculas para no dejar afuera cuentas creadas antes de normalizar el email.
+  const usuario = await prisma.usuario.findFirst({
+    where: { email: { equals: input.email, mode: "insensitive" } },
+  });
 
   if (!usuario || !usuario.activo) {
     throw new AppError(401, "Credenciales incorrectas");

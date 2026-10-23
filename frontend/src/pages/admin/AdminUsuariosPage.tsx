@@ -188,7 +188,7 @@ export function AdminUsuariosPage(): React.ReactElement {
           {modal?.mode === "create" && (
             <div>
               <label htmlFor="admin-user-password" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Contraseña (mín. 6 caracteres)
+                Contraseña (mín. 8 caracteres)
               </label>
               <input
                 id="admin-user-password"

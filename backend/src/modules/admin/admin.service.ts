@@ -72,7 +72,9 @@ export async function listarUsuarios(page: number, pageSize: number, rol?: strin
 }
 
 export async function crearUsuario(input: CrearUsuarioInput) {
-  const existe = await prisma.usuario.findUnique({ where: { email: input.email } });
+  const existe = await prisma.usuario.findFirst({
+    where: { email: { equals: input.email, mode: "insensitive" } },
+  });
 
   if (existe) {
     throw new AppError(409, "Ya existe una cuenta con ese email");

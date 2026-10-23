@@ -8,6 +8,15 @@ function baseUrl(): string {
   return (env.AI_SERVICE_URL ?? "").replace(/\/+$/, "");
 }
 
+/** Agrega el token interno (si está configurado) a los headers de cada llamada al ai-service. */
+function aiHeaders<T extends Record<string, string | number>>(base?: T): T & Record<string, string> {
+  const headers = { ...(base ?? {}) } as T & Record<string, string>;
+  if (env.AI_SERVICE_TOKEN) {
+    (headers as Record<string, string>)["X-Internal-Token"] = env.AI_SERVICE_TOKEN;
+  }
+  return headers;
+}
+
 function aiDisponible(): boolean {
   return Boolean(env.AI_SERVICE_URL);
 }
@@ -57,7 +66,7 @@ async function postLargo(
       url,
       {
         method: "POST",
-        headers: { "Content-Type": contentType, "Content-Length": body.length },
+        headers: aiHeaders({ "Content-Type": contentType, "Content-Length": body.length }),
         timeout: INDEXADO_TIMEOUT_MS,
       },
       (res) => {
@@ -128,7 +137,7 @@ export async function eliminarMaterialRag(subjectId: string, materialId: string)
   try {
     const res = await fetch(
       `${baseUrl()}/rag/material/${encodeURIComponent(subjectId)}/${encodeURIComponent(materialId)}`,
-      { method: "DELETE", signal: AbortSignal.timeout(30_000) }
+      { method: "DELETE", headers: aiHeaders(), signal: AbortSignal.timeout(30_000) }
     );
     if (!res.ok) {
       logger.error({ status: res.status, materialId }, "Fallo al eliminar material del RAG");
@@ -166,7 +175,7 @@ export async function chatTutor(
   try {
     const res = await fetch(`${baseUrl()}/tutor/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: aiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         subject_id: subjectId,
         question,
@@ -203,7 +212,7 @@ export async function streamTutor(
   try {
     return await fetch(`${baseUrl()}/tutor/chat/stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: aiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         subject_id: subjectId,
         question,
@@ -254,7 +263,7 @@ export async function generarMaterialDocente(
   try {
     const res = await fetch(`${baseUrl()}/tutor/generar-material`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: aiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         subject_id: subjectId,
         prompt,
@@ -296,7 +305,7 @@ export async function corregirEntregaIA(input: CorreccionIARequest): Promise<Cor
   try {
     const res = await fetch(`${baseUrl()}/tutor/corregir-entrega`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: aiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         subject_id: input.subject_id,
         material_id: input.material_id,
@@ -336,7 +345,7 @@ export async function resumirDocumento(
   try {
     const res = await fetch(`${baseUrl()}/tutor/resumen`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: aiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ text, language, max_words: maxWords }),
       signal: AbortSignal.timeout(120_000),
     });
@@ -381,7 +390,7 @@ export async function generarExamen(
   try {
     const res = await fetch(`${baseUrl()}/tutor/examen`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: aiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ subject_id: subjectId, n_questions: nQuestions, difficulty }),
       signal: AbortSignal.timeout(180_000),
     });

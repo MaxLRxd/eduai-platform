@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     pinecone_region: str = "us-east-1"
     pinecone_metric: str = "cosine"
 
+    # Secreto compartido con el backend (header X-Internal-Token). Vacío = sin control (solo dev).
+    ai_service_token: str = ""
+
     redis_cache_ttl_seconds: int = 3600
     retrieval_top_k: int = 5
 

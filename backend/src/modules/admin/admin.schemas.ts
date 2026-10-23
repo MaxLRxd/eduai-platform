@@ -5,8 +5,9 @@ export const tipoProfesorSchema = z.enum(["TITULAR", "ADJUNTO"]);
 
 export const crearUsuarioSchema = z.object({
   nombre: z.string().min(2).max(100),
-  email: z.string().email("email invalido").max(255),
-  password: z.string().min(6, "minimo 6 caracteres").max(100),
+  email: z.string().trim().toLowerCase().email("email invalido").max(255),
+  // bcrypt ignora todo lo que pase de 72 bytes: mismo rango que el registro.
+  password: z.string().min(8, "minimo 8 caracteres").max(72),
   rol: rolSchema.default("ALUMNO"),
   tipo_profesor: tipoProfesorSchema.optional(),
 });
