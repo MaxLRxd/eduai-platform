@@ -97,7 +97,9 @@ class PineconeRetrievalService:
                 material_id=material_id,
             )
 
-    async def search(self, subject_id: str, embedding: list[float], top_k: int = 5) -> list[dict]:
+    async def search(
+        self, subject_id: str, embedding: list[float], top_k: int = 5, min_score: float | None = None
+    ) -> list[dict]:
         index = self._ensure_index()
         response = index.query(
             vector=embedding,
@@ -116,7 +118,9 @@ class PineconeRetrievalService:
                     "score": float(match.score),
                 }
             )
-        return rows
+        if min_score is None or min_score <= 0.0:
+            return rows
+        return [r for r in rows if float(r.get("score", 0.0)) >= float(min_score)]
 
     async def close(self) -> None:
         if self._pc is not None:

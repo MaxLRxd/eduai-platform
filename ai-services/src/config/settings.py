@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
     redis_cache_ttl_seconds: int = 3600
     retrieval_top_k: int = 5
+    # Umbral mínimo de similitud coseno (1 - distancia). Si ningún chunk supera el umbral,
+    # el tutor responde sin invocar al LLM indicando falta de información en el material indexado.
+    retrieval_min_score: float = 0.0
 
     default_temperature: float = 0.7
     default_max_tokens: int = 1024

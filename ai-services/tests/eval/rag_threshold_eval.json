@@ -1,0 +1,16 @@
+﻿[
+  {
+    "id": "in_01",
+    "type": "in_corpus",
+    "subject_id": "test-subject",
+    "question": "Pregunta que debería tener respuesta en el material indexado",
+    "notes": "Completar tras indexar material de prueba"
+  },
+  {
+    "id": "out_01",
+    "type": "out_of_corpus",
+    "subject_id": "test-subject",
+    "question": "Pregunta completamente fuera del temario para validar que no inventa",
+    "notes": "Debe devolver respuesta 'decir que no' sin llamar al LLM"
+  }
+]

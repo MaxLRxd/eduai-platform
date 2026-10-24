@@ -88,7 +88,7 @@ ai-services/
 | Variable | Descripción |
 |---|---|
 | `GEMINI_API_KEY` | Clave de API de Google Gemini |
-| `GEMINI_MODEL` | Modelo LLM de chat (por defecto `gemini-3.6-flash`) |
+| `GEMINI_MODEL` | Modelo LLM de chat (por defecto `gemini-3.5-flash-lite`) |
 | `GEMINI_EMBEDDING_MODEL` | Modelo de embeddings (por defecto `gemini-embedding-2`) |
 | `EMBEDDING_DIMENSIONS` | Dimensión de los vectores (por defecto **1536**; se trunca con `output_dimensionality` y debe ser ≤ 2000 para que pgvector cree el índice HNSW) |
 | `LLM_PROVIDER` | Proveedor LLM (solo `gemini` por ahora) |
@@ -102,6 +102,7 @@ ai-services/
 | `PINECONE_METRIC` | Métrica de distancia (por defecto `cosine`) |
 | `REDIS_CACHE_TTL_SECONDS` | TTL de las respuestas cacheadas (3600 s) |
 | `RETRIEVAL_TOP_K` | Cantidad de fragmentos recuperados por consulta (5) |
+| `RETRIEVAL_MIN_SCORE` | Umbral mínimo de similitud coseno (0.0-1.0). Si ningún fragmento lo supera, el tutor responde sin invocar al LLM. Ver `docs/ai-models-justification.md`. |
 
 **`conftest.py`** — Archivo especial de pytest ubicado en la raíz. Setea variables de entorno de prueba (`GEMINI_API_KEY=test-key`, etc.) antes de que se importe `settings.py`, para que los tests corran sin `.env` real. Además, al estar en la raíz, permite importar el paquete `src.*` desde los tests.
 
@@ -395,3 +396,26 @@ La documentación interactiva (Swagger) queda en `http://localhost:8000/docs`.
 ruff check src conftest.py     # linter
 pytest                         # 27 tests
 ```
+## RAG: configuración, indexado y troubleshooting
+
+### Configuración RAG
+- RETRIEVAL_TOP_K (default 5): número de fragmentos a recuperar.
+- RETRIEVAL_MIN_SCORE (default  .0): umbral mínimo de similitud. Con  .0 no hay filtro (comportamiento legacy). Tras calibración con scripts/calibrate_threshold.py se recomienda establecer un valor > 0.
+- VECTOR_STORE (pgvector|pinecone): almacén vectorial a utilizar.
+
+### Indexado
+- POST /rag/material con {subject_id, material_id, text} indexa el material (fragmentación + embeddings + upsert).
+- POST /rag/material/archivo (multipart) extrae texto con document_service (PDF/DOCX/PPTX/TXT) e indexa.
+- DELETE /rag/material/{subject_id}/{material_id} elimina chunks del material.
+
+### Reindexado
+Para reindexar tras cambios de embeddings/modelo o correcciones:
+1. Eliminar material existente (DELETE /rag/material/...) o confiar en delete_material() durante indexado.
+2. Volver a enviar el material a indexar.
+3. Si cambian dimensiones de embeddings, RetrievalService migra la tabla automáticamente (reembebe contenido existente cuando es posible).
+
+### Troubleshooting
+- **Responde sin fuentes / dice que no tiene información:** Verificar que haya material indexado para la materia y que RETRIEVAL_MIN_SCORE no sea excesivamente alto.
+- **high demand 503 de Gemini:** Usar GEMINI_MODEL=gemini-3.5-flash-lite. Ajustar EMBEDDING_CONCURRENCY/EMBEDDING_REQUESTS_PER_MINUTE.
+- **HNSW no creado con dimensiones > 2000:** Bajar EMBEDDING_DIMENSIONS (se trunca con output_dimensionality) o aceptar búsqueda secuencial.
+- **Calibrar umbral:** Usar i-services/tests/eval/rag_threshold_eval.json y i-services/scripts/calibrate_threshold.py para generar evidencia.

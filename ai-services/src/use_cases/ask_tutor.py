@@ -39,12 +39,22 @@ class AskTutorUseCase:
         self.retrieval = retrieval
         self.cache = cache
 
+    NO_INFO_ANSWER = (
+        "No cuento con información suficiente en el material indexado para esta materia "
+        "para responder esa pregunta."
+    )
+
     async def _prepare(self, req: TutorRequest) -> tuple[str, int, list[dict], str, list[dict]]:
         prompt_depurado, tokens_ahorrados = sanitize_prompt(req.question)
         query = prompt_depurado or req.question
 
         embedding = await self.embeddings.embed_query(query)
-        results = await self.retrieval.search(req.subject_id, embedding, settings.retrieval_top_k)
+        results = await self.retrieval.search(
+            req.subject_id,
+            embedding,
+            settings.retrieval_top_k,
+            min_score=getattr(settings, "retrieval_min_score", 0.0),
+        )
         sources = build_sources(results, req.material_titles)
         context = format_context(results, req.material_titles)
 
@@ -66,6 +76,18 @@ class AskTutorUseCase:
             return payload
 
         prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req)
+        if not sources:
+            response = {
+                "answer": self.NO_INFO_ANSWER,
+                "mode": req.mode.value,
+                "sources": [],
+                "prompt_depurado": prompt_depurado,
+                "tokens_ahorrados": tokens_ahorrados,
+                "cached": False,
+            }
+            await self.cache.set(key, json.dumps(response, ensure_ascii=False))
+            return response
+
         answer = await self.llm.generate(
             system,
             messages,
@@ -98,6 +120,20 @@ class AskTutorUseCase:
             return
 
         prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req)
+        if not sources:
+            response = {
+                "answer": self.NO_INFO_ANSWER,
+                "mode": req.mode.value,
+                "sources": [],
+                "prompt_depurado": prompt_depurado,
+                "tokens_ahorrados": tokens_ahorrados,
+                "cached": False,
+            }
+            await self.cache.set(key, json.dumps(response, ensure_ascii=False))
+            yield {"type": "token", "text": self.NO_INFO_ANSWER}
+            yield {"type": "done", "sources": [], "cached": False}
+            return
+
         collected: list[str] = []
         async for token in self.llm.stream(
             system,
