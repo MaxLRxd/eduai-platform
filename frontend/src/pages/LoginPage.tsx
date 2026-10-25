@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useBranding } from "../contexts/BrandingContext";
 
 export function LoginPage(): React.ReactElement {
   const { login } = useAuth();
+  const { branding } = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +31,12 @@ export function LoginPage(): React.ReactElement {
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-[#001a3a] via-primary to-[#005fa3]">
       <div className="bg-surface rounded-xl shadow-lg w-full max-w-md p-10 pt-11 pb-9">
         <div className="text-center mb-8">
-          <div className="w-[54px] h-[54px] mx-auto mb-3.5 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[0_8px_20px_rgba(0,61,122,0.3)]">
-            <span className="text-2xl">🎓</span>
-          </div>
-          <h1 className="font-display text-2xl font-extrabold text-primary tracking-tight">EduAI</h1>
+          {branding?.logoUrl ? (
+            <img src={branding.logoUrl} alt={branding.nombre} className="w-[54px] h-[54px] mx-auto mb-3.5 object-contain" />
+          ) : (
+            <div className="w-[54px] h-[54px] mx-auto mb-3.5 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[0_8px_20px_rgba(0,61,122,0.3)]" />
+          )}
+          <h1 className="font-display text-2xl font-extrabold text-primary tracking-tight">{branding?.nombre || "EduAI"}</h1>
           <p className="text-xs text-text-2 mt-1">Campus educativo integrado con IA</p>
         </div>
 

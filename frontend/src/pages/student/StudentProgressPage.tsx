@@ -10,25 +10,21 @@ export function StudentProgressPage(): React.ReactElement {
 
   const tiles = [
     {
-      icon: "📊",
       label: "Promedio general",
       value: (overview.data?.promedioGeneral ?? 0).toFixed(1),
       color: "#003d7a",
     },
     {
-      icon: "📅",
       label: "Asistencia global",
       value: `${overview.data?.asistenciaGlobal ?? 0}%`,
       color: "#059669",
     },
     {
-      icon: "✅",
       label: "Actividades entregadas",
       value: `${overview.data?.actividades.entregadas ?? 0}/${overview.data?.actividades.total ?? 0}`,
       color: "#2563eb",
     },
     {
-      icon: "🏆",
       label: "Mejor nota",
       value: (overview.data?.mejorNota ?? 0).toFixed(1),
       color: "#d97706",
@@ -45,7 +41,6 @@ export function StudentProgressPage(): React.ReactElement {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         {tiles.map((t) => (
           <Card key={t.label} className="text-center py-4 px-3">
-            <div className="text-2xl mb-1">{t.icon}</div>
             <div className="text-[11px] text-text-3 uppercase tracking-wide mb-1.5">{t.label}</div>
             <div className="font-display text-[22px] font-extrabold" style={{ color: t.color }}>
               {t.value}
@@ -70,7 +65,7 @@ export function StudentProgressPage(): React.ReactElement {
             <div className="flex flex-col gap-2.5">
               <div>
                 <div className="flex justify-between mb-1">
-                  <span className="text-xs text-text-2">📊 Promedio notas</span>
+                  <span className="text-xs text-text-2">Promedio notas</span>
                   <span className="text-xs font-bold" style={{ color: s.color }}>
                     {s.average}/10
                   </span>
@@ -79,7 +74,7 @@ export function StudentProgressPage(): React.ReactElement {
               </div>
               <div>
                 <div className="flex justify-between mb-1">
-                  <span className="text-xs text-text-2">📅 Asistencia</span>
+                  <span className="text-xs text-text-2">Asistencia</span>
                   <span className="text-xs font-bold">{s.attendance}%</span>
                 </div>
                 <ProgressBar value={s.attendance} color={s.attendance >= 90 ? "#059669" : s.attendance >= 75 ? "#d97706" : "#dc2626"} />
@@ -95,7 +90,7 @@ export function StudentProgressPage(): React.ReactElement {
       </div>
 
       <Card className="mb-4.5">
-        <CardHeader title="📋 Detalle de calificaciones" />
+        <CardHeader title="Detalle de calificaciones" />
         <TableWrap>
           <Table>
             <Thead>
@@ -134,7 +129,7 @@ export function StudentProgressPage(): React.ReactElement {
       </Card>
 
       <Card>
-        <CardHeader title="📅 Registro de asistencia" />
+        <CardHeader title="Registro de asistencia" />
         <TableWrap>
           <Table>
             <Thead>

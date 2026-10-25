@@ -14,9 +14,9 @@ import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
 import type { RagStatus, UploadedMaterial } from "../../types/domain";
 
-const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "📄", pptx: "📊", docx: "📝", txt: "🗒️", img: "🖼️", video: "🎬" };
+const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "", pptx: "", docx: "", txt: "", img: "", video: "" };
 const RAG_COLOR: Record<RagStatus, TagColor> = { Indexado: "green", "Indexando…": "blue", "Sin indexar": "gray" };
-const RAG_LABEL: Record<RagStatus, string> = { Indexado: "🤖 RAG", "Indexando…": "⏳ RAG", "Sin indexar": "— RAG" };
+const RAG_LABEL: Record<RagStatus, string> = { Indexado: "RAG", "Indexando…": "RAG", "Sin indexar": "RAG" };
 
 export function TeacherContentPage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
@@ -58,7 +58,7 @@ export function TeacherContentPage(): React.ReactElement {
       },
       {
         onSuccess: () => {
-          setSectionMsg("✅ Sección creada.");
+          setSectionMsg("Sección creada.");
           setSectionName("");
         },
         onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo crear la sección")),
@@ -71,7 +71,7 @@ export function TeacherContentPage(): React.ReactElement {
     setSectionMsg("");
     deleteSection.mutate(id, {
       onSuccess: () => {
-        setSectionMsg("🗑️ Sección eliminada.");
+        setSectionMsg("Sección eliminada.");
         if (sectionId === id) setSectionId(null);
       },
       onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo eliminar la sección")),
@@ -80,7 +80,7 @@ export function TeacherContentPage(): React.ReactElement {
 
   const handleUpload = (file: File): void => {
     if (!activeSection) {
-      setSavedMsg("⚠️ Seleccioná una materia y una sección destino.");
+      setSavedMsg("Seleccioná una materia y una sección destino.");
       return;
     }
     setSavedMsg("");
@@ -90,7 +90,7 @@ export function TeacherContentPage(): React.ReactElement {
         onSuccess: () => setSavedMsg("✅ Archivo guardado e indexado por el RAG Pipeline"),
         onError: (err) => {
           const msg = err instanceof Error ? err.message : "";
-          setSavedMsg(`⚠️ No se pudo subir el archivo. ${msg}`);
+          setSavedMsg(`No se pudo subir el archivo. ${msg}`);
         },
       }
     );
@@ -102,7 +102,7 @@ export function TeacherContentPage(): React.ReactElement {
       { sectionId: activeSection, title: resourceTitle, body: resourceBody },
       {
         onSuccess: () => {
-          setSavedMsg("✅ Texto guardado e indexado por el RAG Pipeline");
+          setSavedMsg("Texto guardado e indexado por el RAG Pipeline");
           setResourceTitle("");
           setResourceBody("");
         },
@@ -118,7 +118,7 @@ export function TeacherContentPage(): React.ReactElement {
           <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Contenidos y materiales</h2>
           <p className="text-[13px] text-text-2">Subí material a las secciones — el RAG Pipeline lo indexa automáticamente para el Tutor IA</p>
         </div>
-        <Tag color="green">🤖 RAG Pipeline activo</Tag>
+        <Tag color="green">RAG Pipeline activo</Tag>
       </div>
 
       <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
@@ -148,7 +148,7 @@ export function TeacherContentPage(): React.ReactElement {
           </Card>
 
           <Card>
-            <CardHeader title="🧩 Secciones de la materia" />
+            <CardHeader title="Secciones de la materia" />
             <p className="text-xs text-text-2 mb-3">
               Creá las secciones (unidades) de la materia y elegí el destino de subida haciendo clic en una.
             </p>
@@ -177,7 +177,7 @@ export function TeacherContentPage(): React.ReactElement {
                       onClick={() => handleDeleteSection(s.id)}
                       aria-label={`Eliminar sección ${s.nombre}`}
                     >
-                      🗑️
+                      Eliminar
                     </Button>
                   </div>
                 );
@@ -226,9 +226,9 @@ export function TeacherContentPage(): React.ReactElement {
           </Card>
 
           <Card>
-            <CardHeader title="📎 Subir archivo" />
+            <CardHeader title="Subir archivo" />
             <p className="text-xs text-text-2 mb-3">
-              Destino: {activeSectionName ? <strong className="text-text-1">{activeSectionName}</strong> : <span className="text-danger">elegí una sección en 🧩 Secciones de la materia</span>}
+              Destino: {activeSectionName ? <strong className="text-text-1">{activeSectionName}</strong> : <span className="text-danger">elegí una sección</span>}
             </p>
             <label
               htmlFor="content-file-input"
@@ -236,7 +236,7 @@ export function TeacherContentPage(): React.ReactElement {
                 activeSection ? "cursor-pointer" : "opacity-50"
               }`}
             >
-              <div className="text-2xl mb-2">📂</div>
+              <div className="text-2xl mb-2"></div>
               <div className="font-semibold text-text-1 mb-1">Hacé click o arrastrá un archivo aquí</div>
               <div className="text-xs text-text-3">PDF, PPTX, DOCX, JPG, PNG, TXT · Máx. 50 MB</div>
               <input
@@ -253,11 +253,11 @@ export function TeacherContentPage(): React.ReactElement {
                 }}
               />
             </label>
-            {uploadFile.isPending && <p className="text-xs text-text-2 mt-2">⏳ Subiendo e indexando…</p>}
+            {uploadFile.isPending && <p className="text-xs text-text-2 mt-2">Subiendo e indexando…</p>}
           </Card>
 
           <Card>
-            <CardHeader title="✏️ Agregar texto o consigna" />
+            <CardHeader title="Agregar texto o consigna" />
             <div className="mb-3.5">
               <label htmlFor="resource-title" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Título del recurso
@@ -323,7 +323,7 @@ export function TeacherContentPage(): React.ReactElement {
               )}
             </div>
             <p className="text-[11px] text-text-2 mt-3.5 bg-info-light border border-blue-200 rounded px-3 py-2">
-              Los archivos marcados como <strong>🤖 RAG</strong> ya están disponibles para el Tutor IA de la materia.
+              Los archivos marcados como <strong>RAG</strong> ya están disponibles para el Tutor IA de la materia.
             </p>
           </Card>
         </aside>

@@ -17,10 +17,10 @@ const UNIT_TAG_COLOR = {
   Disponible: "gray",
 } as const;
 
-const MODO_LABEL: Record<ModoTutor, string> = {
+  const MODO_LABEL: Record<ModoTutor, string> = {
   NORMAL: "Normal",
-  SOCRATIC: "🧠 Socrático",
-  HINTS: "💡 Pistas",
+  SOCRATIC: "Socrático",
+  HINTS: "Pistas",
 };
 
 const MODO_NOMBRE: Record<ModoTutor, string> = {
@@ -95,7 +95,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
 
       <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
         <Card>
-          <CardHeader title="📚 Unidades de estudio" action={<Tag color="gray">Similar a Moodle</Tag>} />
+          <CardHeader title="Unidades de estudio" action={<Tag color="gray">Similar a Moodle</Tag>} />
           <div className="flex flex-col gap-3">
             {course.units.map((u, idx) => (
               <div key={u.title} className="border border-border rounded overflow-hidden">
@@ -126,7 +126,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
 
         <aside className="flex flex-col gap-4.5">
           <Card>
-            <CardHeader title="🤖 Tutor IA de la materia" />
+            <CardHeader title="Tutor IA de la materia" />
             <p className="text-xs text-text-2 mb-3">
               Responde usando el contexto de <strong>{course.name}</strong>: {course.tutorFocus}.
             </p>
@@ -209,19 +209,36 @@ export function StudentCourseDetailPage(): React.ReactElement {
           </Card>
 
           <Card>
-            <CardHeader title="📌 Material usado por la IA" />
+            <CardHeader title="Materiales" />
             <div className="flex flex-col gap-2">
-              {course.materiales.map((m) => (
-                <div key={m.id} className="flex items-start gap-3 py-1.5">
-                  <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: course.color }} />
-                  <div>
-                    <div className="text-[13px] text-text-1 font-medium">{m.titulo}</div>
-                    <div className="text-[11px] text-text-3 mt-0.5">
-                      {m.ragIndexado ? "Disponible para el Tutor IA" : "Pendiente de indexar"}
+              {course.materiales.map((m) => {
+                const url = (m as any).url ?? (m as any).archivo_url ?? null;
+                const isFile = Boolean(url);
+                return (
+                  <div key={m.id} className="flex items-start gap-3 py-1.5">
+                    <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: course.color }} />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[13px] text-text-1 font-medium">{m.titulo}</div>
+                        {isFile && url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[12px] text-primary hover:underline"
+                          >
+                            Ver / descargar
+                          </a>
+                        ) : null}
+                      </div>
+                      <div className="text-[11px] text-text-3 mt-0.5">
+                        {m.ragIndexado ? "Disponible para el Tutor IA" : "Pendiente de indexar"}
+                        {isFile && (m as any).archivo_nombre ? ` · ${(m as any).archivo_nombre}` : ""}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {course.materiales.length === 0 && (
                 <div className="py-4 text-center text-[12px] text-text-3">Todavía no hay materiales indexados para el tutor.</div>
               )}

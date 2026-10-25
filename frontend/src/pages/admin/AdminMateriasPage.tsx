@@ -45,22 +45,25 @@ export function AdminMateriasPage(): React.ReactElement {
           if (form.profesorId) {
             assign.mutate({ materiaId: materia.id, profesorId: form.profesorId });
           }
-          setMessage(form.id ? `✅ "${form.nombre}" actualizada correctamente.` : `✅ Materia "${form.nombre}" creada.`);
+          setMessage(form.id ? `Materia "${form.nombre}" actualizada correctamente.` : `Materia "${form.nombre}" creada correctamente.`);
           setForm(EMPTY_FORM);
+        },
+        onError: (err: any) => {
+          setMessage(err?.message || "No se pudo guardar la materia.");
         },
       }
     );
   };
 
   const loadForEdit = (id: string, nombre: string, estado: SubjectStatus): void => {
-    const existing = subjects?.find((s) => s.id === id);
+    const existing = subjects?.find((s) => s.id === id) as any;
     setForm({
       id,
       nombre,
-      nivelEducativo: existing?.estado === "Pendiente" ? "" : form.nivelEducativo,
-      descripcion: "",
+      nivelEducativo: existing?.nivelEducativo ?? existing?.nivel_educativo ?? "",
+      descripcion: existing?.descripcion ?? "",
       activa: estado === "Activa",
-      profesorId: "",
+      profesorId: existing?.profesorId ?? "",
     });
   };
 

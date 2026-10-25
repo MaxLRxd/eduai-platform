@@ -12,6 +12,8 @@ export interface CourseMaterial {
   resumible: boolean;
   /** true cuando el contenido ya está vectorizado en el RAG del tutor. */
   ragIndexado: boolean;
+  url?: string | null;
+  archivo_nombre?: string | null;
 }
 
 export interface Course {

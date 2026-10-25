@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTeacherCourses, useTeacherCourseStudents } from "../../hooks/useTeacherCourses";
 import { CourseFilter } from "../../components/ui/CourseFilter";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
@@ -7,6 +7,7 @@ import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 
 export function TeacherStudentsPage(): React.ReactElement {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: courses } = useTeacherCourses();
   const [selected, setSelected] = useState(searchParams.get("course") ?? "");
@@ -25,11 +26,11 @@ export function TeacherStudentsPage(): React.ReactElement {
 
       {course && (
         <div className="text-xs text-text-2 mb-2 font-semibold">
-          📚 {course.label} — {course.curso} · {students?.length ?? 0} alumnos
+          {course.label} · {course.curso} · {students?.length ?? 0} alumnos
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-text-2">Cargando estudiantes…</p>}
+      {isLoading && <p className="text-sm text-text-2">Cargando estudiantes...</p>}
 
       <TableWrap>
         <Table ariaLabel="Listado de estudiantes">
@@ -54,7 +55,7 @@ export function TeacherStudentsPage(): React.ReactElement {
                   <Tag color={s.standing === "Regular" ? "green" : "amber"}>{s.standing}</Tag>
                 </Td>
                 <Td>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students/${s.legajo}`)}>
                     Ver perfil
                   </Button>
                 </Td>

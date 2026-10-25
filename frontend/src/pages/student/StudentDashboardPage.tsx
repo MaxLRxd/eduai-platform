@@ -32,7 +32,7 @@ export function StudentDashboardPage(): React.ReactElement {
     <div>
       <div className="mb-6">
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">
-          Bienvenido, {user?.name} 👋
+          Bienvenido, {user?.name}
         </h2>
         <p className="text-[13px] text-text-2">Semestre 2024 · Tecnicatura en Desarrollo de Software · IES Santa Fe</p>
       </div>
@@ -97,7 +97,7 @@ export function StudentDashboardPage(): React.ReactElement {
               </div>
             ))}
             {upcoming.length === 0 && (
-              <div className="py-4 text-[12px] text-text-3 text-center">No tenés entregas pendientes. Todo al día. 🎉</div>
+              <div className="py-4 text-[12px] text-text-3 text-center">No tenés entregas pendientes. Todo al día.</div>
             )}
           </div>
         </Card>

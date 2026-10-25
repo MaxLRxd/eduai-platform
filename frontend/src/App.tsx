@@ -25,6 +25,7 @@ import { TeacherActivitiesPage } from "./pages/teacher/TeacherActivitiesPage";
 import { TeacherMessagesPage } from "./pages/teacher/TeacherMessagesPage";
 import { TeacherContentPage } from "./pages/teacher/TeacherContentPage";
 import { TeacherProfilePage } from "./pages/teacher/TeacherProfilePage";
+import { TeacherStudentProfilePage } from "./pages/teacher/TeacherStudentProfilePage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminMateriasPage } from "./pages/admin/AdminMateriasPage";
 import { AdminClavesPage } from "./pages/admin/AdminClavesPage";
@@ -144,6 +145,16 @@ export function App(): React.ReactElement {
           <ProtectedRoute allow="PROFESOR">
             <Shell title="Mis estudiantes">
               <TeacherStudentsPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/students/:legajo"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Perfil del alumno">
+              <TeacherStudentProfilePage />
             </Shell>
           </ProtectedRoute>
         }

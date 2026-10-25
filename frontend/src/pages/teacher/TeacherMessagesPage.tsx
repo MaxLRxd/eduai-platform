@@ -22,10 +22,10 @@ export function TeacherMessagesPage(): React.ReactElement {
 
   const recipientsLabel =
     broadcastTarget === "all"
-      ? "📣 Se enviará a toda la institución"
+      ? "Se enviará a toda la institución"
       : broadcastTarget === "ALUMNO"
-        ? "📚 Se enviará a todos los alumnos"
-        : "🧑🏫 Se enviará a todos los docentes";
+        ? "Se enviará a todos los alumnos"
+        : "Se enviará a todos los docentes";
 
   const handleSendMessage = () => {
     if (!destinatarioId || !body.trim()) return;
@@ -75,7 +75,7 @@ export function TeacherMessagesPage(): React.ReactElement {
 
         <div className="flex flex-col gap-4">
           <Card>
-            <CardHeader title="✉️ Mensaje individual" />
+            <CardHeader title="Mensaje individual" />
             <div className="mb-3.5">
               <label htmlFor="msg-to" className="block text-xs font-semibold text-text-1 mb-1.5">
                 Para
@@ -122,11 +122,11 @@ export function TeacherMessagesPage(): React.ReactElement {
             <Button size="sm" onClick={handleSendMessage} disabled={sendMessage.isPending || !destinatarioId || !body.trim()}>
               {sendMessage.isPending ? "Enviando…" : "Enviar mensaje"}
             </Button>
-            {sendMessage.isSuccess && <p className="text-xs text-success mt-2">📨 Mensaje enviado</p>}
+            {sendMessage.isSuccess && <p className="text-xs text-success mt-2">Mensaje enviado</p>}
           </Card>
 
           <Card className="border-[1.5px] border-primary bg-primary-light">
-            <CardHeader title={<span className="text-primary">📢 Difusión a curso</span>} />
+            <CardHeader title={<span className="text-primary">Difusión</span>} />
             <InfoBox variant="info">Enviá un mensaje a todos los alumnos, docentes o a toda la institución.</InfoBox>
             <div className="mb-3.5">
               <label htmlFor="broadcast-target" className="block text-xs font-semibold text-text-1 mb-1.5">
@@ -138,9 +138,9 @@ export function TeacherMessagesPage(): React.ReactElement {
                 onChange={(e) => setBroadcastTarget(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
               >
-                <option value="all">📣 Toda la institución</option>
-                <option value="ALUMNO">📚 Todos los alumnos</option>
-                <option value="PROFESOR">🧑‍🏫 Todos los docentes</option>
+                <option value="all">Toda la institución</option>
+                <option value="ALUMNO">Todos los alumnos</option>
+                <option value="PROFESOR">Todos los docentes</option>
               </select>
             </div>
             <div className="text-xs text-primary font-semibold mb-2.5 px-2.5 py-1.5 bg-white rounded-sm border border-primary">{recipientsLabel}</div>
@@ -170,9 +170,9 @@ export function TeacherMessagesPage(): React.ReactElement {
               />
             </div>
             <Button size="sm" onClick={handleSendBroadcast} disabled={sendBroadcast.isPending || !broadcastContenido.trim()}>
-              {sendBroadcast.isPending ? "Enviando…" : "📢 Enviar difusión"}
+              {sendBroadcast.isPending ? "Enviando…" : "Enviar difusión"}
             </Button>
-            {sendBroadcast.isSuccess && <p className="text-xs text-success mt-2">📢 Difusión enviada a {sendBroadcast.data?.recipients} destinatarios</p>}
+            {sendBroadcast.isSuccess && <p className="text-xs text-success mt-2">Difusión enviada a {sendBroadcast.data?.recipients} destinatarios</p>}
           </Card>
         </div>
       </div>
