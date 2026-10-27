@@ -3,7 +3,7 @@ import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 
 export async function dashboardAlumno(alumnoId: string) {
-  const [inscripciones, materias, notas, asistencias, pendientes, alertas] = await Promise.all([
+  const [inscripciones, materias, notas, asistencias, actividades, alertas] = await Promise.all([
     prisma.inscripcion.count({ where: { alumno_id: alumnoId } }),
     prisma.inscripcion.findMany({
       where: { alumno_id: alumnoId },
@@ -21,11 +21,17 @@ export async function dashboardAlumno(alumnoId: string) {
       where: { alumno_id: alumnoId },
       _count: { _all: true },
     }),
-    prisma.entrega.count({
-      where: {
-        alumno_id: alumnoId,
-        publicado: false,
+    // Actividades activas de las materias del alumno, con su entrega (si existe).
+    prisma.actividad.findMany({
+      where: { activo: true, seccion: { materia: { inscripciones: { some: { alumno_id: alumnoId } } } } },
+      select: {
+        id: true,
+        nombre: true,
+        fecha_limite: true,
+        seccion: { select: { materia: { select: { id: true, nombre: true } } } },
+        entregas: { where: { alumno_id: alumnoId }, select: { id: true }, take: 1 },
       },
+      orderBy: { fecha_limite: "asc" },
     }),
     prisma.alertaRiesgoAcademico.count({
       where: { alumno_id: alumnoId, activa: true },
@@ -53,6 +59,7 @@ export async function dashboardAlumno(alumnoId: string) {
       id: insc.materia.id,
       nombre: insc.materia.nombre,
       promedio: promedio !== null ? Math.round(promedio * 100) / 100 : null,
+      progreso: progresoDe(insc.materia.id),
     };
   });
 
@@ -69,6 +76,35 @@ export async function dashboardAlumno(alumnoId: string) {
     }
   }
 
+  const totalPorMateria = new Map<string, number>();
+  const entregadasPorMateria = new Map<string, number>();
+  const proximasActividades: {
+    id: string;
+    nombre: string;
+    materia: string;
+    fecha_limite: Date;
+  }[] = [];
+
+  for (const a of actividades) {
+    const materiaId = a.seccion.materia.id;
+    totalPorMateria.set(materiaId, (totalPorMateria.get(materiaId) ?? 0) + 1);
+    if (a.entregas.length > 0) {
+      entregadasPorMateria.set(materiaId, (entregadasPorMateria.get(materiaId) ?? 0) + 1);
+    } else {
+      proximasActividades.push({
+        id: a.id,
+        nombre: a.nombre,
+        materia: a.seccion.materia.nombre,
+        fecha_limite: a.fecha_limite,
+      });
+    }
+  }
+
+  const progresoDe = (materiaId: string): number => {
+    const total = totalPorMateria.get(materiaId) ?? 0;
+    return total === 0 ? 0 : Math.round(((entregadasPorMateria.get(materiaId) ?? 0) / total) * 100);
+  };
+
   const asistencia = asistencias.map((a) => ({
     estado: a.estado,
     count: a._count._all,
@@ -78,13 +114,14 @@ export async function dashboardAlumno(alumnoId: string) {
     rol: "ALUMNO",
     resumen: {
       materias: inscripciones,
-      entregasPendientes: pendientes,
+      entregasPendientes: proximasActividades.length,
       alertasActivas: alertas,
       promedioGlobal: Math.round(promedioGlobal * 100) / 100,
       promedioPeriodoActual: promPeriodoActual !== null ? Math.round(promPeriodoActual * 100) / 100 : null,
     },
     materias: materiasResumen,
     asistencia,
+    proximasActividades: proximasActividades.slice(0, 5),
   };
 }
 

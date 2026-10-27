@@ -12,8 +12,9 @@ export interface DashboardAlumno {
     promedioGlobal: number;
     promedioPeriodoActual: number | null;
   };
-  materias: { id: string; nombre: string; promedio: number }[];
+  materias: { id: string; nombre: string; promedio: number | null; progreso: number }[];
   asistencia: { estado: string; count: number }[];
+  proximasActividades: { id: string; nombre: string; materia: string; fecha_limite: string }[];
 }
 
 export interface DashboardProfesor {
