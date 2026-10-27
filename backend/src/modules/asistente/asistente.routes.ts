@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { validateBody } from "../../middlewares/validate";
-import { generarMaterialSchema } from "./asistente.schemas";
+import { generarMaterialSchema, materialPdfSchema } from "./asistente.schemas";
 import * as asistenteController from "./asistente.controller";
 
 const router = Router();
@@ -12,6 +12,14 @@ router.post(
   requireRole("PROFESOR"),
   validateBody(generarMaterialSchema),
   asistenteController.generarMaterial
+);
+
+router.post(
+  "/asistente/pdf",
+  requireAuth,
+  requireRole("PROFESOR"),
+  validateBody(materialPdfSchema),
+  asistenteController.generarMaterialPdf
 );
 
 export default router;

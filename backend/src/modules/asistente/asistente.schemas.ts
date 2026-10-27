@@ -10,3 +10,11 @@ export const generarMaterialSchema = z.object({
 });
 
 export type GenerarMaterialInput = z.infer<typeof generarMaterialSchema>;
+
+export const materialPdfSchema = z.object({
+  materia_id: z.string().min(1),
+  material: z.string().min(1).max(60000),
+  titulo: z.string().min(1).max(200).optional(),
+});
+
+export type MaterialPdfInput = z.infer<typeof materialPdfSchema>;

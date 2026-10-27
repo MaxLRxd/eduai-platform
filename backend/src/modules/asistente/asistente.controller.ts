@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as asistenteService from "./asistente.service";
 import { AppError } from "../../middlewares/error";
-import { generarMaterialSchema, GenerarMaterialInput } from "./asistente.schemas";
+import { generarMaterialSchema, GenerarMaterialInput, MaterialPdfInput } from "./asistente.schemas";
 
 export async function generarMaterial(
   req: Request<unknown, unknown, GenerarMaterialInput>,
@@ -19,5 +19,16 @@ export async function generarMaterial(
     parsed.data,
     req.user.id
   );
+  res.json(resultado);
+}
+
+export async function generarMaterialPdf(
+  req: Request<unknown, unknown, MaterialPdfInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const resultado = await asistenteService.generarMaterialPdf(req.body, req.user.id);
   res.json(resultado);
 }

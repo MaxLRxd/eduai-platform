@@ -5,6 +5,7 @@ import { useTeacherAssistant } from "../../hooks/useTeacherAssistant";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
+import { apiErrorMessage } from "../../services/api";
 
 const QUICK_ACTIONS = [
   "Crear actividades diferenciadas",
@@ -20,14 +21,22 @@ export function TeacherAIPage(): React.ReactElement {
   const courseLabel = courses?.find((c) => c.id === activeCourse)?.label ?? "la materia seleccionada";
 
   const { data: planning } = usePlanning(activeCourse, courseLabel);
-  const { output, pending, ask } = useTeacherAssistant();
+  const { output, pending, pdfPending, ask, downloadPdf } = useTeacherAssistant();
 
   const [classDate, setClassDate] = useState(planning?.[0]?.date ?? "");
   const [prompt, setPrompt] = useState("");
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const runPrompt = (text: string): void => {
     setPrompt(text);
     void ask(text, activeCourse, classDate || undefined);
+  };
+
+  const handleDownloadPdf = (): void => {
+    setPdfError(null);
+    downloadPdf(activeCourse, prompt.trim().slice(0, 80) || undefined).catch((e: unknown) =>
+      setPdfError(apiErrorMessage(e, "No se pudo generar el PDF"))
+    );
   };
 
   return (
@@ -112,6 +121,14 @@ export function TeacherAIPage(): React.ReactElement {
           <div className="mt-4 p-3.5 border border-border rounded bg-surface-2 text-[13px] text-text-2">
             {output ?? "La respuesta aparecerá acá."}
           </div>
+          {output && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <Button variant="secondary" onClick={handleDownloadPdf} disabled={pdfPending || pending}>
+                {pdfPending ? "Generando PDF…" : "📄 Descargar PDF"}
+              </Button>
+            </div>
+          )}
+          {pdfError && <InfoBox variant="error">{pdfError}</InfoBox>}
         </Card>
 
         <Card>

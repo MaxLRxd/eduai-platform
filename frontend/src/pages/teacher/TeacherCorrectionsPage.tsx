@@ -63,7 +63,7 @@ export function TeacherCorrectionsPage(): React.ReactElement {
   useEffect(() => {
     if (selected) {
       setGrade(selected.aiGrade !== "—" ? selected.aiGrade : "");
-      setFeedback(selected.aiFeedback);
+      setFeedback(selected.aiGrade !== "—" ? selected.aiFeedback : "");
       setPublished(false);
       setAiError(null);
     }
@@ -185,17 +185,19 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               <div className="text-xs font-bold text-info mb-1.5 uppercase tracking-wide">🤖 Feedback auto-generado por IA</div>
               <div className="px-3 py-2.5 bg-blue-50 rounded text-[13px] text-text-1 mb-3.5 border border-blue-200">{selected.aiFeedback}</div>
 
-              {!correctWithAi.isSuccess && (
-                <Button
-                  fullWidth
-                  variant="ghost"
-                  className="justify-center mb-3.5"
-                  onClick={handleAiCorrection}
-                  disabled={correctWithAi.isPending}
-                >
-                  {correctWithAi.isPending ? "Corrigiendo con IA…" : "🤖 Volver a corregir con IA"}
-                </Button>
-              )}
+              <Button
+                fullWidth
+                variant="ghost"
+                className="justify-center mb-3.5"
+                onClick={handleAiCorrection}
+                disabled={correctWithAi.isPending}
+              >
+                {correctWithAi.isPending
+                  ? "Corrigiendo con IA…"
+                  : selected.aiGrade === "—"
+                    ? "🤖 Corregir con IA"
+                    : "🤖 Volver a corregir con IA"}
+              </Button>
               {aiError && <InfoBox variant="error">{aiError}</InfoBox>}
 
               <div className="mb-3.5">

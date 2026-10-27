@@ -2,7 +2,8 @@ import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { generarMaterialDocente } from "../../config/aiClient";
 import { obtenerProfesorAsignado } from "../materias/materias.service";
-import type { GenerarMaterialInput } from "./asistente.schemas";
+import type { GenerarMaterialInput, MaterialPdfInput } from "./asistente.schemas";
+import { renderMaterialPdf } from "./materialPdf";
 
 function assertUuid(id: string, mensaje: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -43,4 +44,35 @@ export async function generarMaterial(materiaId: string, input: GenerarMaterialI
   }
 
   return { material: resultado.material, sources: resultado.sources };
+}
+
+export async function generarMaterialPdf(input: MaterialPdfInput, usuarioId: string) {
+  assertUuid(input.materia_id, "Materia no encontrada");
+
+  const perfil = await obtenerProfesorAsignado(input.materia_id, usuarioId);
+
+  if (!perfil) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const materia = await prisma.materia.findUnique({
+    where: { id: input.materia_id },
+    select: { nombre: true },
+  });
+
+  const titulo = input.titulo?.trim() || "Material de clase";
+  const buffer = await renderMaterialPdf({ titulo, materia: materia?.nombre, material: input.material });
+
+  const slug = titulo
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+  return {
+    filename: `${slug || "material-de-clase"}.pdf`,
+    pdf: buffer.toString("base64"),
+  };
 }

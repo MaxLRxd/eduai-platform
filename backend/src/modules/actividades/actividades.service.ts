@@ -2,6 +2,7 @@ import path from "node:path";
 import type { Prisma, Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { corregirEntregaIA } from "../../config/aiClient";
+import { logger } from "../../config/logger";
 import { guardarArchivo } from "../../config/storage";
 import { AppError } from "../../middlewares/error";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
@@ -340,6 +341,8 @@ export async function enviar(actividadId: string, alumnoId: string, input: Envia
     )
   );
 
+  corregirAutomaticamente(entrega, actividad, materiaId);
+
   return toEntregaDto(entrega);
 }
 
@@ -603,9 +606,60 @@ export async function eliminarRubrica(rubricaId: string, usuarioId: string) {
 }
 
 /**
- * CU-A07: le pide al ai-service una correccion sugerida contra la rubrica de la actividad
- * y guarda el resultado como borrador. No publica: el docente sigue teniendo que
- * revisarla y publicarla desde la cola de correcciones.
+ * Pide al ai-service una correccion contra la rubrica de la actividad y la guarda como
+ * borrador (no publica). Compartida por la correccion manual del docente y la automatica
+ * que se dispara al recibir una entrega.
+ */
+async function generarBorradorIA(
+  entrega: { id: string; respuesta_texto: string | null; respuesta_codigo: string | null; archivo_nombre: string | null },
+  actividad: Awaited<ReturnType<typeof obtenerActividadODefecto>>,
+  materiaId: string
+) {
+  const contenido = [entrega.respuesta_texto, entrega.respuesta_codigo]
+    .filter((texto): texto is string => Boolean(texto?.trim()))
+    .join("\n\n");
+
+  if (!contenido && !entrega.archivo_nombre) {
+    throw new AppError(422, "La entrega no tiene contenido para corregir");
+  }
+
+  // La rubrica de la actividad manda; si no tiene, se deja que el ai-service use la suya.
+  const rubrica = actividad.rubrica_id
+    ? await prisma.rubrica.findUnique({ where: { id: actividad.rubrica_id } })
+    : null;
+
+  const criterios = (rubrica?.criterios as { nombre: string; peso: number; esperado?: string }[] | undefined) ?? [];
+
+  const resultado = await corregirEntregaIA({
+    subject_id: materiaId,
+    material_id: actividad.id,
+    consigna: actividad.consigna,
+    entrega: contenido || `[entrega adjunta: ${entrega.archivo_nombre}]`,
+    rubrica: criterios.map((c) => ({
+      nombre: c.nombre,
+      peso: c.peso,
+      esperado: c.esperado ?? "",
+    })),
+  });
+
+  if (!resultado) {
+    throw new AppError(502, "El servicio de IA no pudo corregir la entrega. Reintenta en unos segundos.");
+  }
+
+  return prisma.entrega.update({
+    where: { id: entrega.id },
+    data: {
+      calificacion_ia: resultado.calificacion,
+      feedback_ia: resultado.feedback,
+      revision_tipo: "IA",
+    },
+    include: { alumno: { select: { id: true, nombre: true, email: true } } },
+  });
+}
+
+/**
+ * CU-A07: correccion sugerida por IA a pedido del docente. Queda como borrador: el
+ * docente sigue teniendo que revisarla y publicarla desde la cola de correcciones.
  */
 export async function corregirConIA(entregaId: string, usuarioId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entregaId)) {
@@ -628,46 +682,24 @@ export async function corregirConIA(entregaId: string, usuarioId: string) {
 
   await exigirAccesoAMateria(materiaId, usuarioId);
 
-  const contenido = [entrega.respuesta_texto, entrega.respuesta_codigo]
-    .filter((texto): texto is string => Boolean(texto?.trim()))
-    .join("\n\n");
-
-  if (!contenido && !entrega.archivo_nombre) {
-    throw new AppError(422, "La entrega no tiene contenido para corregir");
-  }
-
-  // La rubrica de la actividad manda; si no tiene, se deja que el ai-service use la suya.
-  const rubrica = actividad.rubrica_id
-    ? await prisma.rubrica.findUnique({ where: { id: actividad.rubrica_id } })
-    : null;
-
-  const criterios = (rubrica?.criterios as { nombre: string; peso: number; esperado?: string }[] | undefined) ?? [];
-
-  const resultado = await corregirEntregaIA({
-    subject_id: actividad.seccion_id,
-    material_id: actividad.id,
-    consigna: actividad.consigna,
-    entrega: contenido || `[entrega adjunta: ${entrega.archivo_nombre}]`,
-    rubrica: criterios.map((c) => ({
-      nombre: c.nombre,
-      peso: c.peso,
-      esperado: c.esperado ?? "",
-    })),
-  });
-
-  if (!resultado) {
-    throw new AppError(502, "El servicio de IA no pudo corregir la entrega. Reintenta en unos segundos.");
-  }
-
-  const corregida = await prisma.entrega.update({
-    where: { id: entregaId },
-    data: {
-      calificacion_ia: resultado.calificacion,
-      feedback_ia: resultado.feedback,
-      revision_tipo: "IA",
-    },
-    include: { alumno: { select: { id: true, nombre: true, email: true } } },
-  });
+  const corregida = await generarBorradorIA(entrega, actividad, materiaId);
 
   return toEntregaDto(corregida);
+}
+
+/**
+ * Correccion automatica: al recibir una entrega se le deja un borrador de IA para que el
+ * docente lo encuentre ya cargado en la cola. Corre sin bloquear al alumno y nunca falla
+ * el envio: si la IA no responde, el docente puede pedirla a mano.
+ */
+function corregirAutomaticamente(
+  entrega: Parameters<typeof generarBorradorIA>[0] & { publicado: boolean },
+  actividad: Parameters<typeof generarBorradorIA>[1],
+  materiaId: string
+): void {
+  if (entrega.publicado || actividad.tipo === "MULTIPLE_CHOICE") return;
+
+  void generarBorradorIA(entrega, actividad, materiaId).catch((err) => {
+    logger.warn({ err, entregaId: entrega.id }, "Correccion automatica con IA no disponible");
+  });
 }
