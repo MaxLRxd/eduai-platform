@@ -4,6 +4,7 @@ from src.config.settings import settings
 from src.prompts.material import SYSTEM_PROMPT as MATERIAL_PROMPT
 from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
+from src.services.prompt_sanitizer import depurar
 from src.services.retrieval_service import RetrievalService
 from src.use_cases._helpers import build_sources, format_context
 
@@ -22,6 +23,11 @@ class GenerarMaterialUseCase:
     async def execute(
         self, subject_id: str, prompt: str, material_titles: dict[str, str] | None = None
     ) -> dict:
+        depurado = depurar(prompt)
+        if depurado.estado != "ok":
+            return {"material": depurado.respuesta_directa, "sources": []}
+        prompt = depurado.texto
+
         embedding = await self.embeddings.embed_query(prompt)
         results = await self.retrieval.search(subject_id, embedding, settings.retrieval_top_k)
         sources = build_sources(results, material_titles)

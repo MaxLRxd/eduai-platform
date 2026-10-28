@@ -227,6 +227,18 @@ export async function actualizarMateria(materiaId: string, input: ActualizarMate
     throw new AppError(404, "Materia no encontrada");
   }
 
+  // CU-AD01 (A3.1): una materia con alumnos inscriptos no se da de baja.
+  if (input.activa === false && existente.activa) {
+    const inscriptos = await prisma.inscripcion.count({ where: { materia_id: materiaId } });
+
+    if (inscriptos > 0) {
+      throw new AppError(
+        409,
+        `No se puede desactivar la materia: tiene ${inscriptos} ${inscriptos === 1 ? "alumno inscripto" : "alumnos inscriptos"}. Desmatricularlos antes de darla de baja`
+      );
+    }
+  }
+
   const materia = await prisma.materia.update({
     where: { id: materiaId },
     data: {

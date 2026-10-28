@@ -284,12 +284,21 @@ export async function eliminar(actividadId: string, usuarioId: string) {
   return { eliminada: true };
 }
 
+/** CU-A03 (A4): pasada la fecha limite no se aceptan entregas ni archivos nuevos. */
+function exigirPlazoAbierto(actividad: { fecha_limite: Date }) {
+  if (actividad.fecha_limite && actividad.fecha_limite.getTime() < Date.now()) {
+    throw new AppError(409, "El plazo de entrega de esta actividad ya vencio. Contactá al docente para pedir una extension");
+  }
+}
+
 export async function enviar(actividadId: string, alumnoId: string, input: EnviarEntregaInput) {
   const actividad = await obtenerActividadODefecto(actividadId);
 
   if (!actividad.activo) {
     throw new AppError(409, "La actividad fue archivada por el docente y no admite nuevas entregas");
   }
+
+  exigirPlazoAbierto(actividad);
 
   const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
 
@@ -356,6 +365,8 @@ export async function subirArchivoEntrega(
   if (!actividad.activo) {
     throw new AppError(409, "La actividad fue archivada por el docente y no admite nuevas entregas");
   }
+
+  exigirPlazoAbierto(actividad);
 
   const materiaId = await obtenerMateriaDeSeccion(actividad.seccion_id);
 
@@ -697,7 +708,8 @@ function corregirAutomaticamente(
   actividad: Parameters<typeof generarBorradorIA>[1],
   materiaId: string
 ): void {
-  if (entrega.publicado || actividad.tipo === "MULTIPLE_CHOICE") return;
+  // CU-A03 (A6): sin rubrica no hay correccion automatica; queda para revision manual.
+  if (entrega.publicado || actividad.tipo === "MULTIPLE_CHOICE" || !actividad.rubrica_id) return;
 
   void generarBorradorIA(entrega, actividad, materiaId).catch((err) => {
     logger.warn({ err, entregaId: entrega.id }, "Correccion automatica con IA no disponible");

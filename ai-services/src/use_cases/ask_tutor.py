@@ -10,7 +10,7 @@ from src.schemas.tutor import TutorRequest
 from src.services.cache_service import CacheService
 from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
-from src.services.prompt_sanitizer import sanitize_prompt
+from src.services.prompt_sanitizer import PromptDepurado, depurar
 from src.services.retrieval_service import RetrievalService
 from src.use_cases._helpers import (
     build_sources,
@@ -44,8 +44,22 @@ class AskTutorUseCase:
         "para responder esa pregunta."
     )
 
-    async def _prepare(self, req: TutorRequest) -> tuple[str, int, list[dict], str, list[dict]]:
-        prompt_depurado, tokens_ahorrados = sanitize_prompt(req.question)
+    @staticmethod
+    def _respuesta_directa(req: TutorRequest, depurado: PromptDepurado) -> dict:
+        """Saludo solo o mensaje vacio tras depurar: se responde sin consumir tokens (CU-SYS01)."""
+        return {
+            "answer": depurado.respuesta_directa,
+            "mode": req.mode.value,
+            "sources": [],
+            "prompt_depurado": depurado.texto,
+            "tokens_ahorrados": depurado.tokens_ahorrados,
+            "cached": False,
+        }
+
+    async def _prepare(
+        self, req: TutorRequest, depurado: PromptDepurado
+    ) -> tuple[str, int, list[dict], str, list[dict]]:
+        prompt_depurado, tokens_ahorrados = depurado.texto, depurado.tokens_ahorrados
         query = prompt_depurado or req.question
 
         embedding = await self.embeddings.embed_query(query)
@@ -68,6 +82,10 @@ class AskTutorUseCase:
         return prompt_depurado, tokens_ahorrados, sources, MODE_PROMPTS[req.mode.value], messages
 
     async def execute(self, req: TutorRequest) -> dict:
+        depurado = depurar(req.question)
+        if depurado.estado != "ok":
+            return self._respuesta_directa(req, depurado)
+
         key = cache_key(req.subject_id, req.mode.value, req.question)
         cached = await self.cache.get(key)
         if cached is not None:
@@ -75,7 +93,7 @@ class AskTutorUseCase:
             payload["cached"] = True
             return payload
 
-        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req)
+        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req, depurado)
         if not sources:
             response = {
                 "answer": self.NO_INFO_ANSWER,
@@ -107,6 +125,12 @@ class AskTutorUseCase:
         return response
 
     async def stream(self, req: TutorRequest):
+        depurado = depurar(req.question)
+        if depurado.estado != "ok":
+            yield {"type": "token", "text": depurado.respuesta_directa}
+            yield {"type": "done", "sources": [], "cached": False}
+            return
+
         key = cache_key(req.subject_id, req.mode.value, req.question)
         cached = await self.cache.get(key)
         if cached is not None:
@@ -119,7 +143,7 @@ class AskTutorUseCase:
             }
             return
 
-        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req)
+        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req, depurado)
         if not sources:
             response = {
                 "answer": self.NO_INFO_ANSWER,

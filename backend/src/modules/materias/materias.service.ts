@@ -248,20 +248,33 @@ export async function unirse(input: UnirseInput, alumnoId: string) {
     throw new AppError(409, "Ya estas inscripto a esta materia");
   }
 
-  const [, materia] = await prisma.$transaction([
-    prisma.inscripcion.create({
+  // El cupo se reserva con un UPDATE condicional dentro de la transaccion: si dos
+  // alumnos usan la ultima plaza a la vez, solo uno logra incrementar el contador.
+  const materia = await prisma.$transaction(async (tx) => {
+    const reservada = await tx.claveMatriculacion.updateMany({
+      where: {
+        id: clave.id,
+        activa: true,
+        revocada_en: null,
+        ...(clave.max_usos !== null ? { usos_actuales: { lt: clave.max_usos } } : {}),
+      },
+      data: { usos_actuales: { increment: 1 } },
+    });
+
+    if (reservada.count === 0) {
+      throw new AppError(400, "La clave alcanzo su limite de usos");
+    }
+
+    await tx.inscripcion.create({
       data: {
         alumno_id: alumnoId,
         materia_id: clave.materia_id,
         clave_id: clave.id,
       },
-    }),
-    prisma.materia.findUniqueOrThrow({ where: { id: clave.materia_id }, include: materiaInclude }),
-    prisma.claveMatriculacion.update({
-      where: { id: clave.id },
-      data: { usos_actuales: { increment: 1 } },
-    }),
-  ]);
+    });
+
+    return tx.materia.findUniqueOrThrow({ where: { id: clave.materia_id }, include: materiaInclude });
+  });
 
   return toMateriaDto(materia);
 }
