@@ -24,7 +24,7 @@ export function StudentAssignmentsPage(): React.ReactElement {
     <div>
       <div className="mb-6">
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Entregas pendientes</h2>
-        <p className="text-[13px] text-text-2">Trabajos prácticos y evaluaciones · Semestre 2024</p>
+        <p className="text-[13px] text-text-2">Trabajos prácticos y evaluaciones de tus materias</p>
       </div>
 
       {pendientes.length > 0 && (

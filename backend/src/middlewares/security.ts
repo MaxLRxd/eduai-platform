@@ -26,7 +26,14 @@ interface Ventana {
  * en una sola instancia; si se escala a varias réplicas hay que moverlo a Redis.
  * Desactivado en tests para no interferir con las suites.
  */
-export function rateLimit(opciones: { max: number; ventanaMs: number }) {
+export function rateLimit(opciones: {
+  max: number;
+  ventanaMs: number;
+  /** Solo cuentan los intentos que terminan en error (4xx/5xx): un login correcto no gasta cupo. */
+  soloFallos?: boolean;
+  /** Separa el contador por email del body, para frenar fuerza bruta sobre una cuenta puntual. */
+  porEmail?: boolean;
+}) {
   const ventanas = new Map<string, Ventana>();
 
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -35,8 +42,18 @@ export function rateLimit(opciones: { max: number; ventanaMs: number }) {
     }
 
     const ahora = Date.now();
-    const clave = `${req.ip}:${req.baseUrl}${req.path}`;
+    const email = opciones.porEmail ? `:${String(req.body?.email ?? "").trim().toLowerCase()}` : "";
+    const clave = `${req.ip}:${req.baseUrl}${req.path}${email}`;
     const actual = ventanas.get(clave);
+
+    if (opciones.soloFallos) {
+      res.on("finish", () => {
+        const ventana = ventanas.get(clave);
+        if (res.statusCode < 400 && ventana && ventana.intentos > 0) {
+          ventana.intentos -= 1;
+        }
+      });
+    }
 
     if (!actual || actual.reinicio <= ahora) {
       ventanas.set(clave, { intentos: 1, reinicio: ahora + opciones.ventanaMs });

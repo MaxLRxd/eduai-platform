@@ -11,5 +11,16 @@ export const loginSchema = z.object({
   password: z.string().min(1, "contrasena obligatoria").max(72),
 });
 
+export const cambiarPasswordSchema = z
+  .object({
+    password_actual: z.string().min(1, "contrasena actual obligatoria").max(72),
+    password_nueva: z.string().min(8, "minimo 8 caracteres").max(72),
+  })
+  .refine((d) => d.password_actual !== d.password_nueva, {
+    message: "la nueva contrasena debe ser distinta de la actual",
+    path: ["password_nueva"],
+  });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type CambiarPasswordInput = z.infer<typeof cambiarPasswordSchema>;

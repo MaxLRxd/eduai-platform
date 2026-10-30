@@ -45,6 +45,35 @@ export async function dashboardAlumno(alumnoId: string) {
     notaPorMateria.set(n.materia_id, arr);
   }
 
+  const totalPorMateria = new Map<string, number>();
+  const entregadasPorMateria = new Map<string, number>();
+  const proximasActividades: {
+    id: string;
+    nombre: string;
+    materia: string;
+    fecha_limite: Date;
+  }[] = [];
+
+  for (const a of actividades) {
+    const materiaId = a.seccion.materia.id;
+    totalPorMateria.set(materiaId, (totalPorMateria.get(materiaId) ?? 0) + 1);
+    if (a.entregas.length > 0) {
+      entregadasPorMateria.set(materiaId, (entregadasPorMateria.get(materiaId) ?? 0) + 1);
+    } else {
+      proximasActividades.push({
+        id: a.id,
+        nombre: a.nombre,
+        materia: a.seccion.materia.nombre,
+        fecha_limite: a.fecha_limite,
+      });
+    }
+  }
+
+  const progresoDe = (materiaId: string): number => {
+    const total = totalPorMateria.get(materiaId) ?? 0;
+    return total === 0 ? 0 : Math.round(((entregadasPorMateria.get(materiaId) ?? 0) / total) * 100);
+  };
+
   let promedioGlobal = 0;
   let promPeriodoActual: number | null = null;
 
@@ -75,35 +104,6 @@ export async function dashboardAlumno(alumnoId: string) {
         notasPeriodo.reduce((a, b) => a + b.calificacion.toNumber(), 0) / notasPeriodo.length;
     }
   }
-
-  const totalPorMateria = new Map<string, number>();
-  const entregadasPorMateria = new Map<string, number>();
-  const proximasActividades: {
-    id: string;
-    nombre: string;
-    materia: string;
-    fecha_limite: Date;
-  }[] = [];
-
-  for (const a of actividades) {
-    const materiaId = a.seccion.materia.id;
-    totalPorMateria.set(materiaId, (totalPorMateria.get(materiaId) ?? 0) + 1);
-    if (a.entregas.length > 0) {
-      entregadasPorMateria.set(materiaId, (entregadasPorMateria.get(materiaId) ?? 0) + 1);
-    } else {
-      proximasActividades.push({
-        id: a.id,
-        nombre: a.nombre,
-        materia: a.seccion.materia.nombre,
-        fecha_limite: a.fecha_limite,
-      });
-    }
-  }
-
-  const progresoDe = (materiaId: string): number => {
-    const total = totalPorMateria.get(materiaId) ?? 0;
-    return total === 0 ? 0 : Math.round(((entregadasPorMateria.get(materiaId) ?? 0) / total) * 100);
-  };
 
   const asistencia = asistencias.map((a) => ({
     estado: a.estado,

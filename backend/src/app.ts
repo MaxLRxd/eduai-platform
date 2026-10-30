@@ -26,6 +26,21 @@ import messagesRoutes from "./modules/messages/messages.routes";
 import configRoutes from "./modules/config/config.routes";
 import healthRoutes from "./routes/health.routes";
 
+const EXTENSIONES_EJECUTABLES = /\.(html?|xhtml|svg|xml|js|mjs)$/i;
+
+/**
+ * Los archivos de /uploads los suben alumnos y docentes y se sirven desde el mismo origen
+ * que la API. Un .html o .svg abierto ahi podria ejecutar scripts con las cookies de la
+ * sesion (p. ej. pedir /api/auth/refresh), asi que se descargan y, si se abren, quedan en
+ * un sandbox sin origen. PDFs e imagenes se siguen viendo en el navegador.
+ */
+function protegerArchivoSubido(res: express.Response, rutaArchivo: string): void {
+  if (EXTENSIONES_EJECUTABLES.test(rutaArchivo)) {
+    res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'");
+    res.setHeader("Content-Disposition", "attachment");
+  }
+}
+
 export function createApp(): express.Express {
   const app = express();
 
@@ -48,7 +63,7 @@ export function createApp(): express.Express {
   app.use(cookieParser());
 
   asegurarDirectorioUploads();
-  app.use("/uploads", express.static(UPLOADS_DIR, { fallthrough: true }));
+  app.use("/uploads", express.static(UPLOADS_DIR, { fallthrough: true, setHeaders: protegerArchivoSubido }));
 
   app.get("/", (_req, res) => {
     res.json({ service: "eduai-backend", status: "ok" });

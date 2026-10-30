@@ -212,7 +212,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
             <CardHeader title="Materiales" />
             <div className="flex flex-col gap-2">
               {course.materiales.map((m) => {
-                const url = (m as any).url ?? (m as any).archivo_url ?? null;
+                const url = m.url ?? null;
                 const isFile = Boolean(url);
                 return (
                   <div key={m.id} className="flex items-start gap-3 py-1.5">
@@ -233,7 +233,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                       </div>
                       <div className="text-[11px] text-text-3 mt-0.5">
                         {m.ragIndexado ? "Disponible para el Tutor IA" : "Pendiente de indexar"}
-                        {isFile && (m as any).archivo_nombre ? ` · ${(m as any).archivo_nombre}` : ""}
+                        {isFile && m.archivo_nombre ? ` · ${m.archivo_nombre}` : ""}
                       </div>
                     </div>
                   </div>

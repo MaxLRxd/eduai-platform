@@ -120,6 +120,15 @@ export async function actualizarEstado(usuarioId: string, input: ActualizarEstad
     data: { activo: input.activo },
   });
 
+  // Dar de baja corta tambien las sesiones abiertas: sin esto el refresh token seguiria
+  // vivo hasta su vencimiento (el token de acceso dura 15 minutos).
+  if (!input.activo) {
+    await prisma.sesion.updateMany({
+      where: { usuario_id: usuarioId, revocado: false },
+      data: { revocado: true },
+    });
+  }
+
   return toUsuarioDto(actualizado);
 }
 

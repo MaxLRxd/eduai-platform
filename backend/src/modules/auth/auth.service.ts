@@ -5,7 +5,7 @@ import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { signAccessToken } from "../../middlewares/auth";
 import { AppError } from "../../middlewares/error";
-import type { LoginInput, RegisterInput } from "./auth.schemas";
+import type { CambiarPasswordInput, LoginInput, RegisterInput } from "./auth.schemas";
 
 const REFRESH_COOKIE = "eduai_refresh";
 export const refreshCookieName = REFRESH_COOKIE;
@@ -151,4 +151,41 @@ export async function me(userId: string): Promise<PublicUsuario> {
   }
 
   return toPublic(usuario);
+}
+
+/**
+ * Cambia la contrasena del usuario autenticado. Cierra todas las demas sesiones (un
+ * dispositivo perdido o un token filtrado dejan de servir) pero conserva la actual.
+ */
+export async function cambiarPassword(
+  userId: string,
+  input: CambiarPasswordInput,
+  refreshTokenActual: string | undefined
+): Promise<void> {
+  const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
+
+  if (!usuario || !usuario.activo) {
+    throw new AppError(404, "Usuario no encontrado");
+  }
+
+  // 400 y no 401: un 401 haria que el frontend intente renovar la sesion y la cierre.
+  const passwordOk = await bcrypt.compare(input.password_actual, usuario.password_hash);
+
+  if (!passwordOk) {
+    throw new AppError(400, "La contraseña actual es incorrecta");
+  }
+
+  const passwordHash = await bcrypt.hash(input.password_nueva, 10);
+
+  await prisma.$transaction([
+    prisma.usuario.update({ where: { id: userId }, data: { password_hash: passwordHash } }),
+    prisma.sesion.updateMany({
+      where: {
+        usuario_id: userId,
+        revocado: false,
+        ...(refreshTokenActual ? { token_hash: { not: hashToken(refreshTokenActual) } } : {}),
+      },
+      data: { revocado: true },
+    }),
+  ]);
 }

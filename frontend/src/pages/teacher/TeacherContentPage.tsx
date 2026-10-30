@@ -89,7 +89,7 @@ export function TeacherContentPage(): React.ReactElement {
       {
         onSuccess: () => setSavedMsg("✅ Archivo guardado e indexado por el RAG Pipeline"),
         onError: (err) => {
-          const msg = err instanceof Error ? err.message : "";
+          const msg = apiErrorMessage(err, "");
           setSavedMsg(`No se pudo subir el archivo. ${msg}`);
         },
       }

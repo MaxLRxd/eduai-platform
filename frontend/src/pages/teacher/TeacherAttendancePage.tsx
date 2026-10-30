@@ -24,7 +24,7 @@ export function TeacherAttendancePage(): React.ReactElement {
   const [statuses, setStatuses] = useState<Record<string, DailyAttendanceStatus>>({});
   const [savedMsg, setSavedMsg] = useState("");
 
-  const all = students ?? [];
+  const all = useMemo(() => students ?? [], [students]);
 
   const currentStatus = (id: string, fallback: DailyAttendanceStatus): DailyAttendanceStatus =>
     statuses[id] ?? fallback;

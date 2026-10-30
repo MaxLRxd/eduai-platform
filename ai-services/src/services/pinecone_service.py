@@ -98,7 +98,11 @@ class PineconeRetrievalService:
             )
 
     async def search(
-        self, subject_id: str, embedding: list[float], top_k: int = 5, min_score: float | None = None
+        self,
+        subject_id: str,
+        embedding: list[float],
+        top_k: int = 5,
+        min_score: float | None = None,
     ) -> list[dict]:
         index = self._ensure_index()
         response = index.query(

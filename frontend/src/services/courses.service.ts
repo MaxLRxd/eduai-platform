@@ -26,6 +26,9 @@ interface ContenidoDto {
   tipo: string;
   texto_contenido: string | null;
   rag_indexado: boolean;
+  archivo_url?: string | null;
+  url?: string | null;
+  archivo_nombre?: string | null;
 }
 
 const COLOR_PALETTE = ["#003d7a", "#059669", "#2563eb", "#d97706", "#7c3aed", "#db2777"];
@@ -85,8 +88,8 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
           tipo: c.tipo,
           resumible: Boolean(c.texto_contenido?.trim()),
           ragIndexado: c.rag_indexado,
-          url: (c as any).archivo_url ?? (c as any).url ?? null,
-          archivo_nombre: (c as any).archivo_nombre ?? null,
+          url: c.archivo_url ?? c.url ?? null,
+          archivo_nombre: c.archivo_nombre ?? null,
         }))
       );
       unidades.push({

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as authService from "./auth.service";
-import type { LoginInput, RegisterInput } from "./auth.schemas";
+import type { CambiarPasswordInput, LoginInput, RegisterInput } from "./auth.schemas";
 import { AppError } from "../../middlewares/error";
 
 export async function register(
@@ -43,4 +43,16 @@ export async function me(req: Request, res: Response): Promise<void> {
   }
   const usuario = await authService.me(req.user.id);
   res.json({ usuario });
+}
+
+export async function cambiarPassword(
+  req: Request<unknown, unknown, CambiarPasswordInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const token = req.cookies?.[authService.refreshCookieName] as string | undefined;
+  await authService.cambiarPassword(req.user.id, req.body, token);
+  res.json({ ok: true });
 }

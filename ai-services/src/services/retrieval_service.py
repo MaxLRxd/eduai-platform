@@ -231,7 +231,11 @@ class RetrievalService:
             )
 
     async def search(
-        self, subject_id: str, embedding: list[float], top_k: int = 5, min_score: float | None = None
+        self,
+        subject_id: str,
+        embedding: list[float],
+        top_k: int = 5,
+        min_score: float | None = None,
     ) -> list[dict]:
         pool = await self._get_pool()
         async with pool.acquire() as conn:

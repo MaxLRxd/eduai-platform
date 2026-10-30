@@ -49,7 +49,7 @@ export function TeacherActivitiesPage(): React.ReactElement {
       { actividadId: a.id, input: { activo } },
       {
         onSuccess: () => setMsg(activo ? `✅ "${a.nombre}" restaurada.` : `📦 "${a.nombre}" archivada. Los alumnos ya no la ven.`),
-        onError: (e) => setMsg(`⚠️ ${e instanceof Error ? e.message : "No se pudo cambiar el estado"}`),
+        onError: (e) => setMsg(`⚠️ ${apiErrorMessage(e, "No se pudo cambiar el estado")}`),
       }
     );
   };

@@ -52,3 +52,10 @@ export async function logoutRequest(): Promise<void> {
     setAccessToken(null);
   }
 }
+
+export async function changePasswordRequest(currentPassword: string, newPassword: string): Promise<void> {
+  await api<{ ok: boolean }>("/api/auth/password", {
+    method: "POST",
+    body: JSON.stringify({ password_actual: currentPassword, password_nueva: newPassword }),
+  });
+}

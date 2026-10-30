@@ -32,8 +32,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # --- Producción: imagen mínima ---
 FROM base AS prod
-ENV PATH="/app/.venv/bin:$PATH"
 COPY --from=prod-deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY . .
+# Solo se copian las librerias (no /usr/local/bin), asi que uvicorn se invoca como modulo.
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

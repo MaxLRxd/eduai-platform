@@ -4,9 +4,11 @@ import { useDashboard } from "../../hooks/useDashboard";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { ProgressBar } from "../../components/ui/ProgressBar";
+import { useBranding } from "../../contexts/BrandingContext";
 
 export function AdminDashboardPage(): React.ReactElement {
   const { user } = useAuth();
+  const branding = useBranding();
   const { data: dashboard } = useDashboard(user?.role);
 
   const d = dashboard?.rol === "ADMIN" ? dashboard.data : undefined;
@@ -17,7 +19,7 @@ export function AdminDashboardPage(): React.ReactElement {
     <div>
       <div className="mb-6">
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Panel institucional</h2>
-        <p className="text-[13px] text-text-2">IES Santa Fe · Vista general del sistema</p>
+        <p className="text-[13px] text-text-2">{branding.nombre ? `${branding.nombre} · ` : ""}Vista general del sistema</p>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">

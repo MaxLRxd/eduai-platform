@@ -7,15 +7,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { Tag } from "../../components/ui/Tag";
-
-function tasaAsistencia(asistencia: { estado: string; count: number }[] | undefined): number | null {
-  if (!asistencia || asistencia.length === 0) return null;
-  const total = asistencia.reduce((sum, a) => sum + a.count, 0);
-  if (total === 0) return null;
-  const presente = (asistencia.find((a) => a.estado === "PRESENTE")?.count ?? 0) +
-    (asistencia.find((a) => a.estado === "TARDANZA")?.count ?? 0);
-  return Math.round((presente / total) * 100);
-}
+import { tasaAsistencia } from "../../utils/asistencia";
 
 function formatDue(iso: string): string {
   const f = new Date(iso);

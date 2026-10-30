@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
+import { Card, CardHeader } from "../../components/ui/Card";
 
 export function TeacherStudentProfilePage(): React.ReactElement {
   const { legajo } = useParams();
@@ -18,8 +18,9 @@ export function TeacherStudentProfilePage(): React.ReactElement {
           Volver
         </Button>
       </div>
-      <Card title="Informacin del alumno">
-        <p className="text-sm text-text-2">Informacin no disponible temporalmente.</p>
+      <Card>
+        <CardHeader title="Información del alumno" />
+        <p className="text-sm text-text-2">Información no disponible temporalmente.</p>
       </Card>
     </div>
   );

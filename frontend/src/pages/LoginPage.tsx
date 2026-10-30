@@ -4,7 +4,7 @@ import { useBranding } from "../contexts/BrandingContext";
 
 export function LoginPage(): React.ReactElement {
   const { login } = useAuth();
-  const { branding } = useBranding();
+  const branding = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function LoginPage(): React.ReactElement {
       <div className="bg-surface rounded-xl shadow-lg w-full max-w-md p-10 pt-11 pb-9">
         <div className="text-center mb-8">
           {branding?.logoUrl ? (
-            <img src={branding.logoUrl} alt={branding.nombre} className="w-[54px] h-[54px] mx-auto mb-3.5 object-contain" />
+            <img src={branding.logoUrl} alt={branding.nombre ?? "EduAI"} className="w-[54px] h-[54px] mx-auto mb-3.5 object-contain" />
           ) : (
             <div className="w-[54px] h-[54px] mx-auto mb-3.5 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[0_8px_20px_rgba(0,61,122,0.3)]" />
           )}

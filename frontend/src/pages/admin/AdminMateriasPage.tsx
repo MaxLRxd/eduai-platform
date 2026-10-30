@@ -5,6 +5,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
+import { apiErrorMessage } from "../../services/api";
 import type { SubjectStatus } from "../../types/domain";
 
 const STATUS_COLOR: Record<SubjectStatus, TagColor> = { Activa: "green", Pendiente: "amber", Inactiva: "gray" };
@@ -48,15 +49,15 @@ export function AdminMateriasPage(): React.ReactElement {
           setMessage(form.id ? `Materia "${form.nombre}" actualizada correctamente.` : `Materia "${form.nombre}" creada correctamente.`);
           setForm(EMPTY_FORM);
         },
-        onError: (err: any) => {
-          setMessage(err?.message || "No se pudo guardar la materia.");
+        onError: (err: unknown) => {
+          setMessage(apiErrorMessage(err, "No se pudo guardar la materia."));
         },
       }
     );
   };
 
   const loadForEdit = (id: string, nombre: string, estado: SubjectStatus): void => {
-    const existing = subjects?.find((s) => s.id === id) as any;
+    const existing = subjects?.find((s) => s.id === id) as Record<string, string | undefined> | undefined;
     setForm({
       id,
       nombre,

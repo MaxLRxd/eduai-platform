@@ -67,6 +67,8 @@ export function TeacherCorrectionsPage(): React.ReactElement {
       setPublished(false);
       setAiError(null);
     }
+    // Solo se reinicia al cambiar de entrega: un refetch no debe pisar lo que el docente edita.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
   const handlePublish = (): void => {

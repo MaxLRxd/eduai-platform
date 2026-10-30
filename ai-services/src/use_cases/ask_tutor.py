@@ -93,7 +93,9 @@ class AskTutorUseCase:
             payload["cached"] = True
             return payload
 
-        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req, depurado)
+        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(
+            req, depurado
+        )
         if not sources:
             response = {
                 "answer": self.NO_INFO_ANSWER,
@@ -143,7 +145,9 @@ class AskTutorUseCase:
             }
             return
 
-        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(req, depurado)
+        prompt_depurado, tokens_ahorrados, sources, system, messages = await self._prepare(
+            req, depurado
+        )
         if not sources:
             response = {
                 "answer": self.NO_INFO_ANSWER,
