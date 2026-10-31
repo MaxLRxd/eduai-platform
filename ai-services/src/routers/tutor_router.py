@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from src.schemas.tutor import (
+    CorrectExamRequest,
+    CorrectExamResponse,
     CorrectSubmissionRequest,
     CorrectSubmissionResponse,
     DepurarPromptRequest,
@@ -70,6 +72,16 @@ async def resumen(req: SummaryRequest, request: Request) -> SummaryResponse:
 async def examen(req: ExamRequest, request: Request) -> ExamResponse:
     try:
         return await request.app.state.examen_use_case.execute(req)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}") from exc
+
+
+@router.post("/examen/corregir", response_model=CorrectExamResponse)
+async def corregir_examen(req: CorrectExamRequest, request: Request) -> CorrectExamResponse:
+    try:
+        return await request.app.state.corregir_simulacro_use_case.execute(req)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

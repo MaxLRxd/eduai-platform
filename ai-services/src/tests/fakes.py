@@ -47,6 +47,25 @@ class FakeCorreccionLLM:
         )
 
 
+class FakeExamenCorreccionLLM:
+    """Devuelve una correccion fija para las preguntas de desarrollo recibidas."""
+
+    def __init__(self, respuesta: str | None = None):
+        self.respuesta = respuesta
+        self.llamadas = 0
+        self.ultimo_mensaje = ""
+
+    async def generate(self, system_instruction, messages, temperature=None, max_tokens=None):
+        self.llamadas += 1
+        self.ultimo_mensaje = messages[-1]["content"]
+        if self.respuesta is not None:
+            return self.respuesta
+        return (
+            '{"resultados": [{"indice": 1, "veredicto": "parcial", "puntaje": 0.5, '
+            '"feedback": "Mencionas la idea central pero falta el ejemplo."}]}'
+        )
+
+
 class FakeCache(CacheService):
     def __init__(self):
         self._store: dict[str, str] = {}

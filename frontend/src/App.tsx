@@ -150,7 +150,7 @@ export function App(): React.ReactElement {
         }
       />
       <Route
-        path="/teacher/students/:legajo"
+        path="/teacher/students/:alumnoId"
         element={
           <ProtectedRoute allow="PROFESOR">
             <Shell title="Perfil del alumno">

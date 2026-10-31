@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const tipoNotificacionSchema = z.enum(["ENTREGA", "FEEDBACK", "ALERTA", "MENSAJE"]);
+const tipoNotificacionSchema = z.enum(["ENTREGA", "FEEDBACK", "ALERTA", "MENSAJE", "SISTEMA"]);
 
 export const crearNotificacionSchema = z.object({
   usuario_id: z.string().uuid("id de usuario invalido"),

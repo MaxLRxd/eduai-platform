@@ -406,3 +406,51 @@ export async function generarExamen(
     return null;
   }
 }
+
+export interface CorreccionExamenItemInput {
+  tipo: "multiple_choice" | "desarrollo";
+  enunciado: string;
+  opciones: string[];
+  respuesta_modelo: string;
+  respuesta_alumno: string;
+}
+
+export type VeredictoExamen = "correcta" | "parcial" | "incorrecta" | "sin_responder";
+
+export interface CorreccionExamenItemResult {
+  indice: number;
+  veredicto: VeredictoExamen;
+  puntaje: number;
+  feedback: string;
+}
+
+/** CU-A11: corrige las respuestas de un simulacro. `null` si el servicio de IA no responde. */
+export async function corregirExamenIA(
+  subjectId: string,
+  titulo: string,
+  items: CorreccionExamenItemInput[]
+): Promise<CorreccionExamenItemResult[] | null> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; no se pudo corregir el simulacro");
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl()}/tutor/examen/corregir`, {
+      method: "POST",
+      headers: aiHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ subject_id: subjectId, titulo, items }),
+      signal: AbortSignal.timeout(120_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al corregir el simulacro en ai-service");
+      return null;
+    }
+
+    return ((await res.json()) as { resultados: CorreccionExamenItemResult[] }).resultados;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para corregir el simulacro");
+    return null;
+  }
+}

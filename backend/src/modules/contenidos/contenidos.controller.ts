@@ -77,3 +77,23 @@ export async function eliminar(
   const resultado = await contenidosService.eliminar(req.params.contenidoId, req.user.id);
   res.json(resultado);
 }
+
+export async function registrarAcceso(
+  req: Request<{ contenidoId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await contenidosService.registrarAcceso(req.params.contenidoId, req.user.id));
+}
+
+export async function estadisticasDeAcceso(
+  req: Request<{ materiaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await contenidosService.estadisticasDeAcceso(req.params.materiaId, req.user.id));
+}

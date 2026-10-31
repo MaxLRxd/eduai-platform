@@ -2,7 +2,10 @@ import bcrypt from "bcryptjs";
 import type { TipoProfesor } from "@prisma/client";
 import { renderReportePdf } from "./reportsPdf";
 import { prisma } from "../../config/prisma";
+import { logger } from "../../config/logger";
 import { AppError } from "../../middlewares/error";
+import { crearNoLeidas } from "../notificaciones/notificaciones.service";
+import type { CrearNotificacionInput } from "../notificaciones/notificaciones.schemas";
 import type {
   ActualizarEstadoInput,
   ActualizarMateriaAdminInput,
@@ -12,7 +15,18 @@ import type {
   CrearUsuarioInput,
   GenerarClaveAdminInput,
 } from "./admin.schemas";
-import { generarClaveUnica } from "../materias/materias.service";
+import { exigirNombreDeMateriaLibre, exigirVencimientoFuturo, generarClaveUnica } from "../materias/materias.service";
+
+/** Aviso in-app que nunca debe tumbar la operacion administrativa que lo origina. */
+async function avisar(input: CrearNotificacionInput): Promise<void> {
+  try {
+    await crearNoLeidas(input);
+  } catch (err) {
+    logger.warn({ err, usuarioId: input.usuario_id }, "No se pudo crear la notificacion");
+  }
+}
+
+const ROL_LEGIBLE: Record<string, string> = { ALUMNO: "alumno", PROFESOR: "docente", ADMIN: "administrador" };
 
 function toUsuarioDto(u: {
   id: string;
@@ -97,6 +111,15 @@ export async function crearUsuario(input: CrearUsuarioInput) {
       perfilProfesor: { select: { id: true, tipo_profesor: true } },
       _count: { select: { inscripciones: true } },
     },
+  });
+
+  // CU-AD03: el nuevo usuario recibe el aviso de alta dentro de la plataforma. La contraseña
+  // temporal no se guarda ni se envia en el aviso: el administrador se la entrega aparte.
+  await avisar({
+    usuario_id: usuario.id,
+    tipo: "SISTEMA",
+    titulo: "Tu cuenta fue creada",
+    mensaje: `Te dieron de alta como ${ROL_LEGIBLE[usuario.rol] ?? "usuario"}. Ingresá con tu email (${usuario.email}) y la contraseña temporal que te indicó el administrador, y cambiala desde "Mi perfil".`,
   });
 
   return toUsuarioDto(usuario);
@@ -207,6 +230,8 @@ export async function listarMaterias(page: number, pageSize: number) {
 }
 
 export async function crearMateria(input: CrearMateriaAdminInput) {
+  await exigirNombreDeMateriaLibre(input.nombre);
+
   const materia = await prisma.materia.create({
     data: {
       nombre: input.nombre,
@@ -234,6 +259,10 @@ export async function actualizarMateria(materiaId: string, input: ActualizarMate
 
   if (!existente) {
     throw new AppError(404, "Materia no encontrada");
+  }
+
+  if (input.nombre && input.nombre.trim().toLowerCase() !== existente.nombre.trim().toLowerCase()) {
+    await exigirNombreDeMateriaLibre(input.nombre, materiaId);
   }
 
   // CU-AD01 (A3.1): una materia con alumnos inscriptos no se da de baja.
@@ -285,12 +314,36 @@ export async function asignarProfesor(materiaId: string, input: AsignarProfesorI
     throw new AppError(404, "Profesor no encontrado");
   }
 
+  const previa = await prisma.materiaProfesor.findUnique({
+    where: { materia_id_profesor_id: { materia_id: materiaId, profesor_id: input.profesor_id } },
+  });
+
+  // CU-AD02 (E1): no se duplica una asignacion vigente.
+  if (input.activo && previa?.activo) {
+    throw new AppError(409, "El profesor ya se encuentra asignado a esta materia");
+  }
+
+  if (!input.activo && !previa?.activo) {
+    throw new AppError(409, "El profesor no se encuentra asignado a esta materia");
+  }
+
   const asignacion = await prisma.materiaProfesor.upsert({
     where: {
       materia_id_profesor_id: { materia_id: materiaId, profesor_id: input.profesor_id },
     },
     update: { activo: input.activo, desasignado_en: input.activo ? null : new Date() },
     create: { materia_id: materiaId, profesor_id: input.profesor_id, activo: input.activo },
+  });
+
+  await avisar({
+    usuario_id: profesor.usuario_id,
+    tipo: "SISTEMA",
+    titulo: input.activo ? "Nueva materia asignada" : "Materia desasignada",
+    mensaje: input.activo
+      ? `Te asignaron la materia "${materia.nombre}". Ya podés gestionar su contenido y sus alumnos.`
+      : `Ya no estás asignado a la materia "${materia.nombre}" y perdiste el acceso a su gestión.`,
+    referencia_tipo: "materia",
+    referencia_id: materiaId,
   });
 
   return {
@@ -353,6 +406,8 @@ export async function generarClaveAdmin(input: GenerarClaveAdminInput) {
   if (!materia.activa) {
     throw new AppError(400, "La materia no está activa");
   }
+
+  exigirVencimientoFuturo(input.vencimiento);
 
   const clave = await prisma.claveMatriculacion.create({
     data: {
@@ -625,5 +680,168 @@ export async function obtenerEstadoLicencia() {
       features: p.features,
       current: p.name === planActual.name,
     })),
+  };
+}
+
+/**
+ * CU-AD01 (A3.1): un alumno se desmatricula para poder dar de baja una materia. Se conserva su
+ * historial (notas, entregas, asistencia); solo pierde el acceso. Libera su lugar en la clave.
+ */
+export async function desmatricular(materiaId: string, alumnoId: string) {
+  assertUuid(materiaId, "Materia no encontrada");
+  assertUuid(alumnoId, "Alumno no encontrado");
+
+  const inscripcion = await prisma.inscripcion.findUnique({
+    where: { alumno_id_materia_id: { alumno_id: alumnoId, materia_id: materiaId } },
+    include: { materia: { select: { nombre: true } } },
+  });
+
+  if (!inscripcion) {
+    throw new AppError(404, "El alumno no esta inscripto en esta materia");
+  }
+
+  await prisma.$transaction([
+    prisma.inscripcion.delete({ where: { id: inscripcion.id } }),
+    prisma.claveMatriculacion.updateMany({
+      where: { id: inscripcion.clave_id, usos_actuales: { gt: 0 } },
+      data: { usos_actuales: { decrement: 1 } },
+    }),
+  ]);
+
+  await avisar({
+    usuario_id: alumnoId,
+    tipo: "SISTEMA",
+    titulo: "Baja de matrícula",
+    mensaje: `Fuiste desmatriculado de "${inscripcion.materia.nombre}". Ya no tenés acceso a su contenido ni al tutor IA.`,
+    referencia_tipo: "materia",
+    referencia_id: materiaId,
+  });
+
+  return { desmatriculado: true };
+}
+
+/** Desmatricula a todos los alumnos de la materia (paso previo a darla de baja). */
+export async function desmatricularTodos(materiaId: string) {
+  assertUuid(materiaId, "Materia no encontrada");
+
+  const materia = await prisma.materia.findUnique({ where: { id: materiaId } });
+
+  if (!materia) {
+    throw new AppError(404, "Materia no encontrada");
+  }
+
+  const inscripciones = await prisma.inscripcion.findMany({ where: { materia_id: materiaId } });
+
+  if (inscripciones.length === 0) {
+    return { cantidad: 0 };
+  }
+
+  const usosPorClave = new Map<string, number>();
+  for (const i of inscripciones) {
+    usosPorClave.set(i.clave_id, (usosPorClave.get(i.clave_id) ?? 0) + 1);
+  }
+
+  await prisma.$transaction([
+    prisma.inscripcion.deleteMany({ where: { materia_id: materiaId } }),
+    ...[...usosPorClave].map(([claveId, cantidad]) =>
+      prisma.claveMatriculacion.updateMany({
+        where: { id: claveId, usos_actuales: { gte: cantidad } },
+        data: { usos_actuales: { decrement: cantidad } },
+      })
+    ),
+  ]);
+
+  await Promise.all(
+    inscripciones.map((i) =>
+      avisar({
+        usuario_id: i.alumno_id,
+        tipo: "SISTEMA",
+        titulo: "Baja de matrícula",
+        mensaje: `Fuiste desmatriculado de "${materia.nombre}". Ya no tenés acceso a su contenido ni al tutor IA.`,
+        referencia_tipo: "materia",
+        referencia_id: materiaId,
+      })
+    )
+  );
+
+  return { cantidad: inscripciones.length };
+}
+
+const VENTANA_METRICAS_DIAS = 30;
+
+/** Porcentaje con un decimal; `null` cuando no hay base sobre la cual calcularlo. */
+export function porcentaje(parte: number, total: number): number | null {
+  return total > 0 ? Math.round((parte / total) * 1000) / 10 : null;
+}
+
+function evaluar(valor: number | null, objetivo: number) {
+  return { valor, objetivo, cumple: valor === null ? null : valor >= objetivo };
+}
+
+/**
+ * Metricas de exito del proyecto (Delimitacion del problema, 1.1), calculadas con datos reales:
+ *  - uso del tutor IA por alumno activo >= 40%
+ *  - actividades con feedback revisado por el alumno >= 60%
+ *  - retencion mensual de usuarios activos >= 70%
+ * La reduccion del tiempo de preparacion docente (>= 30%) sale de una encuesta, no del sistema.
+ * "Activo" = inicio sesion en la ventana de 30 dias.
+ */
+export async function metricasDeExito() {
+  const ahora = Date.now();
+  const desde = new Date(ahora - VENTANA_METRICAS_DIAS * 24 * 60 * 60 * 1000);
+  const desdeAnterior = new Date(ahora - 2 * VENTANA_METRICAS_DIAS * 24 * 60 * 60 * 1000);
+
+  const [activosAlumnos, usaronTutor, feedbackPublicado, feedbackRevisado, activosAnterior, activosActual] =
+    await Promise.all([
+      prisma.sesion.findMany({
+        where: { created_at: { gte: desde }, usuario: { rol: "ALUMNO" } },
+        select: { usuario_id: true },
+        distinct: ["usuario_id"],
+      }),
+      prisma.sesionIA.findMany({
+        where: { iniciada_en: { gte: desde }, mensajes: { some: { rol: "USER" } } },
+        select: { alumno_id: true },
+        distinct: ["alumno_id"],
+      }),
+      prisma.entrega.count({ where: { publicado: true, feedback_final: { not: null } } }),
+      prisma.entrega.count({ where: { publicado: true, feedback_final: { not: null }, feedback_revisado_alumno: true } }),
+      prisma.sesion.findMany({
+        where: { created_at: { gte: desdeAnterior, lt: desde } },
+        select: { usuario_id: true },
+        distinct: ["usuario_id"],
+      }),
+      prisma.sesion.findMany({
+        where: { created_at: { gte: desde } },
+        select: { usuario_id: true },
+        distinct: ["usuario_id"],
+      }),
+    ]);
+
+  const activos = new Set(activosAlumnos.map((s) => s.usuario_id));
+  const conTutor = usaronTutor.filter((s) => activos.has(s.alumno_id)).length;
+
+  const actuales = new Set(activosActual.map((s) => s.usuario_id));
+  const quedaron = activosAnterior.filter((s) => actuales.has(s.usuario_id)).length;
+
+  return {
+    ventana_dias: VENTANA_METRICAS_DIAS,
+    uso_tutor: {
+      ...evaluar(porcentaje(conTutor, activos.size), 40),
+      detalle: `${conTutor} de ${activos.size} alumnos activos usaron el tutor`,
+    },
+    feedback_revisado: {
+      ...evaluar(porcentaje(feedbackRevisado, feedbackPublicado), 60),
+      detalle: `${feedbackRevisado} de ${feedbackPublicado} correcciones publicadas fueron abiertas por el alumno`,
+    },
+    retencion_mensual: {
+      ...evaluar(porcentaje(quedaron, activosAnterior.length), 70),
+      detalle: `${quedaron} de ${activosAnterior.length} usuarios activos el mes anterior volvieron este mes`,
+    },
+    reduccion_tiempo_docente: {
+      valor: null,
+      objetivo: 30,
+      cumple: null,
+      detalle: "Se mide con la encuesta post-lanzamiento a docentes (no se calcula desde el sistema)",
+    },
   };
 }

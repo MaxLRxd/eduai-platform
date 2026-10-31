@@ -75,6 +75,8 @@ export async function crear(materiaId: string, input: CrearSeccionInput, usuario
     throw new AppError(403, "No tenes acceso a esta materia");
   }
 
+  await exigirNombreDeSeccionLibre(materiaId, input.nombre);
+
   const seccion = await prisma.seccion.create({
     data: {
       materia_id: materiaId,
@@ -87,6 +89,22 @@ export async function crear(materiaId: string, input: CrearSeccionInput, usuario
   });
 
   return toSeccionDto(seccion);
+}
+
+/** CU-P01 (E1): dos secciones de una misma materia no pueden llamarse igual. */
+async function exigirNombreDeSeccionLibre(materiaId: string, nombre: string, excluirId?: string) {
+  const repetida = await prisma.seccion.findFirst({
+    where: {
+      materia_id: materiaId,
+      nombre: { equals: nombre.trim(), mode: "insensitive" },
+      ...(excluirId ? { id: { not: excluirId } } : {}),
+    },
+    select: { id: true },
+  });
+
+  if (repetida) {
+    throw new AppError(409, "Ya existe una seccion con ese nombre en la materia. Elegi un nombre diferente");
+  }
 }
 
 async function obtenerSeccionYVerificar(seccionId: string, usuarioId: string) {
@@ -112,7 +130,11 @@ export async function actualizar(
   input: ActualizarSeccionInput,
   usuarioId: string
 ) {
-  await obtenerSeccionYVerificar(seccionId, usuarioId);
+  const actual = await obtenerSeccionYVerificar(seccionId, usuarioId);
+
+  if (input.nombre) {
+    await exigirNombreDeSeccionLibre(actual.materia_id, input.nombre, seccionId);
+  }
 
   const seccion = await prisma.seccion.update({
     where: { id: seccionId },

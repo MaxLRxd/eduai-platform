@@ -5,7 +5,8 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
-import { apiErrorMessage } from "../../services/api";
+import { ApiError, apiErrorMessage } from "../../services/api";
+import { EnrolledStudentsPanel } from "../../components/admin/EnrolledStudentsPanel";
 import type { SubjectStatus } from "../../types/domain";
 
 const STATUS_COLOR: Record<SubjectStatus, TagColor> = { Activa: "green", Pendiente: "amber", Inactiva: "gray" };
@@ -27,6 +28,7 @@ export function AdminMateriasPage(): React.ReactElement {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [message, setMessage] = useState("");
+  const [alumnosDe, setAlumnosDe] = useState<{ id: string; nombre: string } | null>(null);
 
   const handleSave = (): void => {
     if (!form.nombre.trim() || !form.nivelEducativo.trim()) {
@@ -44,7 +46,17 @@ export function AdminMateriasPage(): React.ReactElement {
       {
         onSuccess: (materia) => {
           if (form.profesorId) {
-            assign.mutate({ materiaId: materia.id, profesorId: form.profesorId });
+            assign.mutate(
+              { materiaId: materia.id, profesorId: form.profesorId },
+              {
+                // El docente elegido puede ser el que ya tenia la materia: no es un error para quien edita.
+                onError: (e) => {
+                  if (!(e instanceof ApiError && e.status === 409)) {
+                    setMessage(apiErrorMessage(e, "La materia se guardó, pero no se pudo asignar el docente."));
+                  }
+                },
+              }
+            );
           }
           setMessage(form.id ? `Materia "${form.nombre}" actualizada correctamente.` : `Materia "${form.nombre}" creada correctamente.`);
           setForm(EMPTY_FORM);
@@ -99,9 +111,14 @@ export function AdminMateriasPage(): React.ReactElement {
                       <Tag color={STATUS_COLOR[s.estado]}>{s.estado}</Tag>
                     </Td>
                     <Td>
-                      <Button variant="ghost" size="sm" onClick={() => loadForEdit(s.id, s.nombre, s.estado)}>
-                        Editar
-                      </Button>
+                      <div className="flex gap-1.5">
+                        <Button variant="ghost" size="sm" onClick={() => loadForEdit(s.id, s.nombre, s.estado)}>
+                          Editar
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setAlumnosDe({ id: s.id, nombre: s.nombre })}>
+                          Alumnos
+                        </Button>
+                      </div>
                     </Td>
                   </tr>
                 ))}
@@ -115,6 +132,15 @@ export function AdminMateriasPage(): React.ReactElement {
               </tbody>
             </Table>
           </TableWrap>
+
+          {alumnosDe && (
+            <EnrolledStudentsPanel
+              key={alumnosDe.id}
+              materiaId={alumnosDe.id}
+              materiaNombre={alumnosDe.nombre}
+              onClose={() => setAlumnosDe(null)}
+            />
+          )}
         </div>
 
         <Card>

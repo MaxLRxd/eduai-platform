@@ -9,6 +9,7 @@ import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { ResumenPanel } from "../../components/student/ResumenPanel";
 import { SimulacroPanel } from "../../components/student/SimulacroPanel";
+import { MaterialItem } from "../../components/student/MaterialItem";
 
 const UNIT_TAG_COLOR = {
   "En curso": "blue",
@@ -58,7 +59,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { data: course, isLoading } = useCourse(courseId);
-  const { messages, pending, ask } = useTutorChat(course);
+  const { messages, pending, lenta, ask, reintentar } = useTutorChat(course);
   const [question, setQuestion] = useState("");
   const [activeModo, setActiveModo] = useState<ModoTutor>("NORMAL");
 
@@ -175,7 +176,15 @@ export function StudentCourseDetailPage(): React.ReactElement {
                   {m.content}
                 </div>
               ))}
-              {pending && <div className="text-[13px] text-text-3 italic">El tutor está pensando…</div>}
+              {pending && !lenta && <div className="text-[13px] text-text-3 italic">El tutor está pensando…</div>}
+              {pending && lenta && (
+                <div className="text-[13px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2.5 flex items-center justify-between gap-2" role="status">
+                  <span>El tutor está tardando más de lo normal. Podés esperar o volver a intentarlo.</span>
+                  <Button size="sm" variant="secondary" onClick={reintentar}>
+                    Reintentar
+                  </Button>
+                </div>
+              )}
               {messages.length === 0 && !pending && (
                 <div className="p-3 rounded bg-surface-2 text-[13px] text-text-2 leading-relaxed">
                   El tutor está listo para responder sobre {course.name} usando las unidades y materiales de esta aula.
@@ -211,34 +220,9 @@ export function StudentCourseDetailPage(): React.ReactElement {
           <Card>
             <CardHeader title="Materiales" />
             <div className="flex flex-col gap-2">
-              {course.materiales.map((m) => {
-                const url = m.url ?? null;
-                const isFile = Boolean(url);
-                return (
-                  <div key={m.id} className="flex items-start gap-3 py-1.5">
-                    <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: course.color }} />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-[13px] text-text-1 font-medium">{m.titulo}</div>
-                        {isFile && url ? (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[12px] text-primary hover:underline"
-                          >
-                            Ver / descargar
-                          </a>
-                        ) : null}
-                      </div>
-                      <div className="text-[11px] text-text-3 mt-0.5">
-                        {m.ragIndexado ? "Disponible para el Tutor IA" : "Pendiente de indexar"}
-                        {isFile && m.archivo_nombre ? ` · ${m.archivo_nombre}` : ""}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {course.materiales.map((m) => (
+                <MaterialItem key={m.id} material={m} color={course.color} />
+              ))}
               {course.materiales.length === 0 && (
                 <div className="py-4 text-center text-[12px] text-text-3">Todavía no hay materiales indexados para el tutor.</div>
               )}

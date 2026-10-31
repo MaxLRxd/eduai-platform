@@ -186,3 +186,13 @@ export async function crearRubrica(
   );
   res.status(201).json({ rubrica });
 }
+
+export async function marcarFeedbackRevisado(
+  req: Request<{ entregaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await actividadesService.marcarFeedbackRevisado(req.params.entregaId, req.user.id));
+}

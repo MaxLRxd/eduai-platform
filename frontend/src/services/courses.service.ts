@@ -90,6 +90,7 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
           ragIndexado: c.rag_indexado,
           url: c.archivo_url ?? c.url ?? null,
           archivo_nombre: c.archivo_nombre ?? null,
+          texto: c.texto_contenido?.trim() ? c.texto_contenido : null,
         }))
       );
       unidades.push({

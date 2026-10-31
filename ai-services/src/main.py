@@ -14,6 +14,7 @@ from src.services.llm_service import LLMService
 from src.services.vector_store import build_retrieval_service
 from src.use_cases.ask_tutor import AskTutorUseCase
 from src.use_cases.correct_submission import CorreccionEntregaUseCase
+from src.use_cases.corregir_simulacro import CorregirSimulacroUseCase
 from src.use_cases.depurar_prompt import DepurarPromptUseCase
 from src.use_cases.examen import GenerarExamenUseCase
 from src.use_cases.generar_material import GenerarMaterialUseCase
@@ -69,6 +70,7 @@ async def lifespan(app: FastAPI):
     app.state.examen_use_case = GenerarExamenUseCase(llm, embeddings, retrieval)
     app.state.generar_material_use_case = GenerarMaterialUseCase(llm, embeddings, retrieval)
     app.state.correccion_use_case = CorreccionEntregaUseCase(llm, embeddings, retrieval)
+    app.state.corregir_simulacro_use_case = CorregirSimulacroUseCase(llm)
     app.state.depurar_prompt_use_case = DepurarPromptUseCase()
 
     yield

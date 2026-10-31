@@ -12,6 +12,7 @@ jest.mock("../config/prisma", () => ({
   prisma: {
     claveMatriculacion: { findUnique: jest.fn() },
     inscripcion: { findUnique: jest.fn() },
+    materia: { findUniqueOrThrow: jest.fn() },
     $transaction: jest.fn(),
   },
 }));
@@ -25,6 +26,7 @@ const tx = {
 const prismaMock = prisma as unknown as {
   claveMatriculacion: { findUnique: jest.Mock };
   inscripcion: { findUnique: jest.Mock };
+  materia: { findUniqueOrThrow: jest.Mock };
   $transaction: jest.Mock;
 };
 
@@ -99,6 +101,37 @@ describe("inscripcion con clave: limite de usos (CU-AD04)", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("limite de usos");
     expect(tx.inscripcion.create).not.toHaveBeenCalled();
+  });
+
+  it("si el alumno ya esta inscripto no es un error: lo lleva a la materia y no gasta un uso", async () => {
+    prismaMock.claveMatriculacion.findUnique.mockResolvedValue(clave(5, 4));
+    prismaMock.inscripcion.findUnique.mockResolvedValue({ alumno_id: ALUMNO_ID });
+    prismaMock.materia.findUniqueOrThrow.mockResolvedValue({
+      id: MATERIA_ID,
+      nombre: "Bases de Datos",
+      descripcion: null,
+      nivel_educativo: "Terciario",
+      activa: true,
+      created_at: new Date(),
+      _count: { inscripciones: 1, secciones: 0 },
+      profesores: [],
+    });
+
+    const res = await unirse();
+
+    expect(res.status).toBe(200);
+    expect(res.body.materia).toMatchObject({ id: MATERIA_ID, ya_inscripto: true });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("una inscripcion nueva responde 201 e indica que no estaba inscripto", async () => {
+    prismaMock.claveMatriculacion.findUnique.mockResolvedValue(clave(5, 1));
+    tx.claveMatriculacion.updateMany.mockResolvedValue({ count: 1 });
+
+    const res = await unirse();
+
+    expect(res.status).toBe(201);
+    expect(res.body.materia.ya_inscripto).toBe(false);
   });
 
   it("no pone tope de usos cuando la clave no tiene max_usos", async () => {

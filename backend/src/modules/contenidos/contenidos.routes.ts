@@ -13,6 +13,18 @@ const upload = multer({
   limits: { fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024 },
 });
 
+router.post(
+  "/contenidos/:contenidoId/acceso",
+  requireAuth,
+  requireRole("ALUMNO"),
+  contenidosController.registrarAcceso
+);
+router.get(
+  "/materias/:materiaId/accesos",
+  requireAuth,
+  requireRole("PROFESOR"),
+  contenidosController.estadisticasDeAcceso
+);
 router.get(
   "/secciones/:seccionId/contenidos",
   requireAuth,

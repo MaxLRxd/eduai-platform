@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useEnrollment } from "../../hooks/useEnrollment";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -7,6 +8,15 @@ import { InfoBox } from "../../components/ui/InfoBox";
 export function StudentEnrollPage(): React.ReactElement {
   const [code, setCode] = useState("");
   const { mutate, data, isPending } = useEnrollment();
+  const navigate = useNavigate();
+
+  // CU-A01: tras inscribirse (o si ya estaba inscripto) se lo lleva a la vista de la materia,
+  // dejando unos segundos el mensaje de confirmacion.
+  useEffect(() => {
+    if (!data?.success || !data.materiaId) return;
+    const espera = window.setTimeout(() => navigate(`/student/courses/${data.materiaId}`), 1800);
+    return () => window.clearTimeout(espera);
+  }, [data, navigate]);
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();

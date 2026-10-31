@@ -1,536 +1,593 @@
-# Graph Report - eduai-platform  (2026-10-18)
+# Graph Report - eduai-platform  (2026-10-30)
 
 ## Corpus Check
-- 296 files · ~96,224 words
+- 347 files · ~134,921 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1940 nodes · 4707 edges · 141 communities (83 shown, 43 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 196 edges (avg confidence: 0.89)
+- 2494 nodes · 6505 edges · 129 communities (101 shown, 28 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 285 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- Admin Backend Controllers
-- AI Services Core Config
-- Pinecone Vector Retrieval
-- Document OCR Processing
-- Messaging Broadcast Backend
-- Backend Core Auth Middleware
-- Teacher Activity Editor UI
-- AI Services Test Fakes
-- Backend Dependencies
-- AI Tutor Backend Module
-- Frontend App Shell Layout
-- Tutor Router Exam Prompts
-- UI Table Filter Components
-- Backend Package Manifest
-- Activity Rubric Schemas
-- Backend Bootstrap Health
-- AI Client Contracts
-- Student Dashboard Panels
-- AI Prompts Cache Service
-- Branding Admin Settings
-- Analytics Backend Controller
-- AI Correction Test Suite
-- Student Tutor Chat UI
-- Admin Users Management UI
-- Auth Login JWT Flow
-- LLM Retry Logic
-- Admin Keys Subjects UI
-- Teacher Content Upload UI
-- Server Config Branding Backend
-- Activities Grading Controller
-- Course Enrollment Services
-- Teacher Corrections Workflow UI
-- Teacher Course Services
-- Frontend App TSConfig
-- Retrieval Service HNSW
-- Subjects Backend Module
-- Assignment Submission UI
-- Chunking Service Tests
-- Frontend Package Manifest
-- Frontend Auth Context
-- Root Workspace Scripts
-- Retrieval Service Tests
-- Attendance Backend Module
-- Class Planning Backend
-- Frontend Dev Dependencies
-- Prompt Sanitization Layer
-- Admin Reports UI
-- Analytics Frontend Hooks
-- Progress Tracking Frontend
-- Error Handling Dashboards
-- Backend TSConfig
-- Teacher Planning UI
-- Node TSConfig
-- S3 Storage Config
-- Grades Backend Module
-- Form UI Primitives
-- API Client Core
-- Messages Frontend UI
-- Notifications Frontend UI
-- Courses Frontend Hooks
-- Vector Store Migration Notes
-- Backend Build Scripts
-- Course Content Backend
-- Course Sections Backend
-- RAG Indexing Router
-- Dashboard Frontend Hooks
-- RAG Study Mode Design Docs
-- Implementation Conventions Docs
-- CI Pipeline Workflows
-- Grading Correction Prompts
-- Database Seed Script
-- Teaching Material Generator
-- Teacher AI Assistant UI
-- Rubric Editor UI
-- Admin Licensing UI
-- Frontend Package Scripts
-- Enrollment Code UI
-- Venv Helper Script
-- Venv Setup Script
-- Frontend Core Dependencies
-- Vite Vitest Config
-- Redis Cache Degradation
-- Gemini Model Selection
-- OCR Use Case Docs
-- Frontend TSConfig Root
-- LLM Abstraction Layer Docs
-- FastAPI Microservice Docs
-- Prompt Sanitizer Docs
-- SSE Streaming Docs
-- AI Test Fakes Docs
-- Venv Volume Pitfall
-- Graceful Degradation Docs
-- Email Notifications Docs
-- Tutor Proxy Contracts
-- Enrollment Listing Bugs
-- Seed Data UI Bugs
-- Cloud Deployment Docs
-- Deploy Secrets Checklist
-- ESLint React Config
-- Anti Hallucination Prompting
-- Mock First Strategy
-- Session Logging Docs
-- Material Generation Prompt
-- Chunking Service Docs
-- Embeddings Service Docs
-- Asyncpg Dependency
-- Fastapi Dependency
-- Google Genai Dependency
-- Pgvector Dependency
-- Pinecone Dependency
-- Archive Activity Note
-- Branding Runtime Theming
-- AI Message Mode Persistence
-- R2 S3 Storage Note
-- Response Envelope Bug
-- Logo URL Bug
-- Preset Persistence Bug
-- Rubric Delivery Binding Bug
-- Fly IO Deploy Recommendation
-- Hints Prompt
-- Socratic Prompt
-- Summary Prompt
-- RAG Pipeline Docs
-- Scrum Methodology Docs
-- Stack Selection Docs
-- Success Metrics Docs
+- Núcleo del servicio de IA
+- Base del backend y pruebas HTTP
+- Módulo tutor (backend)
+- Pruebas del ai-service (fakes)
+- App Express y rutas
+- Extracción de documentos y OCR
+- Aplicación React y paneles
+- Depuración de prompts
+- Pantallas de administración
+- Componentes UI y cliente API
+- Actividades y correcciones (UI)
+- Actividades y entregas (backend)
+- Esquemas y router del tutor
+- Servicio Pinecone y pruebas
+- Corrección de simulacros
+- Cliente de IA y corrección
+- Servicio de administración
+- Dependencias del backend
+- Autenticación
+- Entregas y actividades (cliente)
+- Documentación técnica y avance
+- Arquitectura y stack
+- Analytics (backend)
+- Manual y endpoints
+- Chunking y resumen
+- Materias (backend)
+- Controladores y asistente
+- Contenidos (backend)
+- Scripts de entorno
+- Reintentos del LLM
+- Almacenamiento y planificación
+- Herramientas del tutor (UI)
+- Indexado RAG y logger
+- Dependencias del frontend
+- Recuperación pgvector (pruebas)
+- Sesión y login (frontend)
+- Scripts del monorepo
+- Indexado y vector stores
+- Datos del docente (cliente)
+- Config TypeScript (app)
+- Casos de uso del tutor
+- Secciones (backend)
+- Correcciones y rúbricas (cliente)
+- Corrección con IA y rúbricas
+- Dependencias de producción
+- Dependencias de desarrollo
+- Notas e inscripciones
+- Controlador de administración
+- Asistencia y dashboard (cliente)
+- Contenido y secciones (cliente)
+- Implementación y configuración
+- Mensajería (backend)
+- Dashboard (backend)
+- Herramientas de desarrollo UI
+- Notificaciones (UI)
+- Usuarios administrados (cliente)
+- Embeddings (pruebas)
+- Helpers de contexto
+- Asistencias (backend)
+- Configuración y branding (backend)
+- Notificaciones y email
+- Simulacro y curso (UI)
+- Reportes de administración
+- Ajustes de administración
+- Chat del tutor (hook)
+- Analytics (cliente)
+- Progreso del alumno
+- OCR y CI del ai-service
+- Esquemas y rutas de admin
+- Config TypeScript (backend)
+- Config TypeScript (node)
+- Decisiones de arquitectura
+- Planificación y notificaciones
+- Pruebas de corrección
+- Pool y esquema pgvector
+- Cursos y materiales (UI)
+- Branding (frontend)
+- Planificación (cliente)
+- Scripts de base de datos
+- Asistente docente IA
+- Claves de matriculación (cliente)
+- Mensajes (cliente)
+- Caché Redis
+- Asistente docente (backend)
+- Benchmark del tutor
+- Materias admin (cliente)
+- Reintentos y backoff del LLM
+- RAG y Tutor IA
+- Suite E2E
+- Embeddings con límite de tasa
+- Seed de datos
+- Desmatriculación (UI)
+- Asistente docente (cliente)
+- Entrega de actividades
+- Seguridad y límite de intentos
+- Pruebas de herramientas del tutor
+- Licencias (cliente)
+- Perfil del alumno (docente)
+- Cliente Gemini
+- Notificaciones y capas
+- Scripts del frontend
+- Inscripción (cliente)
+- Reportes en PDF
+- Dependencias React
+- Otros: _Embedder
+- Otros: frontend/eslint.config.mjs
+- Otros: Resumir documento
+- Otros: frontend/tsconfig.json
+- Otros: actions/setup-node@v4 (Node 22)
+- Otros: asyncpg
+- Otros: fastapi
+- Otros: google-genai
+- Otros: pgvector
+- Otros: Baja de materia
+- Otros: CU-A02 Navegar contenido
+- Otros: CU-P03 Gestionar actividades
+- Otros: nginx.conf
 
 ## God Nodes (most connected - your core abstractions)
-1. `AppError` - 182 edges
-2. `api()` - 59 edges
-3. `react` - 56 edges
-4. `express` - 41 edges
-5. `obtenerProfesorAsignado()` - 40 edges
-6. `RetrievalService` - 36 edges
-7. `LLMService` - 30 edges
-8. `prisma` - 27 edges
-9. `Button()` - 27 edges
-10. `useAuth()` - 27 edges
+1. `AppError` - 210 edges
+2. `api()` - 73 edges
+3. `react` - 63 edges
+4. `Card()` - 61 edges
+5. `CardHeader()` - 57 edges
+6. `Button()` - 55 edges
+7. `prisma` - 46 edges
+8. `obtenerProfesorAsignado()` - 46 edges
+9. `Tag()` - 44 edges
+10. `express` - 43 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Centralized error abstraction (star topology, load-bearing seam)` --rationale_for--> `AppError`  [EXTRACTED]
-  graphify-out/memory/query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md → backend/src/middlewares/error.ts
 - `errorHandler()` --conceptually_related_to--> `Centralized error abstraction (star topology, load-bearing seam)`  [INFERRED]
   backend/src/middlewares/error.ts → graphify-out/memory/query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md
-- `Auto-correction Engine (planned)` --semantically_similar_to--> `Auto-correction Engine System Prompt`  [INFERRED] [semantically similar]
-  README.md → IA_MODELOS_Y_PROMPTS.md
+- `Arquitectura: frontend -> backend -> (db, redis, ai-service)` --semantically_similar_to--> `Cada capa solo habla con la adyacente (intercambiabilidad)`  [INFERRED] [semantically similar]
+  docs/DOCUMENTACION_TECNICA.md → IMPLEMENTATION.md
 - `Query: Why does AppError bridge 21 communities?` --references--> `AppError`  [EXTRACTED]
   graphify-out/memory/query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md → backend/src/middlewares/error.ts
-- `HNSW Index Fix via 1536 Embedding Dimensions` --semantically_similar_to--> `Embedding Dimension Migration and Reindex`  [INFERRED] [semantically similar]
-  AVANCE.md → ai-services/README.md
+- `Centralized error abstraction (star topology, load-bearing seam)` --rationale_for--> `AppError`  [EXTRACTED]
+  graphify-out/memory/query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities.md → backend/src/middlewares/error.ts
+- `Cacheo con Redis (TTL)` --semantically_similar_to--> `Redis cache`  [INFERRED] [semantically similar]
+  IMPLEMENTATION.md → docs/DOCUMENTACION_TECNICA.md
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **RAG Pipeline (index material and retrieve context)** — readme_rag_pipeline [INFERRED 0.85]
-- **Layered Decoupled Architecture (adjacent-layer rule)** — implementation_backend_layers, implementation_ai_service_architecture, implementation_adjacent_layer_rule [INFERRED 0.85]
 - **Centralized error-handling pattern (AppError star topology)** — backend_src_middlewares_error_apperror, backend_src_middlewares_error_errorhandler, backend_src_middlewares_error_notfound, backend_src_middlewares_error, graphify_out_memory_query_20260913_211720_0e476545_why_does_apperror_bridge_21_communities_centralized_error_abstraction [EXTRACTED 1.00]
-- **Tutor Chat Query Pipeline (Cache → Prompt → Embed → Retrieve → LLM)** — ai_services_readme_ask_tutor_flow, ai_services_readme_llm_service, ai_services_readme_embeddings_service, ai_services_readme_retrieval_service_pgvector, ai_services_readme_cache_service [EXTRACTED 1.00]
-- **Per-Use-Case System Prompt Suite** — ia_modelos_y_prompts_prompt_files, ia_modelos_y_prompts_prompt_tutor_normal, ia_modelos_y_prompts_prompt_socratic, ia_modelos_y_prompts_prompt_hints, ia_modelos_y_prompts_prompt_summary, ia_modelos_y_prompts_prompt_exam, ia_modelos_y_prompts_prompt_material, ia_modelos_y_prompts_prompt_correccion [EXTRACTED 1.00]
-- **Common Root Cause Cluster for Teacher Module Bugs 3-9** — bugs_missing_creation_uis, bugs_seed_data_dependency, bugs_rubric_tied_to_selected_delivery, bugs_students_from_grades_not_enrollments [EXTRACTED 1.00]
+- **EduAI runtime stack** — c_frontend, c_backend, c_aiservice, c_postgres, c_redis [EXTRACTED 1.00]
+- **RAG pipeline** — c_rag, c_emb, c_llm, c_pgvector, c_tutor [INFERRED 0.85]
+- **Flujo de indexacion RAG (archivo -> texto -> chunks -> embeddings -> vector store)** — ai_services_src_routers_rag_router, ai_services_src_services_document_service, index_material_usecase, ai_services_src_services_chunking_service, ai_services_src_services_embeddings_service, retrieval_service [EXTRACTED 0.95]
+- **Flujo de consulta al tutor (sanitizar, cache, embedding, retrieval, LLM)** — ask_tutor_usecase, ai_services_src_services_prompt_sanitizer, ai_services_src_services_cache_service, ai_services_src_services_embeddings_service, retrieval_service, ai_services_src_services_llm_service [EXTRACTED 0.95]
+- **Correccion IA como borrador que el docente publica** — avance_corregir_ia_borrador, avance_rubricas_esperado, correct_submission_usecase, c_ia_sug, docs_manual_usuario_docente_rubricas_correccion [INFERRED 0.85]
 
-## Communities (141 total, 43 thin omitted)
+## Communities (129 total, 28 thin omitted)
 
-### Community 0 - "Admin Backend Controllers"
-Cohesion: 0.06
-Nodes (61): actualizarEstado(), actualizarMateria(), asignarProfesor(), cambiarRol(), crearMateria(), crearUsuario(), estadoLicencia(), exportarReporte() (+53 more)
-
-### Community 1 - "AI Services Core Config"
-Cohesion: 0.06
-Nodes (26): get_genai_client(), Devuelve el cliente compartido de Gemini, creado de forma perezosa. Si la clave…, Settings, create_app(), healthz(), lifespan(), System prompt del asistente docente (CU-A09): generación de material didáctico., build_summary_prompt() (+18 more)
-
-### Community 2 - "Pinecone Vector Retrieval"
-Cohesion: 0.06
-Nodes (29): PineconeRetrievalService, Búsqueda vectorial en Pinecone (serverless). Misma interfaz que…, Acceso a la base vectorial de material educativo indexado en Pinecone., build_retrieval_service(), _Embedder, Factory del vector store según la variable VECTOR_STORE (pgvector | pinecone)., Interfaz mínima que necesita el retrieval para reindexar., fake_pinecone() (+21 more)
-
-### Community 3 - "Document OCR Processing"
-Cohesion: 0.06
-Nodes (19): DocumentService, Extracción de texto de documentos (PDF, DOCX, PPTX, TXT, imágenes)., Ultimo recurso: solo acepta algo que parezca texto de verdad. Sin este filtro,…, OcrService, Servicio de OCR para CU-P02: imagenes y PDF escaneado. Usa tesseract via…, Quita el ruido tipico de tesseract: lineas en blanco repetidas y espacios…, True si el binario de tesseract esta instalado. Se cachea el resultado., Transcribe una imagen a texto. Devuelve "" si no se puede. (+11 more)
-
-### Community 4 - "Messaging Broadcast Backend"
-Cohesion: 0.08
-Nodes (37): rolSchema, enviarBroadcast(), enviarMensaje(), listarConversaciones(), obtenerMensajes(), requireUser(), BroadcastInput, broadcastSchema (+29 more)
-
-### Community 5 - "Backend Core Auth Middleware"
-Cohesion: 0.15
-Nodes (28): env, envSchema, parsed, AccessTokenPayload, requireAuth(), requireRole(), validateBody(), router (+20 more)
-
-### Community 6 - "Teacher Activity Editor UI"
-Cohesion: 0.09
-Nodes (37): ActivityFormModal(), AYUDA, errorDeApi(), TIPOS, toInputDate(), key(), useCreateActivity(), useDeleteActivity() (+29 more)
-
-### Community 7 - "AI Services Test Fakes"
-Cohesion: 0.09
-Nodes (24): FakeCache, FakeCorreccionLLM, FakeEmbeddings, FakeLLM, FakeRetrieval, Fakes de los servicios externos para los tests del tutor IA., fixture, use_case() (+16 more)
-
-### Community 8 - "Backend Dependencies"
+### Community 0 - "Núcleo del servicio de IA"
 Cohesion: 0.05
-Nodes (40): dependencies, @aws-sdk/client-s3, @aws-sdk/lib-storage, bcryptjs, cookie-parser, cors, dotenv, express (+32 more)
+Nodes (21): config/genai.py (cliente Gemini singleton), main(), Settings, create_app(), healthz(), lifespan(), verificar_token_interno(), EmbeddingsService (+13 more)
 
-### Community 9 - "AI Tutor Backend Module"
+### Community 1 - "Base del backend y pruebas HTTP"
+Cohesion: 0.06
+Nodes (40): createApp(), protegerArchivoSubido(), adapter, prisma, UPLOADS_DIR, errorHandler(), notFound(), resolverError() (+32 more)
+
+### Community 2 - "Módulo tutor (backend)"
+Cohesion: 0.05
+Nodes (65): registrarConsultaTutor(), MaterialPdf, renderMaterialPdf(), sinEmojis(), sinMarcasInline(), corregirSimulacro(), crearSesion(), enviarMensaje() (+57 more)
+
+### Community 3 - "Pruebas del ai-service (fakes)"
+Cohesion: 0.06
+Nodes (27): FakeCache, FakeCorreccionLLM, FakeEmbeddings, FakeLLM, FakeRetrieval, test_ask_tutor_returns_answer_and_sources(), test_ask_tutor_second_call_is_cached(), test_ask_tutor_stream_yields_tokens_and_done() (+19 more)
+
+### Community 4 - "App Express y rutas"
 Cohesion: 0.10
-Nodes (36): chatTutor(), registrarConsultaTutor(), crearSesion(), enviarMensaje(), examen(), extraerTextoSse(), listarMensajes(), listarSesiones() (+28 more)
+Nodes (38): env, envSchema, parsed, health(), AccessTokenPayload, requireAuth(), requireRole(), validateBody() (+30 more)
 
-### Community 10 - "Frontend App Shell Layout"
-Cohesion: 0.09
-Nodes (31): App(), AppShell(), Header(), BADGE_CLASSES, ROLE_LABEL, Sidebar(), IconKey, Role (+23 more)
+### Community 5 - "Extracción de documentos y OCR"
+Cohesion: 0.06
+Nodes (8): DocumentService, OcrService, _pdf_con_texto(), _png_1px(), TestDisponibilidad, TestFormatosSoportados, TestIntegracionConDocumentService, TestLimpieza
 
-### Community 11 - "Tutor Router Exam Prompts"
+### Community 6 - "Aplicación React y paneles"
 Cohesion: 0.12
-Nodes (31): System prompt para la generación de simulacros de examen (CU-A08)., chat(), chat_stream(), corregir_entrega(), depurar(), examen(), generar_material(), post (+23 more)
+Nodes (37): App(), Shell(), AppShell(), Header(), PROFILE_PATH_BY_ROLE, BADGE_CLASSES, ROLE_LABEL, Sidebar() (+29 more)
 
-### Community 12 - "UI Table Filter Components"
-Cohesion: 0.18
-Nodes (24): Button(), CourseFilter(), Table(), TableWrap(), Td(), Th(), Thead(), Tr() (+16 more)
+### Community 7 - "Depuración de prompts"
+Cohesion: 0.07
+Nodes (31): TutorRequest, estimate_tokens(), depurar(), _matches_greeting(), _normalize_whitespace(), PromptDepurado, sanitize_prompt(), _starts_with_greeting() (+23 more)
 
-### Community 13 - "Backend Package Manifest"
-Cohesion: 0.05
-Nodes (36): author, description, eslint, typescript, typescript-eslint, keywords, license, main (+28 more)
+### Community 8 - "Pantallas de administración"
+Cohesion: 0.16
+Nodes (38): Button(), CourseFilter(), Table(), TableWrap(), Td(), Th(), Thead(), COLOR_CLASSES (+30 more)
 
-### Community 14 - "Activity Rubric Schemas"
-Cohesion: 0.10
-Nodes (35): ActualizarActividadInput, actualizarActividadSchema, ActualizarRubricaInput, actualizarRubricaSchema, CorregirEntregaInput, corregirEntregaSchema, CrearActividadInput, crearActividadSchema (+27 more)
-
-### Community 15 - "Backend Bootstrap Health"
-Cohesion: 0.09
-Nodes (22): createApp(), adapter, prisma, asegurarDirectorioUploads(), health(), router, prismaMock, eliminarArchivoMock (+14 more)
-
-### Community 16 - "AI Client Contracts"
-Cohesion: 0.11
-Nodes (32): aiDisponible(), baseUrl(), ChatMessageInput, CorreccionIARequest, CorreccionIAResult, corregirEntregaIA(), DificultadExamen, ExamenIAResult (+24 more)
-
-### Community 17 - "Student Dashboard Panels"
-Cohesion: 0.15
-Nodes (19): PROFILE_PATH_BY_ROLE, ResumenPanel(), DIFICULTAD_TAG, DIFICULTADES, SimulacroPanel(), Card(), CardHeader(), Icon() (+11 more)
-
-### Community 18 - "AI Prompts Cache Service"
-Cohesion: 0.10
-Nodes (18): System prompt del modo pistas sin revelar respuesta (CU-A06)., System prompt del modo estudio con metodología socrática (CU-A09)., System prompt del tutor IA en modo normal (CU-A04)., TutorRequest, CacheService, Servicio de cacheo en Redis para consultas y respuestas del tutor IA., Caché clave/valor con TTL. Degrada de forma silenciosa si Redis no está…, asyncio (+10 more)
-
-### Community 19 - "Branding Admin Settings"
+### Community 9 - "Componentes UI y cliente API"
 Cohesion: 0.13
-Nodes (24): BrandingContext, BrandingContextValue, BrandingProvider(), useAdminSettings(), useSaveBranding(), queryClient, AdminSettingsPage(), getBranding() (+16 more)
+Nodes (34): FILAS, Metrica, MetricasExito, SuccessMetricsCard(), ResumenPanel(), AccesosMateria, ContentAccessCard(), fecha() (+26 more)
 
-### Community 20 - "Analytics Backend Controller"
+### Community 10 - "Actividades y correcciones (UI)"
+Cohesion: 0.10
+Nodes (37): AssignmentSubmitModal(), esVencida(), PLACEHOLDER, TITULO, ActivityFormModal(), AYUDA, errorDeApi(), TIPOS (+29 more)
+
+### Community 11 - "Actividades y entregas (backend)"
+Cohesion: 0.09
+Nodes (40): ActualizarActividadInput, actualizarActividadSchema, ActualizarRubricaInput, actualizarRubricaSchema, CorregirEntregaInput, corregirEntregaSchema, CrearActividadInput, crearActividadSchema (+32 more)
+
+### Community 12 - "Esquemas y router del tutor"
+Cohesion: 0.12
+Nodes (26): schemas/tutor.py (contratos Pydantic), chat(), chat_stream(), corregir_entrega(), corregir_examen(), depurar(), examen(), generar_material() (+18 more)
+
+### Community 13 - "Servicio Pinecone y pruebas"
+Cohesion: 0.08
+Nodes (14): PineconeRetrievalService, fake_pinecone(), FakeIndex, FakeMatch, FakePinecone, FakeQueryResponse, make_service(), test_close_closes_client() (+6 more)
+
+### Community 14 - "Corrección de simulacros"
+Cohesion: 0.13
+Nodes (19): ExamAnswerItem, ExamItemResult, FakeExamenCorreccionLLM, corregir(), desarrollo(), mc(), test_desarrollo_se_corrige_con_un_unico_llamado_al_llm(), test_multiple_choice_correcta_acepta_texto_o_letra() (+11 more)
+
+### Community 15 - "Cliente de IA y corrección"
+Cohesion: 0.10
+Nodes (31): aiDisponible(), aiHeaders(), baseUrl(), ChatMessageInput, chatTutor(), CorreccionExamenItemInput, CorreccionExamenItemResult, CorreccionIARequest (+23 more)
+
+### Community 16 - "Servicio de administración"
+Cohesion: 0.10
+Nodes (35): CrearMateriaAdminInput, CrearUsuarioInput, actualizarEstado(), actualizarMateria(), asignarProfesor(), assertUuid(), avisar(), cambiarRol() (+27 more)
+
+### Community 17 - "Dependencias del backend"
+Cohesion: 0.06
+Nodes (34): author, description, keywords, license, main, name, prisma, seed (+26 more)
+
+### Community 18 - "Autenticación"
+Cohesion: 0.10
+Nodes (31): signAccessToken(), cambiarPassword(), login(), logout(), me(), refresh(), register(), limiteCredenciales (+23 more)
+
+### Community 19 - "Entregas y actividades (cliente)"
+Cohesion: 0.11
+Nodes (29): key(), useCreateActivity(), useDeleteActivity(), useTeacherActivities(), useSubmitAssignment(), useUploadAssignmentFile(), ActivityInput, createActivity() (+21 more)
+
+### Community 20 - "Documentación técnica y avance"
+Cohesion: 0.08
+Nodes (32): Avance del proyecto, Admin conectado al backend real, Branding: presets, logo a storage, theming en runtime, Como correr (Docker / local / verificacion), Export PDF de reportes (pdfkit), MensajeIA persiste el modo de sesion, storage.ts: LocalStorage / S3Storage (R2), Stack: React, Express/Prisma, FastAPI, Docker Compose (+24 more)
+
+### Community 21 - "Arquitectura y stack"
+Cohesion: 0.08
+Nodes (30): Rol Administrador, ai-service FastAPI, Rol Alumno, Asistente docente IA, Backend Node.js + Express, Rol Docente, Docker Compose, Servicio de email (+22 more)
+
+### Community 22 - "Analytics (backend)"
 Cohesion: 0.13
 Nodes (27): actualizarPregunta(), comprension(), crearPregunta(), dudas(), eliminarPregunta(), listarPreguntas(), progreso(), requireUser() (+19 more)
 
-### Community 21 - "AI Correction Test Suite"
-Cohesion: 0.13
-Nodes (19): System prompt del Auto-correction Engine (CU-A13): corrección de entregas con…, CorrectSubmissionRequest, CriterioRubrica, FakeLLMFueraDeRango, FakeLLMQueCapturaElPrompt, asyncio, Guarda el prompt para poder verificar qué recibe el modelo., test_correccion_devuelve_feedback_y_calificacion() (+11 more)
+### Community 23 - "Manual y endpoints"
+Cohesion: 0.08
+Nodes (29): Subida y almacenamiento de archivos (multer), RAG para archivos (POST /rag/material/archivo), CU-P03 Gestion de actividades, Endpoints de la API, Modelo de acceso: Publico/Autenticado/Rol, Zod, limitador, API: Analytics y preguntas frecuentes, API: Autenticacion (/api/auth), API: Correccion IA (GET correccion-ia) (+21 more)
 
-### Community 22 - "Student Tutor Chat UI"
+### Community 24 - "Chunking y resumen"
 Cohesion: 0.11
-Nodes (22): enviar(), useTutorChat(), ask(), obtenerSesion(), messageFromError(), useResumen(), resumir(), limpiar() (+14 more)
+Nodes (10): build_summary_prompt(), ChunkingService, test_chunk_text_empty_input(), test_chunk_text_preserves_whitespace_normalization(), test_chunk_text_short_document_returns_single_chunk(), test_chunk_text_splits_long_document(), _EmbedderAgregado, _RetrievalEspia (+2 more)
 
-### Community 23 - "Admin Users Management UI"
-Cohesion: 0.15
-Nodes (25): TagColor, invalidateUsers(), useAdminProfessors(), useAdminUsers(), useChangeAdminUserRole(), useCreateAdminUser(), useSetAdminUserActive(), AdminRolInput (+17 more)
-
-### Community 24 - "Auth Login JWT Flow"
-Cohesion: 0.15
-Nodes (23): signAccessToken(), login(), logout(), me(), refresh(), register(), router, LoginInput (+15 more)
-
-### Community 25 - "LLM Retry Logic"
+### Community 25 - "Materias (backend)"
 Cohesion: 0.12
-Nodes (21): es_error_transitorio(), True si el error del proveedor es transitorio y vale la pena reintentar., _ClienteFalso, _Permanente, asyncio, fixture, parametrize, Tests del reintento con backoff ante errores transitorios de Gemini. (+13 more)
+Nodes (25): crear(), crearClave(), detalle(), inscriptos(), mias(), perfilAlumno(), unirse(), router (+17 more)
 
-### Community 26 - "Admin Keys Subjects UI"
-Cohesion: 0.14
-Nodes (22): useAdminKeys(), useGenerateAdminKey(), useRevokeAdminKey(), useAdminSubjects(), useAssignAdminProfessor(), useSaveAdminSubject(), AdminClavesPage(), AdminMateriasPage() (+14 more)
-
-### Community 27 - "Teacher Content Upload UI"
-Cohesion: 0.17
-Nodes (23): useCourseSections(), useCreateSection(), useDeleteSection(), useUploadedMaterials(), useUploadMaterial(), useUploadMaterialFile(), FILE_ICON, RAG_COLOR (+15 more)
-
-### Community 28 - "Server Config Branding Backend"
+### Community 26 - "Controladores y asistente"
 Cohesion: 0.13
-Nodes (18): logger, app, server, getBranding(), getBrandingPublico(), subirLogo(), updateBranding(), BrandingInput (+10 more)
+Nodes (24): AppError, actualizar(), actualizarRubrica(), corregir(), corregirConIA(), crear(), crearRubrica(), eliminar() (+16 more)
 
-### Community 29 - "Activities Grading Controller"
-Cohesion: 0.20
-Nodes (21): AppError, actualizar(), actualizarRubrica(), corregir(), corregirConIA(), crear(), crearRubrica(), eliminar() (+13 more)
+### Community 27 - "Contenidos (backend)"
+Cohesion: 0.12
+Nodes (25): actualizar(), crear(), crearArchivo(), eliminar(), estadisticasDeAcceso(), listarPorSeccion(), registrarAcceso(), ActualizarContenidoInput (+17 more)
 
-### Community 30 - "Course Enrollment Services"
+### Community 28 - "Scripts de entorno"
+Cohesion: 0.09
+Nodes (19): app, destino, filas, importaciones, lineas, montajes, NOMBRES, porModulo (+11 more)
+
+### Community 29 - "Reintentos del LLM"
+Cohesion: 0.12
+Nodes (12): es_error_transitorio(), _ClienteFalso, _Permanente, _Respuesta, _service_con(), _sin_espera(), test_es_error_transitorio_detecta_fallos_del_proveedor(), test_es_error_transitorio_ignora_errores_permanentes() (+4 more)
+
+### Community 30 - "Almacenamiento y planificación"
+Cohesion: 0.17
+Nodes (23): asegurarDirectorioUploads(), clienteS3(), eliminarArchivo(), formatoDe(), guardarArchivo(), leerArchivo(), normalizarEndpoint(), prefijoPublico() (+15 more)
+
+### Community 31 - "Herramientas del tutor (UI)"
+Cohesion: 0.11
+Nodes (21): enviar(), messageFromError(), useResumen(), resumir(), useSimulacro(), generar(), limpiar(), AskTutorResult (+13 more)
+
+### Community 32 - "Indexado RAG y logger"
+Cohesion: 0.13
+Nodes (19): indexArchivo(), indexMaterial(), postIndexado(), logger, app, server, ejecutar(), enCurso (+11 more)
+
+### Community 33 - "Dependencias del frontend"
+Cohesion: 0.09
+Nodes (20): eslint, @types/node, typescript, typescript-eslint, description, name, private, type (+12 more)
+
+### Community 34 - "Recuperación pgvector (pruebas)"
+Cohesion: 0.14
+Nodes (8): FakeConn, FakePool, _sql(), test_crea_tabla_con_dimension_configurada_e_indice_hnsw(), test_migra_y_reindexa_si_cambia_la_dimension(), embed_documents(), test_no_migra_si_la_dimension_coincide(), test_si_el_reindexado_falla_la_migracion_se_revierte()
+
+### Community 35 - "Sesión y login (frontend)"
 Cohesion: 0.18
-Nodes (22): listarPorMateria(), assertUuid(), listarInscriptos(), obtenerInscripcion(), obtenerProfesorAsignado(), actualizar(), crear(), listarMias() (+14 more)
+Nodes (18): AuthContext, AuthContextValue, AuthProvider(), readStoredUser(), User, LoginPage(), refreshAccessToken(), AuthUser (+10 more)
 
-### Community 31 - "Teacher Corrections Workflow UI"
-Cohesion: 0.20
-Nodes (22): errorDeFormulario(), useCorrectionQueue(), useCorrectWithAi(), useCreateRubric(), useDeleteRubric(), useInvalidateRubrics(), usePublishCorrection(), useRubrics() (+14 more)
+### Community 36 - "Scripts del monorepo"
+Cohesion: 0.09
+Nodes (22): description, devDependencies, concurrently, name, private, scripts, ai:setup, ai:test (+14 more)
 
-### Community 32 - "Teacher Course Services"
+### Community 37 - "Indexado y vector stores"
+Cohesion: 0.13
+Nodes (11): Migracion de dimension de embeddings y reindexado, main.py (create_app, lifespan, app.state), pinecone, delete_material(), index_material(), index_material_file(), IndexMaterialRequest, IndexMaterialResponse (+3 more)
+
+### Community 38 - "Datos del docente (cliente)"
 Cohesion: 0.13
 Nodes (20): AsistenciaApi, EnrolledStudent, fmtNum(), getCourseEnrolledStudents(), getDatosMateria(), getTeacherCourseGrades(), getTeacherCourseStudents(), NotaApi (+12 more)
 
-### Community 33 - "Frontend App TSConfig"
+### Community 39 - "Config TypeScript (app)"
 Cohesion: 0.09
 Nodes (21): compilerOptions, allowImportingTsExtensions, composite, isolatedModules, jsx, lib, module, moduleDetection (+13 more)
 
-### Community 34 - "Retrieval Service HNSW"
-Cohesion: 0.16
-Nodes (8): _init_connection(), Búsqueda vectorial en PostgreSQL con pgvector., Acceso a la base vectorial de material educativo indexado., Si la tabla existente usa otra dimension, la recrea y devuelve las filas (id,…, RetrievalService, Connection, EmbedDocuments, Pool
+### Community 40 - "Casos de uso del tutor"
+Cohesion: 0.15
+Nodes (21): prompts/ (tutor, socratic, hints, exam, summary), ask_tutor.py (AskTutorUseCase), Tabla de endpoints y casos de uso del ai-service, Cableado de resumen y simulacro (ResumenPanel, SimulacroPanel), Depuracion de prompts, Preguntas frecuentes del tutor, CU-A04 Consultar Tutor IA, CU-A05 Resumen de documento (+13 more)
 
-### Community 35 - "Subjects Backend Module"
+### Community 41 - "Secciones (backend)"
 Cohesion: 0.17
-Nodes (18): crear(), crearClave(), detalle(), inscriptos(), mias(), unirse(), CrearClaveInput, crearClaveSchema (+10 more)
+Nodes (18): assertUuid(), actualizar(), crear(), eliminar(), listarPorMateria(), ActualizarSeccionInput, actualizarSeccionSchema, CrearSeccionInput (+10 more)
 
-### Community 36 - "Assignment Submission UI"
-Cohesion: 0.16
-Nodes (16): AssignmentSubmitModal(), esVencida(), PLACEHOLDER, TITULO, InfoBox(), Variant, VARIANT_CLASSES, Modal() (+8 more)
+### Community 42 - "Correcciones y rúbricas (cliente)"
+Cohesion: 0.19
+Nodes (19): useCorrectionQueue(), useCorrectWithAi(), useCreateRubric(), useDeleteRubric(), useInvalidateRubrics(), usePublishCorrection(), useUpdateRubric(), correctWithAi() (+11 more)
 
-### Community 37 - "Chunking Service Tests"
-Cohesion: 0.16
-Nodes (14): ChunkingService, Divide textos largos en fragmentos aptos para embedding y contexto., test_chunk_text_empty_input(), test_chunk_text_preserves_whitespace_normalization(), test_chunk_text_short_document_returns_single_chunk(), test_chunk_text_splits_long_document(), asyncio, fixture (+6 more)
+### Community 43 - "Corrección con IA y rúbricas"
+Cohesion: 0.13
+Nodes (17): backend aiClient.ts (8 rutas al ai-service), POST /api/entregas/:id/corregir-ia (borrador IA), Rubricas con campo esperado (pesos suman 100), Correccion IA con rubricas, CU-A07 Feedback automatico de entrega, CU-P04 Rubricas y correccion IA, CorreccionEntregaUseCase (correct_submission.py), CU-A07 Correccion de entregas con IA (+9 more)
 
-### Community 38 - "Frontend Package Manifest"
+### Community 44 - "Dependencias de producción"
 Cohesion: 0.10
-Nodes (19): description, eslint, typescript, typescript-eslint, name, private, type, version (+11 more)
+Nodes (20): dependencies, @aws-sdk/client-s3, @aws-sdk/lib-storage, bcryptjs, cookie-parser, cors, dotenv, express (+12 more)
 
-### Community 39 - "Frontend Auth Context"
+### Community 45 - "Dependencias de desarrollo"
+Cohesion: 0.10
+Nodes (20): devDependencies, eslint, jest, supertest, @swc/core, @swc/jest, tsx, @types/bcryptjs (+12 more)
+
+### Community 46 - "Notas e inscripciones"
+Cohesion: 0.16
+Nodes (17): listarPorMateria(), registrarAcceso(), obtenerInscripcion(), actualizar(), crear(), listarPorMateria(), mías(), ActualizarNotaInput (+9 more)
+
+### Community 47 - "Controlador de administración"
 Cohesion: 0.20
-Nodes (15): AuthContext, AuthContextValue, AuthProvider(), readStoredUser(), User, AuthUser, loginRequest(), LoginResponse (+7 more)
+Nodes (19): actualizarEstado(), actualizarMateria(), asignarProfesor(), cambiarRol(), crearMateria(), crearUsuario(), desmatricular(), desmatricularTodos() (+11 more)
 
-### Community 40 - "Root Workspace Scripts"
-Cohesion: 0.10
-Nodes (19): description, devDependencies, concurrently, name, private, scripts, ai:setup, ai:test (+11 more)
+### Community 48 - "Asistencia y dashboard (cliente)"
+Cohesion: 0.15
+Nodes (17): useAttendanceState(), useSaveAttendance(), api(), getHealth(), AsistenciaApi, FRONT_TO_BACK, getAttendanceState(), saveAttendance() (+9 more)
 
-### Community 41 - "Retrieval Service Tests"
+### Community 49 - "Contenido y secciones (cliente)"
 Cohesion: 0.18
-Nodes (7): FakeConn, FakePool, Tests del esquema/índice de pgvector y de la migración por dimensiones., _sql(), test_crea_tabla_con_dimension_configurada_e_indice_hnsw(), test_migra_y_reindexa_si_cambia_la_dimension(), test_no_migra_si_la_dimension_coincide()
+Nodes (18): useCreateSection(), useDeleteSection(), useUploadedMaterials(), useUploadMaterialFile(), ContenidoApi, ContentSection, createSection(), CreateSectionInput (+10 more)
 
-### Community 42 - "Attendance Backend Module"
+### Community 50 - "Implementación y configuración"
+Cohesion: 0.12
+Nodes (17): Variables de entorno del ai-service, RETRIEVAL_MIN_SCORE (umbral de similitud), config/settings.py (Settings), RAG troubleshooting, pytest / pytest-asyncio / httpx / ruff (dev deps), Variables de entorno imprescindibles, frontend/index.html (entrada SPA Vite), src/main.tsx (punto de montaje #root) (+9 more)
+
+### Community 51 - "Mensajería (backend)"
+Cohesion: 0.18
+Nodes (14): rolSchema, enviarBroadcast(), enviarMensaje(), listarConversaciones(), obtenerMensajes(), requireUser(), BroadcastInput, broadcastSchema (+6 more)
+
+### Community 52 - "Dashboard (backend)"
+Cohesion: 0.15
+Nodes (14): dashboard(), dashboardAlumno(), dashboardProfesor(), requireUser(), dashboard(), dashboardAdmin(), dashboardAlumno(), dashboardProfesor() (+6 more)
+
+### Community 53 - "Herramientas de desarrollo UI"
+Cohesion: 0.11
+Nodes (19): devDependencies, autoprefixer, eslint, eslint-plugin-react-hooks, jsdom, postcss, tailwindcss, @testing-library/jest-dom (+11 more)
+
+### Community 54 - "Notificaciones (UI)"
+Cohesion: 0.24
+Nodes (14): Tr(), useMarcarLeida(), useMarcarTodasLeidas(), useNotificaciones(), NotificacionesPage(), getNoLeidasCount(), getNotificaciones(), marcarLeida() (+6 more)
+
+### Community 55 - "Usuarios administrados (cliente)"
 Cohesion: 0.20
+Nodes (17): invalidateUsers(), useAdminUsers(), useChangeAdminUserRole(), useCreateAdminUser(), useSetAdminUserActive(), AdminProfessor, AdminRolInput, AdminUserApi (+9 more)
+
+### Community 56 - "Embeddings (pruebas)"
+Cohesion: 0.19
+Nodes (10): _ClienteFalso, _Embedding, _Respuesta, _service(), _sin_espera(), test_falla_si_el_modelo_no_devuelve_un_vector(), test_no_reintenta_errores_permanentes(), test_reintenta_ante_429() (+2 more)
+
+### Community 57 - "Helpers de contexto"
+Cohesion: 0.16
+Nodes (8): test_las_fuentes_incluyen_el_titulo(), test_rotula_con_el_titulo_y_sin_uuid(), test_sin_titulo_no_expone_el_uuid(), _formatear_rubrica(), _peso_legible(), build_sources(), cache_key(), format_context()
+
+### Community 58 - "Asistencias (backend)"
+Cohesion: 0.18
 Nodes (15): actualizar(), listarPorMateria(), mías(), registrarDia(), ActualizarAsistenciaInput, actualizarAsistenciaSchema, estadosAsistencia, RegistraAsistenciaInput (+7 more)
 
-### Community 43 - "Class Planning Backend"
-Cohesion: 0.24
-Nodes (15): eliminarMaterial(), listarPlanning(), requireUser(), subirMaterial(), upsertPlanning(), estadoPlanningSchema, UpsertPlanningInput, upsertPlanningSchema (+7 more)
+### Community 59 - "Configuración y branding (backend)"
+Cohesion: 0.17
+Nodes (14): getBranding(), getBrandingPublico(), subirLogo(), updateBranding(), BrandingInput, brandingSchema, COLOR_PRESETS, ColorPreset (+6 more)
 
-### Community 44 - "Frontend Dev Dependencies"
-Cohesion: 0.11
-Nodes (18): devDependencies, autoprefixer, eslint, eslint-plugin-react-hooks, jsdom, postcss, tailwindcss, @testing-library/jest-dom (+10 more)
+### Community 60 - "Notificaciones y email"
+Cohesion: 0.16
+Nodes (12): listarMias(), marcarLeida(), Notificacion, notificarPorEmail(), obtenerNotificacionUsuario(), toNotificacionDto(), isEmailEnabled(), sendEmailSeguro() (+4 more)
 
-### Community 45 - "Prompt Sanitization Layer"
+### Community 61 - "Simulacro y curso (UI)"
+Cohesion: 0.17
+Nodes (16): DIFICULTAD_TAG, DIFICULTADES, formatearFecha(), PreguntaRespondible(), ResultadoCorreccion(), SimulacroPanel(), VEREDICTO, useCourse() (+8 more)
+
+### Community 62 - "Reportes de administración"
+Cohesion: 0.22
+Nodes (15): useAdminReports(), useExportReport(), useExportReportPdf(), AdminReportsPage(), downloadCsv(), downloadPdf(), EXPORT_LABELS, ExportPdfResult (+7 more)
+
+### Community 63 - "Ajustes de administración"
 Cohesion: 0.21
-Nodes (12): estimate_tokens(), Estimación aproximada de tokens (código independiente del modelo)., Depuración de prompts de usuario (CU-SYS01)., Elimina saludos, muletillas y contenido irrelevante. Devuelve (prompt_depurado,…, sanitize_prompt(), _strip_leading_greeting(), test_collapses_repeated_punctuation(), test_empty_prompt_returns_empty() (+4 more)
+Nodes (13): useAdminSettings(), getBranding(), getColorPresets(), saveBranding(), SaveBrandingInput, BrandingApi, toBranding(), brandingApi (+5 more)
 
-### Community 46 - "Admin Reports UI"
-Cohesion: 0.24
-Nodes (14): useAdminReports(), useExportReport(), useExportReportPdf(), AdminReportsPage(), downloadCsv(), downloadPdf(), EXPORT_LABELS, ExportPdfResult (+6 more)
+### Community 64 - "Chat del tutor (hook)"
+Cohesion: 0.17
+Nodes (15): TUTOR_LENTO_MS, useTutorChat(), actualizarRespuesta(), ask(), obtenerSesion(), getAccessToken(), askTutorStream(), createTutorSession() (+7 more)
 
-### Community 47 - "Analytics Frontend Hooks"
+### Community 65 - "Analytics (cliente)"
 Cohesion: 0.20
 Nodes (15): useAnalytics(), AlertaApi, ComprensionApi, DudaApi, getFrequentErrors(), getFrequentQuestions(), getRiskAlerts(), getTopicUnderstanding() (+7 more)
 
-### Community 48 - "Progress Tracking Frontend"
+### Community 66 - "Progreso del alumno"
 Cohesion: 0.21
 Nodes (15): useProgress(), ESTADO_LABEL, getAttendanceLog(), getCourseGradeSummary(), getGradeDetail(), getProgreso(), getProgressOverview(), gradeColor() (+7 more)
 
-### Community 49 - "Error Handling Dashboards"
-Cohesion: 0.24
-Nodes (13): errorHandler(), notFound(), resolverError(), dashboard(), dashboardAlumno(), dashboardProfesor(), requireUser(), dashboard() (+5 more)
+### Community 67 - "OCR y CI del ai-service"
+Cohesion: 0.13
+Nodes (15): google-genai, structlog, redis, asyncpg, pgvector, pinecone, pypdf, python-docx, python-pptx, pytesseract + pdf2image + Pillow (CU-P02), fastapi, uvicorn, pydantic-settings, python-multipart, Volumen aipy_venv pisa el venv (python-multipart), Docker verificado (3 bugs corregidos), E2E de OCR de PDF escaneado sin ejecutar, OcrService (tesseract + poppler) (+7 more)
 
-### Community 50 - "Backend TSConfig"
+### Community 68 - "Esquemas y rutas de admin"
+Cohesion: 0.18
+Nodes (14): router, ActualizarEstadoInput, actualizarEstadoSchema, ActualizarMateriaAdminInput, actualizarMateriaAdminSchema, AsignarProfesorInput, asignarProfesorSchema, CambiarRolInput (+6 more)
+
+### Community 69 - "Config TypeScript (backend)"
 Cohesion: 0.12
 Nodes (15): compilerOptions, declaration, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution, outDir, resolveJsonModule (+7 more)
 
-### Community 51 - "Teacher Planning UI"
-Cohesion: 0.22
-Nodes (14): useDeletePlanningMaterial(), useSavePlanning(), useUploadPlanningMaterial(), shortDate(), TeacherPlanningPage(), API_URL, deletePlanningMaterial(), getPlanning() (+6 more)
-
-### Community 52 - "Node TSConfig"
+### Community 70 - "Config TypeScript (node)"
 Cohesion: 0.12
 Nodes (15): compilerOptions, allowImportingTsExtensions, composite, isolatedModules, lib, module, moduleDetection, moduleResolution (+7 more)
 
-### Community 53 - "S3 Storage Config"
+### Community 71 - "Decisiones de arquitectura"
+Cohesion: 0.19
+Nodes (13): ai-service (Python/FastAPI), AI service README, CHROMA_URL eliminada, Deploy a cloud (bloqueo de entrega), Gemini intermitente (503 high demand), DEPLOY.md, Google Gemini (LLM y embeddings), IA modelos y prompts (+5 more)
+
+### Community 72 - "Planificación y notificaciones"
 Cohesion: 0.18
-Nodes (13): clienteS3(), formatoDe(), guardarArchivo(), normalizarEndpoint(), prefijoPublico(), sanitizarBase(), StorageProvider, StoredFile (+5 more)
+Nodes (12): CrearNotificacionInput, crearNotificacionSchema, tipoNotificacionSchema, eliminarMaterial(), listarPlanning(), requireUser(), subirMaterial(), upsertPlanning() (+4 more)
 
-### Community 54 - "Grades Backend Module"
-Cohesion: 0.18
-Nodes (12): actualizar(), crear(), listarPorMateria(), mías(), ActualizarNotaInput, actualizarNotaSchema, CrearNotaInput, crearNotaSchema (+4 more)
+### Community 73 - "Pruebas de corrección"
+Cohesion: 0.27
+Nodes (8): CorrectSubmissionRequest, FakeLLMFueraDeRango, FakeLLMQueCapturaElPrompt, test_correccion_devuelve_feedback_y_calificacion(), test_correccion_recorta_calificacion_fuera_de_rango(), test_correccion_sin_rubrica_usa_por_defecto(), test_el_prompt_incluye_el_esperado_de_cada_criterio(), test_el_prompt_no_inventa_esperado_si_no_viene()
 
-### Community 55 - "Form UI Primitives"
-Cohesion: 0.16
-Nodes (11): ButtonProps, Size, SIZE_CLASSES, Variant, VARIANT_CLASSES, FormField(), FormFieldProps, NOTIFICATIONS (+3 more)
+### Community 75 - "Cursos y materiales (UI)"
+Cohesion: 0.20
+Nodes (12): MaterialItem(), COLOR_PALETTE, colorDeMateria(), ContenidoDto, estadoUnidad(), getCourseById(), getCourses(), MateriaDto (+4 more)
 
-### Community 56 - "API Client Core"
+### Community 76 - "Branding (frontend)"
+Cohesion: 0.23
+Nodes (10): BrandingContext, BrandingContextValue, BrandingProvider(), useBranding(), queryClient, getConfigBranding(), Consumidor(), mockGetBranding (+2 more)
+
+### Community 77 - "Planificación (cliente)"
 Cohesion: 0.24
-Nodes (11): useSaveAttendance(), api(), ApiError, getHealth(), refreshAccessToken(), AsistenciaApi, FRONT_TO_BACK, getAttendanceState() (+3 more)
+Nodes (12): useDeletePlanningMaterial(), useSavePlanning(), useUploadPlanningMaterial(), API_URL, deletePlanningMaterial(), getPlanning(), PlanningItemApi, savePlanning() (+4 more)
 
-### Community 57 - "Messages Frontend UI"
-Cohesion: 0.25
-Nodes (13): useContacts(), useInbox(), useSendBroadcast(), useSendMessage(), TeacherMessagesPage(), ConversacionItem, formatWhen(), getAlumnosContactos() (+5 more)
-
-### Community 58 - "Notifications Frontend UI"
-Cohesion: 0.27
-Nodes (12): useMarcarLeida(), useMarcarTodasLeidas(), useNotificaciones(), NotificacionesPage(), getNoLeidasCount(), getNotificaciones(), marcarLeida(), marcarTodasLeidas() (+4 more)
-
-### Community 59 - "Courses Frontend Hooks"
-Cohesion: 0.22
-Nodes (12): useCourse(), COLOR_PALETTE, colorDeMateria(), ContenidoDto, estadoUnidad(), getCourseById(), getCourses(), MateriaDto (+4 more)
-
-### Community 60 - "Vector Store Migration Notes"
+### Community 78 - "Scripts de base de datos"
 Cohesion: 0.15
-Nodes (13): Embedding Dimension Migration and Reindex, pinecone_service.py Pinecone Access, retrieval_service.py pgvector Access, vector_store.py build_retrieval_service Factory, Cloud Deploy Decision Blocking Delivery, Three-Service Cold Start Trap, HNSW Index Fix via 1536 Embedding Dimensions, Vector Store Switch Requires Manual Reindex (+5 more)
+Nodes (13): scripts, build, db:deploy, db:generate, db:migrate, db:seed, db:studio, dev (+5 more)
 
-### Community 61 - "Backend Build Scripts"
-Cohesion: 0.17
-Nodes (12): scripts, build, db:deploy, db:generate, db:migrate, db:seed, db:studio, dev (+4 more)
+### Community 79 - "Asistente docente IA"
+Cohesion: 0.21
+Nodes (10): Tests del ai-service con fakes, CU-P10 Generar material docente, Docente: Asistente IA (generar, PDF, publicar), Docente: planificacion y mensajes, IA_MODELOS_Y_PROMPTS.md, Prompts de desarrollo, Prompt 1: auditoria de estado y prioridades, Prompt 2: Asistente docente IA (+2 more)
 
-### Community 62 - "Course Content Backend"
+### Community 80 - "Claves de matriculación (cliente)"
+Cohesion: 0.30
+Nodes (10): useAdminKeys(), useGenerateAdminKey(), useRevokeAdminKey(), EnrollmentKeyApi, generateAdminKey(), getAdminKeys(), NewKeyInput, revokeAdminKey() (+2 more)
+
+### Community 81 - "Mensajes (cliente)"
 Cohesion: 0.27
-Nodes (10): actualizar(), crear(), crearArchivo(), eliminar(), listarPorSeccion(), ActualizarContenidoInput, actualizarContenidoSchema, CrearContenidoInput (+2 more)
+Nodes (10): useSendBroadcast(), useSendMessage(), ConversacionItem, formatWhen(), getAlumnosContactos(), getInbox(), MessageContact, sendBroadcast() (+2 more)
 
-### Community 63 - "Course Sections Backend"
-Cohesion: 0.29
-Nodes (9): actualizar(), crear(), eliminar(), listarPorMateria(), ActualizarSeccionInput, actualizarSeccionSchema, CrearSeccionInput, crearSeccionSchema (+1 more)
+### Community 83 - "Asistente docente (backend)"
+Cohesion: 0.35
+Nodes (7): generarMaterial(), generarMaterialPdf(), router, GenerarMaterialInput, generarMaterialSchema, MaterialPdfInput, materialPdfSchema
 
-### Community 64 - "RAG Indexing Router"
-Cohesion: 0.29
-Nodes (9): delete_material(), index_material(), index_material_file(), post, Router RAG: indexación y eliminación de materiales (alimenta el tutor IA)., IndexMaterialRequest, IndexMaterialResponse, delete (+1 more)
+### Community 84 - "Benchmark del tutor"
+Cohesion: 0.18
+Nodes (6): BASE, filas, N, PREGUNTAS, primeras, totales
 
-### Community 65 - "Dashboard Frontend Hooks"
-Cohesion: 0.33
-Nodes (8): useDashboard(), DashboardAdmin, DashboardAlumno, DashboardProfesor, DashboardResumenComun, getDashboardAdmin(), getDashboardAlumno(), getDashboardProfesor()
+### Community 85 - "Materias admin (cliente)"
+Cohesion: 0.31
+Nodes (9): useAssignAdminProfessor(), useSaveAdminSubject(), assignAdminProfessor(), getAdminSubjects(), MateriaApi, saveAdminSubject(), SubjectSaveInput, toAdminSubject() (+1 more)
 
-### Community 66 - "RAG Study Mode Design Docs"
+### Community 87 - "RAG y Tutor IA"
+Cohesion: 0.20
+Nodes (10): Benchmark del tutor, CU-P02 Cargar contenido (OCR), IES Santa Fe Practica Profesionalizante 2, OCR de imagenes y PDF escaneado, Pinecone vector store, pinecone_service bloquea event loop, RAG Retrieval-Augmented Generation, SSE streaming del tutor (+2 more)
+
+### Community 88 - "Suite E2E"
 Cohesion: 0.22
-Nodes (9): AskTutorUseCase Chat Flow, Routers/UseCases/Services Layer Architecture, D2: RAG-Based Tutor Instead of Bare LLM, D3: Prompts Separated from Code per Use Case, D8: Study Modes as One Endpoint with Mode Prompts, Per-Use-Case Prompt Files (src/prompts/*.py), RAG Pattern over Official Subject Material, Tutor Study Modes (normal/socratic/hints) (+1 more)
+Nodes (6): ahora, BASE, ctx, llamar(), login(), SUFIJO
 
-### Community 67 - "Implementation Conventions Docs"
-Cohesion: 0.25
-Nodes (9): AI Service Dev Dependencies (pytest/ruff), Frontend SPA Entry (index.html), Adjacent-Layer Communication Rule, AI Service (Python/FastAPI) Architecture, Backend Layered Architecture (routes/controllers/services/base), No Hardcoded Configuration, EduAI Implementation Document v1.1, Prompts Kept Out of Code (+1 more)
-
-### Community 68 - "CI Pipeline Workflows"
-Cohesion: 0.25
-Nodes (9): pytesseract + pdf2image + Pillow (CU-P02), ai-service job (ruff + pytest), backend job (lint + typecheck + tests), CI Pipeline (3 jobs), frontend job (lint + typecheck + tests + build), pytest, ruff check src, actions/setup-node@v4 (Node 22) (+1 more)
-
-### Community 69 - "Grading Correction Prompts"
-Cohesion: 0.22
-Nodes (9): Rubric 'esperado' Criterion Injected into Correction Prompt, D10: Argentine 0-10 Scale and Default Rubric, D4: Strict JSON Contracts for Structured Output, Auto-correction Engine System Prompt, Exam Mock System Prompt (Strict JSON), Contract Before Implementation Lesson, CorreccionEntregaUseCase (correct_submission), Reuse Existing Patterns Lesson (+1 more)
-
-### Community 70 - "Database Seed Script"
+### Community 90 - "Seed de datos"
 Cohesion: 0.28
 Nodes (8): adapter, estadoAsistencia, fechaClase(), limpiar(), main(), prisma, bcryptjs, @prisma/adapter-pg
 
-### Community 71 - "Teaching Material Generator"
-Cohesion: 0.42
-Nodes (6): generarMaterialDocente(), generarMaterial(), GenerarMaterialInput, generarMaterialSchema, assertUuid(), generarMaterial()
+### Community 91 - "Desmatriculación (UI)"
+Cohesion: 0.44
+Nodes (7): EnrolledStudentsPanel(), Props, EnrolledStudent, useEnrolledStudents(), useRefreshEnrollment(), useUnenrollAll(), useUnenrollStudent()
 
-### Community 72 - "Teacher AI Assistant UI"
-Cohesion: 0.39
-Nodes (6): usePlanning(), useTeacherAssistant(), ask(), QUICK_ACTIONS, TeacherAIPage(), askTeacherAssistant()
+### Community 92 - "Asistente docente (cliente)"
+Cohesion: 0.47
+Nodes (7): useTeacherAssistant(), ask(), downloadPdf(), askTeacherAssistant(), downloadMaterialPdf(), exportMaterialPdf(), MaterialPdfResult
 
-### Community 73 - "Rubric Editor UI"
-Cohesion: 0.36
-Nodes (7): Criterio, criterioVacio(), Props, RubricFormModal(), RubricCriterionInput, RubricInput, Rubric
+### Community 93 - "Entrega de actividades"
+Cohesion: 0.29
+Nodes (8): Entregas del alumno (4 variantes de modal), Clave de acceso a materia, CU-A01 Inscribirse a materia, 26 casos de uso: 22 completos, 4 parciales, Prueba E2E flujo-completo, Plazo de entrega, CU-A03 Entregar actividad, Entregar una actividad (plazo, reemplazo, MC autocorregida)
 
-### Community 74 - "Admin Licensing UI"
+### Community 94 - "Seguridad y límite de intentos"
+Cohesion: 0.29
+Nodes (4): rateLimit(), securityHeaders(), Ventana, Opciones
+
+### Community 95 - "Pruebas de herramientas del tutor"
+Cohesion: 0.25
+Nodes (6): chatTutorMock, generarExamenMock, prismaMock, resumirDocumentoMock, streamTutorMock, TEXTO_LARGO
+
+### Community 96 - "Licencias (cliente)"
 Cohesion: 0.50
 Nodes (6): useAdminLicensing(), EstadoLicenciaApi, getEstadoLicencia(), getLicensePlans(), getLicenseUsage(), LicensePlan
 
-### Community 75 - "Frontend Package Scripts"
+### Community 97 - "Perfil del alumno (docente)"
+Cohesion: 0.36
+Nodes (7): Dato(), fecha(), MODO_LABEL, num(), PerfilAlumno, SEVERIDAD_COLOR, TeacherStudentProfilePage()
+
+### Community 99 - "Notificaciones y capas"
+Cohesion: 0.29
+Nodes (7): email.service.ts (proveedores none/resend/brevo/smtp), Notificaciones (frontend implementado), API: Notificaciones, Modulos del backend (rutas -> controlador -> servicio), Notificaciones (campana), Backend en capas: rutas, controladores, servicios, middlewares, Notificaciones in-app y email de recuperacion
+
+### Community 100 - "Scripts del frontend"
 Cohesion: 0.29
 Nodes (7): scripts, build, dev, lint, preview, test, typecheck
 
-### Community 76 - "Enrollment Code UI"
+### Community 101 - "Inscripción (cliente)"
 Cohesion: 0.48
 Nodes (5): useEnrollment(), EnrollResult, enrollWithCode(), messageFromError(), sanitizeCode()
 
-### Community 77 - "Venv Helper Script"
-Cohesion: 0.33
-Nodes (5): [binario, ...args], ejecutable, raiz, resultado, venvDir
+### Community 102 - "Reportes en PDF"
+Cohesion: 0.47
+Nodes (4): renderReportePdf(), ReportePdf, sinEmojis(), pdfkit
 
-### Community 78 - "Venv Setup Script"
-Cohesion: 0.33
-Nodes (4): aiDir, pip, raiz, venvDir
-
-### Community 79 - "Frontend Core Dependencies"
+### Community 103 - "Dependencias React"
 Cohesion: 0.40
 Nodes (5): dependencies, react, react-dom, react-router-dom, @tanstack/react-query
 
-### Community 81 - "Redis Cache Degradation"
+### Community 106 - "Otros: Resumir documento"
 Cohesion: 0.67
-Nodes (3): cache_service.py Redis TTL Cache, Redis Optional via Silent Cache Degradation, D6: Redis Cache with Silent Degradation
+Nodes (3): CU-A05 Resumir documento, Resumir documento, Simulacro
 
-### Community 82 - "Gemini Model Selection"
+### Community 108 - "Otros: actions/setup-node@v4 (Node 22)"
 Cohesion: 0.67
-Nodes (3): Gemini 503 Retries with Exponential Backoff, Gemini Flash Model Selection Rationale, Planned LLM Providers (OpenAI GPT-4o / Claude)
-
-### Community 83 - "OCR Use Case Docs"
-Cohesion: 0.67
-Nodes (3): OCR for Images and Scanned PDFs (CU-P02), EduAI Platform Project README, Use Case Catalog (Anexo B)
-
-## Ambiguous Edges - Review These
-- `Tutor Resumen/Examen Proxied from Node` → `Contracts Table with Node Backend`  [AMBIGUOUS]
-  AVANCE.md · relation: conceptually_related_to
-- `Gemini Flash Model Selection Rationale` → `Planned LLM Providers (OpenAI GPT-4o / Claude)`  [AMBIGUOUS]
-  README.md · relation: conceptually_related_to
+Nodes (3): backend job (lint + typecheck + tests), frontend job (lint + typecheck + tests + build), actions/setup-node@v4 (Node 22)
 
 ## Knowledge Gaps
-- **468 isolated node(s):** `name`, `version`, `description`, `main`, `dev` (+463 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 673 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **43 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **536 isolated node(s):** `asyncpg`, `fastapi`, `google-genai`, `pgvector`, `backend job (lint + typecheck + tests)` (+531 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 795 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What is the exact relationship between `Tutor Resumen/Examen Proxied from Node` and `Contracts Table with Node Backend`?**
-  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **What is the exact relationship between `Gemini Flash Model Selection Rationale` and `Planned LLM Providers (OpenAI GPT-4o / Claude)`?**
-  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `AppError` connect `Activities Grading Controller` to `Admin Backend Controllers`, `Messaging Broadcast Backend`, `Backend Core Auth Middleware`, `AI Tutor Backend Module`, `Activity Rubric Schemas`, `AI Client Contracts`, `Analytics Backend Controller`, `Auth Login JWT Flow`, `Server Config Branding Backend`, `Course Enrollment Services`, `Subjects Backend Module`, `Attendance Backend Module`, `Class Planning Backend`, `Error Handling Dashboards`, `S3 Storage Config`, `Grades Backend Module`, `Course Content Backend`, `Course Sections Backend`, `Teaching Material Generator`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Why does `react` connect `Student Dashboard Panels` to `Assignment Submission UI`, `Frontend Package Manifest`, `Teacher Activity Editor UI`, `Frontend Auth Context`, `Rubric Editor UI`, `Frontend App Shell Layout`, `Teacher AI Assistant UI`, `UI Table Filter Components`, `Admin Reports UI`, `Branding Admin Settings`, `Admin Users Management UI`, `Student Tutor Chat UI`, `Form UI Primitives`, `Teacher Content Upload UI`, `Teacher Corrections Workflow UI`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Why does `express` connect `Backend Core Auth Middleware` to `Admin Backend Controllers`, `Subjects Backend Module`, `Messaging Broadcast Backend`, `Teaching Material Generator`, `AI Tutor Backend Module`, `Attendance Backend Module`, `Class Planning Backend`, `Backend Package Manifest`, `Backend Bootstrap Health`, `Error Handling Dashboards`, `Analytics Backend Controller`, `Grades Backend Module`, `Auth Login JWT Flow`, `Server Config Branding Backend`, `Activities Grading Controller`, `Course Content Backend`, `Course Sections Backend`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `react` connect `Aplicación React y paneles` to `Chat del tutor (hook)`, `Dependencias del frontend`, `Perfil del alumno (docente)`, `Sesión y login (frontend)`, `Pantallas de administración`, `Componentes UI y cliente API`, `Actividades y correcciones (UI)`, `Cursos y materiales (UI)`, `Branding (frontend)`, `Desmatriculación (UI)`, `Asistente docente (cliente)`, `Simulacro y curso (UI)`, `Reportes de administración`, `Herramientas del tutor (UI)`?**
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `api()` (e.g. with `adminSettings.service.test.ts` and `config.service.test.ts`) actually correct?**
   _`api()` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `name`, `version`, `description` to the rest of the system?**
-  _468 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `asyncpg`, `fastapi`, `google-genai` to the rest of the system?**
+  _536 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Núcleo del servicio de IA` be split into smaller, more focused modules?**
+  _Cohesion score 0.05207835642618251 - nodes in this community are weakly interconnected._
+- **Why does `@tanstack/react-query` connect `Reportes de administración` to `Aplicación React y paneles`, `Pantallas de administración`, `Componentes UI y cliente API`, `Entregas y actividades (cliente)`, `Dependencias del frontend`, `Correcciones y rúbricas (cliente)`, `Asistencia y dashboard (cliente)`, `Contenido y secciones (cliente)`, `Notificaciones (UI)`, `Usuarios administrados (cliente)`, `Simulacro y curso (UI)`, `Ajustes de administración`, `Analytics (cliente)`, `Progreso del alumno`, `Branding (frontend)`, `Planificación (cliente)`, `Claves de matriculación (cliente)`, `Mensajes (cliente)`, `Materias admin (cliente)`, `Desmatriculación (UI)`, `Licencias (cliente)`, `Perfil del alumno (docente)`, `Inscripción (cliente)`?**
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
+- **Should `Base del backend y pruebas HTTP` be split into smaller, more focused modules?**
+  _Cohesion score 0.0563165905631659 - nodes in this community are weakly interconnected._
+- **Why does `express` connect `App Express y rutas` to `Base del backend y pruebas HTTP`, `Módulo tutor (backend)`, `Dependencias del backend`, `Autenticación`, `Analytics (backend)`, `Materias (backend)`, `Controladores y asistente`, `Contenidos (backend)`, `Secciones (backend)`, `Notas e inscripciones`, `Controlador de administración`, `Mensajería (backend)`, `Dashboard (backend)`, `Asistencias (backend)`, `Configuración y branding (backend)`, `Esquemas y rutas de admin`, `Planificación y notificaciones`, `Asistente docente (backend)`, `Seguridad y límite de intentos`?**
+  _High betweenness centrality (0.063) - this node is a cross-community bridge._

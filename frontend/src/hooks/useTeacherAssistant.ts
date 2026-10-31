@@ -31,5 +31,5 @@ export function useTeacherAssistant() {
     }
   }
 
-  return { output, pending, pdfPending, ask, downloadPdf };
+  return { output, setOutput, pending, pdfPending, ask, downloadPdf };
 }

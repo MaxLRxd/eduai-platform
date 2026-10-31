@@ -3,6 +3,9 @@ import { api, ApiError } from "./api";
 export interface EnrollResult {
   success: boolean;
   message: string;
+  /** Materia a la que se lo lleva (tanto si se inscribio ahora como si ya estaba inscripto). */
+  materiaId?: string;
+  yaInscripto?: boolean;
 }
 
 function sanitizeCode(raw: string): string {
@@ -29,11 +32,19 @@ export async function enrollWithCode(rawCode: string): Promise<EnrollResult> {
   const code = sanitizeCode(rawCode);
 
   try {
-    const data = await api<{ materia: { nombre: string } }>("/api/materias/unirse", {
-      method: "POST",
-      body: JSON.stringify({ clave: code }),
-    });
-    return { success: true, message: `Te inscribiste correctamente a ${data.materia.nombre}.` };
+    const data = await api<{ materia: { id: string; nombre: string; ya_inscripto?: boolean } }>(
+      "/api/materias/unirse",
+      { method: "POST", body: JSON.stringify({ clave: code }) }
+    );
+    const { id, nombre, ya_inscripto } = data.materia;
+    return {
+      success: true,
+      materiaId: id,
+      yaInscripto: Boolean(ya_inscripto),
+      message: ya_inscripto
+        ? `Ya te encontrás inscripto en ${nombre}. Te llevamos a la materia.`
+        : `¡Listo! Te inscribiste correctamente a ${nombre}. Te llevamos a la materia.`,
+    };
   } catch (e) {
     return { success: false, message: messageFromError(e) };
   }

@@ -268,3 +268,97 @@ export async function eliminar(contenidoId: string, usuarioId: string) {
 
   return { ok: true };
 }
+
+// Si el alumno reabre el mismo material dentro de esta ventana no se vuelve a registrar:
+// evita inflar las estadisticas con recargas de pagina.
+const VENTANA_ACCESO_MS = 5 * 60 * 1000;
+
+/** CU-A02: registra que un alumno abrio un material (alimenta las estadisticas del docente). */
+export async function registrarAcceso(contenidoId: string, alumnoId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contenidoId)) {
+    throw new AppError(404, "Contenido no encontrado");
+  }
+
+  const contenido = await prisma.contenido.findUnique({
+    where: { id: contenidoId },
+    include: { seccion: { select: { materia_id: true } } },
+  });
+
+  if (!contenido) {
+    throw new AppError(404, "Contenido no encontrado");
+  }
+
+  const inscripcion = await obtenerInscripcion(contenido.seccion.materia_id, alumnoId);
+
+  if (!inscripcion) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const reciente = await prisma.accesoContenido.findFirst({
+    where: {
+      contenido_id: contenidoId,
+      alumno_id: alumnoId,
+      accedido_en: { gt: new Date(Date.now() - VENTANA_ACCESO_MS) },
+    },
+    select: { id: true },
+  });
+
+  if (reciente) {
+    return { registrado: false };
+  }
+
+  await prisma.accesoContenido.create({ data: { contenido_id: contenidoId, alumno_id: alumnoId } });
+
+  return { registrado: true };
+}
+
+/** Cuantos alumnos abrieron cada material de la materia (vista del docente). */
+export async function estadisticasDeAcceso(materiaId: string, usuarioId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(materiaId)) {
+    throw new AppError(404, "Materia no encontrada");
+  }
+
+  const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+
+  if (!perfil) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const [contenidos, accesos, inscriptos] = await Promise.all([
+    prisma.contenido.findMany({
+      where: { seccion: { materia_id: materiaId } },
+      select: { id: true, titulo: true, tipo: true },
+      orderBy: { created_at: "asc" },
+    }),
+    prisma.accesoContenido.findMany({
+      where: { contenido: { seccion: { materia_id: materiaId } } },
+      select: { contenido_id: true, alumno_id: true, accedido_en: true },
+    }),
+    prisma.inscripcion.count({ where: { materia_id: materiaId } }),
+  ]);
+
+  const porContenido = new Map<string, { alumnos: Set<string>; total: number; ultimo: Date | null }>();
+
+  for (const a of accesos) {
+    const fila = porContenido.get(a.contenido_id) ?? { alumnos: new Set<string>(), total: 0, ultimo: null };
+    fila.alumnos.add(a.alumno_id);
+    fila.total += 1;
+    if (!fila.ultimo || a.accedido_en > fila.ultimo) fila.ultimo = a.accedido_en;
+    porContenido.set(a.contenido_id, fila);
+  }
+
+  return {
+    inscriptos,
+    contenidos: contenidos.map((c) => {
+      const fila = porContenido.get(c.id);
+      return {
+        contenido_id: c.id,
+        titulo: c.titulo,
+        tipo: c.tipo,
+        alumnos_distintos: fila?.alumnos.size ?? 0,
+        accesos: fila?.total ?? 0,
+        ultimo_acceso: fila?.ultimo ?? null,
+      };
+    }),
+  };
+}

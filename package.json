@@ -13,7 +13,10 @@
     "db:generate": "npm run db:generate --workspace backend",
     "logs": "docker compose logs -f",
     "test": "npm run test --workspace backend && npm run ai:test && npm run test --workspace frontend",
-    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend"
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
+    "e2e": "node --test \"e2e/*.e2e.mjs\"",
+    "benchmark:tutor": "node e2e/benchmark-tutor.mjs",
+    "docs:api": "node scripts/generar-docs-api.mjs"
   },
   "workspaces": [
     "backend",

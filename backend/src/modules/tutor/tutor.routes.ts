@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { validateBody } from "../../middlewares/validate";
 import { requireAuth, requireRole } from "../../middlewares/auth";
-import { crearSesionSchema, enviarMensajeSchema, examenSchema, resumenSchema } from "./tutor.schemas";
+import {
+  corregirExamenSchema,
+  crearSesionSchema,
+  enviarMensajeSchema,
+  examenSchema,
+  resumenPdfSchema,
+  resumenSchema,
+} from "./tutor.schemas";
 import * as tutorController from "./tutor.controller";
 
 const router = Router();
@@ -21,12 +28,39 @@ router.post(
   tutorController.resumen
 );
 router.post(
+  "/materias/:materiaId/tutor/resumen/pdf",
+  requireAuth,
+  requireRole("ALUMNO"),
+  validateBody(resumenPdfSchema),
+  tutorController.resumenAPdf
+);
+router.post(
   "/materias/:materiaId/tutor/examen",
   requireAuth,
   requireRole("ALUMNO"),
   validateBody(examenSchema),
   tutorController.examen
 );
+router.post(
+  "/materias/:materiaId/tutor/examen/corregir",
+  requireAuth,
+  requireRole("ALUMNO"),
+  validateBody(corregirExamenSchema),
+  tutorController.corregirSimulacro
+);
+router.get(
+  "/materias/:materiaId/tutor/simulacros",
+  requireAuth,
+  requireRole("ALUMNO"),
+  tutorController.listarSimulacros
+);
+router.get(
+  "/materias/:materiaId/tutor/latencia",
+  requireAuth,
+  requireRole("PROFESOR"),
+  tutorController.latenciaDeMateria
+);
+router.get("/admin/tutor/latencia", requireAuth, requireRole("ADMIN"), tutorController.latenciaGlobal);
 router.get(
   "/tutor/sesiones",
   requireAuth,

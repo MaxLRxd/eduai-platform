@@ -148,3 +148,24 @@ export async function estadoLicencia(req: Request, res: Response): Promise<void>
   const estado = await adminService.obtenerEstadoLicencia();
   res.json(estado);
 }
+
+export async function desmatricular(
+  req: Request<{ materiaId: string; alumnoId: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  res.json(await adminService.desmatricular(req.params.materiaId, req.params.alumnoId));
+}
+
+export async function desmatricularTodos(
+  req: Request<{ materiaId: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  res.json(await adminService.desmatricularTodos(req.params.materiaId));
+}
+
+export async function metricasDeExito(req: Request, res: Response): Promise<void> {
+  requireUser(req);
+  res.json(await adminService.metricasDeExito());
+}

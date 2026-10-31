@@ -21,6 +21,8 @@ coverage/
 # Docker local data / logs
 pgdata/
 /data/
+# Archivos subidos al correr el backend en local (UPLOAD_DIR)
+backend/data/
 *.log
 
 # Vite

@@ -3,7 +3,14 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import * as tutorService from "./tutor.service";
 import { streamTutor } from "../../config/aiClient";
-import type { CrearSesionInput, EnviarMensajeInput, ExamenInput, ResumenInput } from "./tutor.schemas";
+import type {
+  CorregirExamenInput,
+  CrearSesionInput,
+  EnviarMensajeInput,
+  ExamenInput,
+  ResumenInput,
+  ResumenPdfInput,
+} from "./tutor.schemas";
 import { AppError } from "../../middlewares/error";
 
 export async function crearSesion(
@@ -94,6 +101,9 @@ export async function stream(
     throw new AppError(401, "No autenticado");
   }
 
+  // El cronometro arranca al recibir el pedido: lo que mide es lo que espera el alumno.
+  const inicioPedido = Date.now();
+
   const { materiaId, modo, modoSesion, history } = await tutorService.prepararStream(
     req.params.sesionId,
     req.body.contenido,
@@ -107,6 +117,26 @@ export async function stream(
     req.user.id,
     modoSesion
   );
+
+  // CU-A04 (A5.1): una pregunta frecuente se contesta sin llamar a la IA (solo en modo normal).
+  const frecuente = modo === "normal" ? await tutorService.buscarPreguntaFrecuente(materiaId, req.body.contenido) : null;
+
+  if (frecuente) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    res.write(`data: ${JSON.stringify({ type: "token", text: frecuente })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: "done", sources: [], cached: true, pregunta_frecuente: true })}\n\n`);
+    res.end();
+
+    try {
+      await tutorService.registrarRespuestaPreguntaFrecuente(req.params.sesionId, frecuente, modoSesion);
+    } catch {
+      // el alumno ya recibio la respuesta; no se pudo guardar en el historial
+    }
+    return;
+  }
 
   const upstream = await streamTutor(materiaId, req.body.contenido, modo, history);
 
@@ -125,12 +155,16 @@ export async function stream(
 
   const upstreamStream: Readable = Readable.fromWeb(upstream.body as import("node:stream/web").ReadableStream);
 
-  const inicio = Date.now();
+  let primerTokenMs: number | undefined;
   const fragmentosSse: string[] = [];
 
   const acumulador = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
-      fragmentosSse.push(chunk.toString("utf8"));
+      const texto = chunk.toString("utf8");
+      fragmentosSse.push(texto);
+      if (primerTokenMs === undefined && /"type":\s*"token"/.test(texto)) {
+        primerTokenMs = Date.now() - inicioPedido;
+      }
       callback(null, chunk);
     },
   });
@@ -148,12 +182,58 @@ export async function stream(
       await tutorService.registrarRespuestaStream(
         req.params.sesionId,
         respuestaTexto,
-        Date.now() - inicio,
+        Date.now() - inicioPedido,
         req.user.id,
-        modoSesion
+        modoSesion,
+        primerTokenMs
       );
     } catch {
       // si no se pudo persistir, el cliente ya recibió el streaming
     }
   }
+}
+
+export async function corregirSimulacro(
+  req: Request<{ materiaId: string }, unknown, CorregirExamenInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await tutorService.corregirSimulacro(req.params.materiaId, req.body, req.user.id));
+}
+
+export async function listarSimulacros(
+  req: Request<{ materiaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json({ simulacros: await tutorService.listarSimulacros(req.params.materiaId, req.user.id) });
+}
+
+export async function latenciaDeMateria(
+  req: Request<{ materiaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  await tutorService.exigirDocenteDeMateria(req.params.materiaId, req.user.id);
+  res.json(await tutorService.latenciaTutor(req.params.materiaId));
+}
+
+export async function latenciaGlobal(_req: Request, res: Response): Promise<void> {
+  res.json(await tutorService.latenciaTutor(null));
+}
+
+export async function resumenAPdf(
+  req: Request<{ materiaId: string }, unknown, ResumenPdfInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await tutorService.resumenAPdf(req.params.materiaId, req.body, req.user.id));
 }

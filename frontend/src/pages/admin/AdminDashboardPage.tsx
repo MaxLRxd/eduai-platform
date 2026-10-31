@@ -5,6 +5,8 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { useBranding } from "../../contexts/BrandingContext";
+import { SuccessMetricsCard } from "../../components/admin/SuccessMetricsCard";
+import { TutorLatencyCard } from "../../components/teacher/TutorLatencyCard";
 
 export function AdminDashboardPage(): React.ReactElement {
   const { user } = useAuth();
@@ -76,6 +78,11 @@ export function AdminDashboardPage(): React.ReactElement {
             </div>
           </div>
         </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-5 mt-5">
+        <SuccessMetricsCard />
+        <TutorLatencyCard />
       </div>
     </div>
   );

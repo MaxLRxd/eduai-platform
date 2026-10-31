@@ -84,6 +84,7 @@ enum TipoNotificacion {
   FEEDBACK
   ALERTA
   MENSAJE
+  SISTEMA
 }
 
 enum EstadoPlanningClase {
@@ -111,6 +112,8 @@ model Usuario {
   asistencias    Asistencia[]
   alertasRiesgo  AlertaRiesgoAcademico[]
   notificaciones Notificacion[]
+  accesosContenido AccesoContenido[]
+  intentosSimulacro IntentoSimulacro[]
   conversaciones ConversacionMiembro[]
   mensajesEnviados MensajeDirecto[]
   broadcastsEnviados MensajeBroadcast[]
@@ -169,6 +172,7 @@ model Materia {
   alertasRiesgo       AlertaRiesgoAcademico[]
   erroresDudas        ErrorDudaFrecuente[]
   planning            PlanningClase[]
+  intentosSimulacro   IntentoSimulacro[]
 
   @@map("materias")
 }
@@ -254,9 +258,47 @@ model Contenido {
   created_at        DateTime     @default(now())
   updated_at        DateTime     @updatedAt
 
-  seccion Seccion @relation(fields: [seccion_id], references: [id])
+  seccion  Seccion           @relation(fields: [seccion_id], references: [id])
+  accesos  AccesoContenido[]
 
   @@map("contenidos")
+}
+
+/// CU-A02: cada vez que un alumno abre un material queda registrado para las estadisticas del docente.
+model AccesoContenido {
+  id           String   @id @default(uuid()) @db.Uuid
+  contenido_id String   @db.Uuid
+  alumno_id    String   @db.Uuid
+  accedido_en  DateTime @default(now())
+
+  contenido Contenido @relation(fields: [contenido_id], references: [id], onDelete: Cascade)
+  alumno    Usuario   @relation(fields: [alumno_id], references: [id])
+
+  @@index([contenido_id])
+  @@index([alumno_id, accedido_en])
+  @@map("accesos_contenido")
+}
+
+/// CU-A11: simulacro corregido por el tutor, guardado en el historial del alumno.
+model IntentoSimulacro {
+  id            String   @id @default(uuid()) @db.Uuid
+  alumno_id     String   @db.Uuid
+  materia_id    String   @db.Uuid
+  titulo        String   @db.VarChar(200)
+  dificultad    String   @db.VarChar(20)
+  puntaje       Decimal  @db.Decimal(4, 2)
+  correctas     Int
+  parciales     Int
+  incorrectas   Int
+  sin_responder Int
+  detalle       Json     @db.JsonB
+  creado_en     DateTime @default(now())
+
+  alumno  Usuario @relation(fields: [alumno_id], references: [id])
+  materia Materia @relation(fields: [materia_id], references: [id])
+
+  @@index([alumno_id, materia_id, creado_en])
+  @@map("intentos_simulacro")
 }
 
 // ─────────────────────── ACTIVIDADES y CORRECCIÓN ────────────────────
@@ -351,6 +393,8 @@ model MensajeIA {
   tokens_prompt       Int?
   tokens_respuesta    Int?
   tiempo_respuesta_ms Int?
+  /// Tiempo hasta que el alumno ve el primer texto de la respuesta (objetivo: menos de 3 s).
+  primer_token_ms     Int?
   creado_en           DateTime     @default(now())
 
   sesion SesionIA @relation(fields: [sesion_id], references: [id])

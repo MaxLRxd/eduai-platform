@@ -40,7 +40,31 @@ function toMateriaDto(materia: {
   };
 }
 
+/** CU-AD01 (E1): no pueden existir dos materias con el mismo nombre. */
+export async function exigirNombreDeMateriaLibre(nombre: string, excluirId?: string) {
+  const repetida = await prisma.materia.findFirst({
+    where: {
+      nombre: { equals: nombre.trim(), mode: "insensitive" },
+      ...(excluirId ? { id: { not: excluirId } } : {}),
+    },
+    select: { id: true },
+  });
+
+  if (repetida) {
+    throw new AppError(409, "Ya existe una materia con ese nombre");
+  }
+}
+
+/** CU-AD04 (E5): una clave no puede nacer vencida. */
+export function exigirVencimientoFuturo(vencimiento: Date | undefined | null) {
+  if (vencimiento && vencimiento.getTime() <= Date.now()) {
+    throw new AppError(400, "La fecha de vencimiento no puede estar en el pasado");
+  }
+}
+
 export async function crear(input: CreateMateriaInput, usuarioId: string) {
+  await exigirNombreDeMateriaLibre(input.nombre);
+
   const perfil = await prisma.profesor.upsert({
     where: { usuario_id: usuarioId },
     update: {},
@@ -122,10 +146,8 @@ export async function listarInscriptos(materiaId: string, usuarioId: string, rol
       throw new AppError(403, "No tenes acceso a esta materia");
     }
   } else {
-    const inscripcion = await obtenerInscripcion(materiaId, usuarioId);
-    if (!inscripcion) {
-      throw new AppError(403, "No tenes acceso a esta materia");
-    }
+    // El listado expone nombre y email: es solo para el equipo docente, no para los companeros.
+    throw new AppError(403, "No tenes acceso a esta informacion");
   }
 
   const inscripciones = await prisma.inscripcion.findMany({
@@ -198,6 +220,8 @@ export async function crearClave(materiaId: string, input: CrearClaveInput, usua
     throw new AppError(403, "No tenes acceso a esta materia");
   }
 
+  exigirVencimientoFuturo(input.vencimiento);
+
   const clave = generarClaveUnica();
   const claveCreada = await prisma.claveMatriculacion.create({
     data: {
@@ -244,8 +268,14 @@ export async function unirse(input: UnirseInput, alumnoId: string) {
     where: { alumno_id_materia_id: { alumno_id: alumnoId, materia_id: clave.materia_id } },
   });
 
+  // CU-A01 (A1) y CU-AD04 (E6): no se genera una inscripcion nueva; se avisa y se lleva al
+  // alumno a la materia en la que ya esta. La clave no gasta ningun uso.
   if (yaInscripto) {
-    throw new AppError(409, "Ya estas inscripto a esta materia");
+    const existente = await prisma.materia.findUniqueOrThrow({
+      where: { id: clave.materia_id },
+      include: materiaInclude,
+    });
+    return { ...toMateriaDto(existente), ya_inscripto: true };
   }
 
   // El cupo se reserva con un UPDATE condicional dentro de la transaccion: si dos
@@ -276,5 +306,5 @@ export async function unirse(input: UnirseInput, alumnoId: string) {
     return tx.materia.findUniqueOrThrow({ where: { id: clave.materia_id }, include: materiaInclude });
   });
 
-  return toMateriaDto(materia);
+  return { ...toMateriaDto(materia), ya_inscripto: false };
 }

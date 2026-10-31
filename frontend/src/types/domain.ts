@@ -14,6 +14,8 @@ export interface CourseMaterial {
   ragIndexado: boolean;
   url?: string | null;
   archivo_nombre?: string | null;
+  /** Cuerpo de los materiales de texto (se leen dentro de la plataforma). */
+  texto?: string | null;
 }
 
 export interface Course {
@@ -40,6 +42,7 @@ export interface AssignmentOption {
 }
 
 export interface SubmittedAssignment {
+  id: string;
   respuesta_texto: string | null;
   respuesta_codigo: string | null;
   archivo_url: string | null;
@@ -103,6 +106,7 @@ export interface TeacherCourse {
 export type StudentStanding = "Regular" | "En riesgo";
 
 export interface TeacherStudentRow {
+  id: string;
   name: string;
   legajo: string;
   average: string;

@@ -65,7 +65,8 @@ export async function askTutorStream(
   sesionId: string,
   question: string,
   onToken: (token: string) => void,
-  modo?: ModoTutor
+  modo?: ModoTutor,
+  signal?: AbortSignal
 ): Promise<string> {
   const token = getAccessToken();
 
@@ -77,6 +78,7 @@ export async function askTutorStream(
     },
     body: JSON.stringify({ contenido: question, ...(modo ? { modo } : {}) }),
     credentials: "include",
+    signal,
   });
 
   if (!res.ok || !res.body) {
@@ -153,4 +155,91 @@ export async function generarSimulacro(
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+// POST /api/contenidos/:id/acceso — CU-A02. Es una estadistica: nunca debe molestar al alumno.
+export async function registerContentAccess(contenidoId: string): Promise<void> {
+  try {
+    await api(`/api/contenidos/${contenidoId}/acceso`, { method: "POST" });
+  } catch {
+    // sin acceso registrado el alumno igual puede leer el material
+  }
+}
+
+export type VeredictoExamen = "correcta" | "parcial" | "incorrecta" | "sin_responder";
+
+export interface SimulacroRespuesta {
+  tipo: ExamenPregunta["tipo"];
+  enunciado: string;
+  opciones: string[];
+  respuesta_modelo: string;
+  respuesta_alumno: string;
+}
+
+export interface SimulacroResultadoPregunta {
+  indice: number;
+  enunciado: string;
+  veredicto: VeredictoExamen;
+  puntaje: number;
+  feedback: string;
+  respuesta_alumno: string;
+  respuesta_correcta: string;
+}
+
+export interface SimulacroCorregido {
+  id: string | null;
+  titulo: string;
+  dificultad: string;
+  puntaje: number;
+  correctas: number;
+  parciales: number;
+  incorrectas: number;
+  sin_responder: number;
+  resultados: SimulacroResultadoPregunta[];
+}
+
+// POST /api/materias/:materiaId/tutor/examen/corregir — CU-A11.
+export async function corregirSimulacro(
+  materiaId: string,
+  input: { titulo: string; dificultad: string; preguntas: SimulacroRespuesta[]; registrar: boolean }
+): Promise<SimulacroCorregido> {
+  return api<SimulacroCorregido>(`/api/materias/${materiaId}/tutor/examen/corregir`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface SimulacroHistorialItem {
+  id: string;
+  titulo: string;
+  dificultad: string;
+  puntaje: number;
+  correctas: number;
+  parciales: number;
+  incorrectas: number;
+  sin_responder: number;
+  creado_en: string;
+}
+
+// GET /api/materias/:materiaId/tutor/simulacros
+export async function listarSimulacros(materiaId: string): Promise<SimulacroHistorialItem[]> {
+  const data = await api<{ simulacros: SimulacroHistorialItem[] }>(`/api/materias/${materiaId}/tutor/simulacros`);
+  return data.simulacros ?? [];
+}
+
+// POST /api/materias/:materiaId/tutor/resumen/pdf — CU-A05: descarga del resumen en PDF.
+export async function descargarResumenPdf(materiaId: string, titulo: string, resumen: string): Promise<void> {
+  const data = await api<{ filename: string; pdf: string }>(`/api/materias/${materiaId}/tutor/resumen/pdf`, {
+    method: "POST",
+    body: JSON.stringify({ titulo, resumen }),
+  });
+  const bytes = Uint8Array.from(atob(data.pdf), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = data.filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

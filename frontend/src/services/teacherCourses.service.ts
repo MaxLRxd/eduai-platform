@@ -89,11 +89,12 @@ export async function getTeacherCourseStudents(courseId: string): Promise<Teache
   }
 
   const filas: TeacherStudentRow[] = [];
-  for (const [, e] of porAlumno) {
+  for (const [id, e] of porAlumno) {
     const promedio = e.califs.length ? e.califs.reduce((s, c) => s + c, 0) / e.califs.length : 0;
     const attendance = e.total ? Math.round((e.presentes / e.total) * 100) : 0;
     const standing: StudentStanding = promedio >= 7 ? "Regular" : "En riesgo";
     filas.push({
+      id,
       name: e.name,
       legajo: e.email,
       average: e.califs.length ? fmtNum(promedio) : "—",

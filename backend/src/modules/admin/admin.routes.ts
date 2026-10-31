@@ -60,6 +60,21 @@ router.post(
   adminController.asignarProfesor
 );
 
+router.delete(
+  "/admin/materias/:materiaId/inscripciones/:alumnoId",
+  requireAuth,
+  requireRole("ADMIN"),
+  adminController.desmatricular
+);
+router.delete(
+  "/admin/materias/:materiaId/inscripciones",
+  requireAuth,
+  requireRole("ADMIN"),
+  adminController.desmatricularTodos
+);
+
+router.get("/admin/metricas-exito", requireAuth, requireRole("ADMIN"), adminController.metricasDeExito);
+
 router.get("/admin/enrollment-keys", requireAuth, requireRole("ADMIN"), adminController.listarClaves);
 router.post(
   "/admin/enrollment-keys",

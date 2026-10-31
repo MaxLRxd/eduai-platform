@@ -62,6 +62,7 @@ function toStatus(estado: string): AssignmentStatus {
 function toSubmitted(e: EntregaApi | null): SubmittedAssignment | null {
   if (!e) return null;
   return {
+    id: e.id,
     respuesta_texto: e.respuesta_texto,
     respuesta_codigo: e.respuesta_codigo,
     archivo_url: e.archivo_url,
@@ -129,4 +130,13 @@ export async function uploadAssignmentFile(actividadId: string, file: File): Pro
     body: form,
   });
   return data.archivo;
+}
+
+// POST /api/entregas/:id/feedback-visto — CU-A07: el alumno abrio la correccion publicada.
+export async function markFeedbackSeen(entregaId: string): Promise<void> {
+  try {
+    await api(`/api/entregas/${entregaId}/feedback-visto`, { method: "POST" });
+  } catch {
+    // es una metrica: si falla, el alumno igual ve su correccion
+  }
 }

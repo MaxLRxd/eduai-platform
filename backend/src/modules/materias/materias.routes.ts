@@ -29,6 +29,12 @@ router.post(
   materiasController.crearClave
 );
 router.get("/:id/inscriptos", requireAuth, materiasController.inscriptos);
+router.get(
+  "/:id/alumnos/:alumnoId/perfil",
+  requireAuth,
+  requireRole("PROFESOR"),
+  materiasController.perfilAlumno
+);
 router.get("/:id", requireAuth, materiasController.detalle);
 
 export default router;

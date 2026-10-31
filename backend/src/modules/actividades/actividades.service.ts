@@ -188,6 +188,12 @@ export async function crear(materiaId: string, input: CrearActividadInput, usuar
     }
   }
 
+  // CU-P03 (E1): no se publica una actividad que ya nace vencida. (Mas adelante el docente si
+  // puede mover la fecha al pasado para cerrar la entrega.)
+  if (input.fecha_limite.getTime() <= Date.now()) {
+    throw new AppError(400, "La fecha limite no puede estar en el pasado");
+  }
+
   const actividad = await prisma.actividad.create({
     data: {
       seccion_id: input.seccion_id,
@@ -703,15 +709,81 @@ export async function corregirConIA(entregaId: string, usuarioId: string) {
  * docente lo encuentre ya cargado en la cola. Corre sin bloquear al alumno y nunca falla
  * el envio: si la IA no responde, el docente puede pedirla a mano.
  */
+/**
+ * CU-P05: la correccion automatica de una actividad de opcion multiple es numerica (10 si eligio
+ * la opcion correcta, 0 si no). Queda como borrador: el docente la revisa y la publica.
+ */
+async function calificarOpcionMultiple(
+  entrega: { id: string; respuesta_texto: string | null },
+  actividad: { opciones_mc: unknown }
+) {
+  const opciones = Array.isArray(actividad.opciones_mc)
+    ? (actividad.opciones_mc as { texto?: string; correcta?: boolean }[])
+    : [];
+  const correcta = opciones.find((o) => o.correcta);
+
+  if (!correcta?.texto || !entrega.respuesta_texto) return;
+
+  const acerto = entrega.respuesta_texto.trim() === correcta.texto.trim();
+
+  await prisma.entrega.update({
+    where: { id: entrega.id },
+    data: {
+      calificacion_ia: acerto ? 10 : 0,
+      feedback_ia: acerto
+        ? "Respuesta correcta."
+        : `Respuesta incorrecta. La opción correcta era: "${correcta.texto}".`,
+      revision_tipo: "IA",
+    },
+  });
+}
+
 function corregirAutomaticamente(
   entrega: Parameters<typeof generarBorradorIA>[0] & { publicado: boolean },
   actividad: Parameters<typeof generarBorradorIA>[1],
   materiaId: string
 ): void {
+  if (entrega.publicado) return;
+
+  // Opcion multiple: se corrige sola comparando con la opcion correcta, no necesita rubrica ni IA.
+  if (actividad.tipo === "MULTIPLE_CHOICE") {
+    void calificarOpcionMultiple(entrega, actividad).catch((err) => {
+      logger.warn({ err, entregaId: entrega.id }, "No se pudo corregir la opcion multiple");
+    });
+    return;
+  }
+
   // CU-A03 (A6): sin rubrica no hay correccion automatica; queda para revision manual.
-  if (entrega.publicado || actividad.tipo === "MULTIPLE_CHOICE" || !actividad.rubrica_id) return;
+  if (!actividad.rubrica_id) return;
 
   void generarBorradorIA(entrega, actividad, materiaId).catch((err) => {
     logger.warn({ err, entregaId: entrega.id }, "Correccion automatica con IA no disponible");
   });
+}
+
+/**
+ * CU-A07: registra que el alumno abrio el feedback publicado de su entrega. Es la base de la
+ * metrica de adopcion del proyecto (actividades con feedback revisado por el alumno >= 60%).
+ */
+export async function marcarFeedbackRevisado(entregaId: string, alumnoId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entregaId)) {
+    throw new AppError(404, "Entrega no encontrada");
+  }
+
+  const entrega = await prisma.entrega.findUnique({ where: { id: entregaId } });
+
+  // Se responde 404 tambien cuando la entrega es de otro alumno: no se revela que existe.
+  if (!entrega || entrega.alumno_id !== alumnoId) {
+    throw new AppError(404, "Entrega no encontrada");
+  }
+
+  if (!entrega.publicado) {
+    throw new AppError(409, "El feedback todavia no fue publicado");
+  }
+
+  if (!entrega.feedback_revisado_alumno) {
+    await prisma.entrega.update({ where: { id: entregaId }, data: { feedback_revisado_alumno: true } });
+  }
+
+  return { revisado: true };
 }

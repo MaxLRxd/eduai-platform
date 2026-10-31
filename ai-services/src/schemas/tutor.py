@@ -74,6 +74,33 @@ class ExamResponse(BaseModel):
     preguntas: list[ExamQuestion]
 
 
+class ExamAnswerItem(BaseModel):
+    """Una pregunta del simulacro con lo que respondió el alumno (CU-A11)."""
+
+    tipo: Literal["multiple_choice", "desarrollo"]
+    enunciado: str = Field(..., min_length=1)
+    opciones: list[str] = Field(default_factory=list)
+    respuesta_modelo: str = ""
+    respuesta_alumno: str = ""
+
+
+class CorrectExamRequest(BaseModel):
+    subject_id: str = Field(..., min_length=1)
+    titulo: str = ""
+    items: list[ExamAnswerItem] = Field(..., min_length=1, max_length=20)
+
+
+class ExamItemResult(BaseModel):
+    indice: int
+    veredicto: Literal["correcta", "parcial", "incorrecta", "sin_responder"]
+    puntaje: float = Field(..., ge=0.0, le=1.0)
+    feedback: str
+
+
+class CorrectExamResponse(BaseModel):
+    resultados: list[ExamItemResult]
+
+
 class IndexMaterialRequest(BaseModel):
     subject_id: str = Field(..., min_length=1)
     material_id: str = Field(..., min_length=1)

@@ -12,6 +12,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
+import { ContentAccessCard } from "../../components/teacher/ContentAccessCard";
 import type { RagStatus, UploadedMaterial } from "../../types/domain";
 
 const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "", pptx: "", docx: "", txt: "", img: "", video: "" };
@@ -326,6 +327,8 @@ export function TeacherContentPage(): React.ReactElement {
               Los archivos marcados como <strong>RAG</strong> ya están disponibles para el Tutor IA de la materia.
             </p>
           </Card>
+
+          <ContentAccessCard materiaId={activeCourse} />
         </aside>
       </div>
     </div>

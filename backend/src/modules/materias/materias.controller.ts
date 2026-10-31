@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as materiasService from "./materias.service";
+import { perfilAlumno as perfilAlumnoService } from "./perfil-alumno.service";
 import type { CreateMateriaInput, CrearClaveInput, UnirseInput } from "./materias.schemas";
 import { AppError } from "../../middlewares/error";
 
@@ -57,5 +58,15 @@ export async function unirse(
     throw new AppError(401, "No autenticado");
   }
   const materia = await materiasService.unirse(req.body, req.user.id);
-  res.status(201).json({ materia });
+  res.status(materia.ya_inscripto ? 200 : 201).json({ materia });
+}
+
+export async function perfilAlumno(
+  req: Request<{ id: string; alumnoId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json({ perfil: await perfilAlumnoService(req.params.id, req.params.alumnoId, req.user.id) });
 }

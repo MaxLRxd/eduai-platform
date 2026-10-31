@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { InfoBox } from "../ui/InfoBox";
 import { useSubmitAssignment, useUploadAssignmentFile } from "../../hooks/useAssignments";
 import { apiErrorMessage } from "../../services/api";
+import { markFeedbackSeen } from "../../services/assignments.service";
 import type { Assignment, AssignmentType } from "../../types/domain";
 
 const TITULO: Record<AssignmentType, string> = {
@@ -47,6 +48,14 @@ export function AssignmentSubmitModal({
 
   const previa = assignment?.submitted ?? null;
 
+  // CU-A07: abrir una correccion publicada queda registrado (una sola vez por entrega).
+  const feedbackRegistradoRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!previa?.publicado || !previa.id || feedbackRegistradoRef.current.has(previa.id)) return;
+    feedbackRegistradoRef.current.add(previa.id);
+    void markFeedbackSeen(previa.id);
+  }, [previa?.id, previa?.publicado]);
+
   useEffect(() => {
     if (!assignment) return;
     const actual = assignment.submitted;
@@ -67,14 +76,17 @@ export function AssignmentSubmitModal({
 
   if (!assignment) return null;
 
-  const pendiente = assignment.status === "Pendiente";
   const published = previa?.publicado ?? false;
+  const vencida = esVencida(assignment.dueDateIso);
+  // CU-A03: se puede enviar (o reemplazar) mientras no este publicada la correccion y no haya
+  // vencido el plazo; pasada la fecha limite el sistema bloquea la confirmacion.
+  const editable = !published && !vencida;
   const accept = assignment.formatosPermitidos.length
     ? assignment.formatosPermitidos.map((f) => `.${f}`).join(",")
     : undefined;
 
   const puedeEnviar = (): boolean => {
-    if (!pendiente) return false;
+    if (!editable) return false;
     if (assignment.tipo === "MULTIPLE_CHOICE") return opcion !== null;
     if (assignment.tipo === "DESARROLLO") return texto.trim().length > 0;
     if (assignment.tipo === "CODIGO") return codigo.trim().length > 0;
@@ -136,11 +148,13 @@ export function AssignmentSubmitModal({
           {previa.feedback_final}
         </InfoBox>
       )}
-      {!pendiente && !published && (
+      {previa && !published && !vencida && (
         <InfoBox variant="info">Tu entrega está en revisión. Podés reemplazarla mientras no sea publicada.</InfoBox>
       )}
-      {pendiente && esVencida(assignment.dueDateIso) && (
-        <InfoBox variant="warning">Esta actividad ya venció. El docente puede decidir si la acepta igual.</InfoBox>
+      {!published && vencida && (
+        <InfoBox variant="warning">
+          El plazo de entrega venció, por eso ya no se puede enviar ni reemplazar la entrega. Si necesitás una extensión, contactá al docente.
+        </InfoBox>
       )}
 
       <div className="mt-4">
@@ -160,7 +174,7 @@ export function AssignmentSubmitModal({
                     type="radio"
                     name="opcion-mc"
                     checked={opcion === i}
-                    disabled={!pendiente}
+                    disabled={!editable}
                     onChange={() => setOpcion(i)}
                     className="mt-0.5 accent-primary"
                   />
@@ -176,7 +190,7 @@ export function AssignmentSubmitModal({
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            disabled={!pendiente}
+            disabled={!editable}
             placeholder={PLACEHOLDER.DESARROLLO}
             rows={8}
             className={inputClass}
@@ -187,7 +201,7 @@ export function AssignmentSubmitModal({
           <textarea
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
-            disabled={!pendiente}
+            disabled={!editable}
             placeholder={PLACEHOLDER.CODIGO}
             rows={10}
             spellCheck={false}
@@ -201,7 +215,7 @@ export function AssignmentSubmitModal({
               ref={fileRef}
               type="file"
               accept={accept}
-              disabled={!pendiente}
+              disabled={!editable}
               onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
               className="w-full text-xs text-text-2 file:mr-3 file:py-1.5 file:px-3 file:rounded-sm file:border file:border-border file:bg-surface-2 file:text-xs file:font-semibold file:text-text-1 hover:file:bg-surface-2"
             />
@@ -219,7 +233,7 @@ export function AssignmentSubmitModal({
         )}
       </div>
 
-      {previa && pendiente && (
+      {previa && editable && (
         <p className="text-[11px] text-text-3 mt-3">
           Entregado el {new Date(previa.entregado_en).toLocaleString("es-AR")}. Si volvés a enviar, se reemplaza.
         </p>
@@ -235,7 +249,7 @@ export function AssignmentSubmitModal({
         <Button variant="ghost" onClick={onClose}>
           Cerrar
         </Button>
-        {pendiente && (
+        {editable && (
           <Button
             onClick={enviarEntrega}
             disabled={!puedeEnviar() || enviar.isPending || leyendoArchivo}

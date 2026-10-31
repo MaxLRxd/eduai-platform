@@ -9,13 +9,13 @@ const ADMIN_ID = "22222222-2222-4222-8222-222222222222";
 
 jest.mock("../config/prisma", () => ({
   prisma: {
-    materia: { findUnique: jest.fn(), update: jest.fn() },
+    materia: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     inscripcion: { count: jest.fn() },
   },
 }));
 
 const prismaMock = prisma as unknown as {
-  materia: { findUnique: jest.Mock; update: jest.Mock };
+  materia: { findUnique: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
   inscripcion: { count: jest.Mock };
 };
 
@@ -45,6 +45,7 @@ describe("admin: baja de materia (CU-AD01 A3.1)", () => {
     server = createServer(createApp() as unknown as import("http").RequestListener);
     prismaMock.materia.findUnique.mockResolvedValue(materia(true));
     prismaMock.materia.update.mockResolvedValue(materia(false));
+    prismaMock.materia.findFirst.mockResolvedValue(null);
   });
 
   afterEach(() => {

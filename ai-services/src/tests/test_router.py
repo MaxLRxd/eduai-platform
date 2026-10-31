@@ -4,9 +4,17 @@ from fastapi.testclient import TestClient
 from src.routers import rag_router, tutor_router
 from src.services.chunking_service import ChunkingService
 from src.services.document_service import DocumentService
-from src.tests.fakes import FakeCache, FakeCorreccionLLM, FakeEmbeddings, FakeLLM, FakeRetrieval
+from src.tests.fakes import (
+    FakeCache,
+    FakeCorreccionLLM,
+    FakeEmbeddings,
+    FakeExamenCorreccionLLM,
+    FakeLLM,
+    FakeRetrieval,
+)
 from src.use_cases.ask_tutor import AskTutorUseCase
 from src.use_cases.correct_submission import CorreccionEntregaUseCase
+from src.use_cases.corregir_simulacro import CorregirSimulacroUseCase
 from src.use_cases.depurar_prompt import DepurarPromptUseCase
 from src.use_cases.examen import GenerarExamenUseCase
 from src.use_cases.index_material import IndexMaterialUseCase
@@ -28,6 +36,7 @@ def _build_app():
     app.state.index_material_use_case = IndexMaterialUseCase(chunking, embeddings, retrieval)
     app.state.resumir_use_case = ResumirDocumentoUseCase(llm, chunking)
     app.state.examen_use_case = GenerarExamenUseCase(llm, embeddings, retrieval)
+    app.state.corregir_simulacro_use_case = CorregirSimulacroUseCase(FakeExamenCorreccionLLM())
     app.state.depurar_prompt_use_case = DepurarPromptUseCase()
     app.state.correccion_use_case = CorreccionEntregaUseCase(
         FakeCorreccionLLM(), embeddings, retrieval
@@ -132,3 +141,32 @@ def test_index_material_file_empty_raises():
         files={"archivo": ("vacio.txt", b"", "text/plain")},
     )
     assert response.status_code == 400
+
+
+def test_corregir_examen_endpoint():
+    client = TestClient(_build_app())
+    response = client.post(
+        "/tutor/examen/corregir",
+        json={
+            "subject_id": "sub-1",
+            "titulo": "Simulacro",
+            "items": [
+                {
+                    "tipo": "multiple_choice",
+                    "enunciado": "Capital de Francia",
+                    "opciones": ["Madrid", "Paris", "Roma", "Lima"],
+                    "respuesta_modelo": "Paris",
+                    "respuesta_alumno": "b",
+                },
+                {
+                    "tipo": "desarrollo",
+                    "enunciado": "Explique la fotosintesis",
+                    "respuesta_modelo": "Proceso por el cual las plantas producen glucosa con luz.",
+                    "respuesta_alumno": "Las plantas usan luz.",
+                },
+            ],
+        },
+    )
+    assert response.status_code == 200
+    resultados = response.json()["resultados"]
+    assert [r["veredicto"] for r in resultados] == ["correcta", "parcial"]

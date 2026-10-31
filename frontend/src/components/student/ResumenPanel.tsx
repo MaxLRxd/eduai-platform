@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useResumen } from "../../hooks/useTutorTools";
+import { descargarResumenPdf } from "../../services/tutor.service";
+import { apiErrorMessage } from "../../services/api";
 import type { Course } from "../../types/domain";
 import { Button } from "../ui/Button";
 import { Card, CardHeader } from "../ui/Card";
@@ -11,6 +13,8 @@ export function ResumenPanel({ course }: { course: Course }): React.ReactElement
   const [contenidoId, setContenidoId] = useState("");
   const [texto, setTexto] = useState("");
   const [modo, setModo] = useState<"material" | "texto">("material");
+  const [pdfPendiente, setPdfPendiente] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const resumibles = course.materiales.filter((m) => m.resumible);
   const usandoTexto = modo === "texto";
@@ -112,6 +116,23 @@ export function ResumenPanel({ course }: { course: Course }): React.ReactElement
           )}
           <div className="bg-surface-2 rounded p-3 text-[13px] text-text-1 leading-relaxed whitespace-pre-wrap">
             {resultado.resumen}
+          </div>
+          <div>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={pdfPendiente}
+              onClick={() => {
+                setPdfError(null);
+                setPdfPendiente(true);
+                descargarResumenPdf(course.id, resultado.origen ? `Resumen - ${resultado.origen}` : "Resumen", resultado.resumen)
+                  .catch((e: unknown) => setPdfError(apiErrorMessage(e, "No se pudo generar el PDF.")))
+                  .finally(() => setPdfPendiente(false));
+              }}
+            >
+              {pdfPendiente ? "Generando PDF…" : "📄 Descargar PDF"}
+            </Button>
+            {pdfError && <p className="text-[11px] text-red-700 mt-1.5">{pdfError}</p>}
           </div>
         </div>
       )}

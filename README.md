@@ -7,6 +7,28 @@
 
 ---
 
+## Documentación y ejecución
+
+| Documento | Contenido |
+| --- | --- |
+| [Manual de usuario](docs/MANUAL_USUARIO.md) | Paso a paso para alumnos, docentes y administradores |
+| [Documentación técnica](docs/DOCUMENTACION_TECNICA.md) | Arquitectura, modelo de datos, seguridad, pruebas, rendimiento, desvíos del plan |
+| [Matriz de casos de uso](docs/MATRIZ_CASOS_DE_USO.md) | Estado de los 26 casos de uso contra el código y las pruebas |
+| [Endpoints de la API](docs/API_ENDPOINTS.md) | Listado generado desde el código (`npm run docs:api`) |
+
+**Ejecutarlo en local** (solo requiere Docker):
+
+```bash
+cp .env.example .env              # completar JWT_SECRET y GEMINI_API_KEY
+docker compose up --build         # frontend :5173 · API :3000 · ai-service :8000
+npm install && npm run db:seed --workspace backend   # datos de prueba (borra los existentes)
+```
+
+Usuarios de prueba (contraseña `Clave1234`): `admin@ies.edu`, `profe1@ies.edu`, `alumno1@ies.edu`.
+Pruebas: `npm test` · punta a punta: `npm run e2e` · tiempo del tutor: `npm run benchmark:tutor`.
+
+---
+
 ## Índice
 
 1. Delimitación del problema

@@ -46,7 +46,7 @@ export function TeacherStudentsPage(): React.ReactElement {
           </Thead>
           <tbody>
             {(students ?? []).map((s) => (
-              <tr key={s.legajo} className="hover:bg-surface-2">
+              <tr key={s.id} className="hover:bg-surface-2">
                 <Td className="font-semibold text-text-1">{s.name}</Td>
                 <Td className="font-mono text-xs">{s.legajo}</Td>
                 <Td className="font-bold text-primary">{s.average}</Td>
@@ -55,7 +55,7 @@ export function TeacherStudentsPage(): React.ReactElement {
                   <Tag color={s.standing === "Regular" ? "green" : "amber"}>{s.standing}</Tag>
                 </Td>
                 <Td>
-                  <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students/${s.legajo}`)}>
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students/${s.id}?course=${courseId}`)}>
                     Ver perfil
                   </Button>
                 </Td>

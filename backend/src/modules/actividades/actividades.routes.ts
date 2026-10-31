@@ -89,6 +89,12 @@ router.patch(
   actividadesController.corregir
 );
 router.post(
+  "/entregas/:entregaId/feedback-visto",
+  requireAuth,
+  requireRole("ALUMNO"),
+  actividadesController.marcarFeedbackRevisado
+);
+router.post(
   "/entregas/:entregaId/corregir-ia",
   requireAuth,
   requireRole("PROFESOR"),
