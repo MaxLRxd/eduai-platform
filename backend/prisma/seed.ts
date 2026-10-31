@@ -14,6 +14,9 @@ async function limpiar(): Promise<void> {
     prisma.conversacionMiembro.deleteMany(),
     prisma.conversacion.deleteMany(),
     prisma.mensajeBroadcast.deleteMany(),
+    // Dependen de usuarios, materias y contenidos (RESTRICT): van antes que ellos.
+    prisma.intentoSimulacro.deleteMany(),
+    prisma.accesoContenido.deleteMany(),
     prisma.planningClase.deleteMany(),
     prisma.institution.deleteMany(),
     prisma.notificacion.deleteMany(),
