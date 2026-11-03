@@ -142,6 +142,9 @@ export interface CorrectionQueueItem {
   type: string;
   aiGrade: string;
   submission: string;
+  /** URL absoluta del archivo adjunto (si la entrega es un archivo). */
+  fileUrl: string | null;
+  fileName: string | null;
   aiFeedback: string;
   materiaId: string;
 }
@@ -286,10 +289,13 @@ export interface InstitutionBranding {
 export type RagStatus = "Indexado" | "Sin indexar" | "Indexando…";
 
 export interface UploadedMaterial {
+  id: string;
   name: string;
   fileType: "pdf" | "pptx" | "docx" | "img" | "txt" | "video";
   sizeLabel: string;
   ragStatus: RagStatus;
   date: string;
   url?: string;
+  /** Cuerpo de los materiales de texto (no tienen archivo que abrir). */
+  text?: string;
 }

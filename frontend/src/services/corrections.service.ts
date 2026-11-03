@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, apiUrl } from "./api";
 import type { CorrectionQueueItem, Rubric } from "../types/domain";
 
 interface EntregaPendiente {
@@ -13,6 +13,7 @@ interface EntregaPendiente {
   materia: { id: string; nombre: string };
   respuesta_texto: string | null;
   respuesta_codigo: string | null;
+  archivo_url: string | null;
   archivo_nombre: string | null;
   calificacion_ia: number | null;
   feedback_ia: string | null;
@@ -70,7 +71,9 @@ export async function getCorrectionQueue(): Promise<CorrectionQueueItem[]> {
     type: TYPE_LABEL[e.actividad.tipo] ?? e.actividad.tipo,
     aiGrade: e.calificacion_ia != null ? String(e.calificacion_ia) : "—",
     submission:
-      e.respuesta_texto ?? e.respuesta_codigo ?? (e.archivo_nombre ? `📎 ${e.archivo_nombre}` : "Sin contenido"),
+      e.respuesta_texto ?? e.respuesta_codigo ?? (e.archivo_nombre ? "El alumno entregó un archivo adjunto." : "Sin contenido"),
+    fileUrl: apiUrl(e.archivo_url),
+    fileName: e.archivo_nombre,
     aiFeedback: e.feedback_ia ?? "Corrección IA aún no disponible para esta entrega.",
     materiaId: e.materia?.id ?? e.actividad.seccion.materia.id,
   }));

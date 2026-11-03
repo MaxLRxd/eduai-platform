@@ -1,4 +1,4 @@
-import { api, API_URL } from "./api";
+import { api, apiUrl } from "./api";
 import type { UploadedMaterial } from "../types/domain";
 
 export interface ContentSection {
@@ -53,12 +53,15 @@ function formatDate(iso: string): string {
 
 function toUploadedMaterial(c: ContenidoApi): UploadedMaterial {
   return {
+    id: c.id,
     name: c.archivo_nombre ?? c.titulo,
     fileType: tipoToFileType(c.tipo),
     sizeLabel: sizeLabel(c.archivo_tamano_kb),
     ragStatus: c.rag_indexado ? "Indexado" : "Sin indexar",
     date: formatDate(c.created_at),
-    url: c.archivo_url ? `${API_URL}${c.archivo_url}` : undefined,
+    // apiUrl respeta las URLs absolutas (R2 u otro almacenamiento): API_URL + ruta las rompia.
+    url: apiUrl(c.archivo_url) ?? undefined,
+    text: c.texto_contenido?.trim() ? c.texto_contenido : undefined,
   };
 }
 

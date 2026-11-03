@@ -32,7 +32,7 @@ export function TeacherCoursesPage(): React.ReactElement {
         {(courses ?? []).map((c) => (
           <button
             key={c.id}
-            onClick={() => navigate(`/teacher/students?course=${c.id}`)}
+            onClick={() => navigate(`/teacher/content?course=${c.id}`)}
             className="text-left bg-surface border border-border rounded-lg p-5 shadow-sm hover:border-border-strong hover:shadow transition-all"
           >
             <div className="font-display text-sm font-bold text-text-1">{c.label}</div>
@@ -43,7 +43,7 @@ export function TeacherCoursesPage(): React.ReactElement {
               <Tag color="blue">{c.curso}</Tag>
               <Tag color="green">{c.alumnos} alumnos</Tag>
             </div>
-            <div className="mt-2.5 text-xs text-primary font-semibold">Gestionar secciones →</div>
+            <div className="mt-2.5 text-xs text-primary font-semibold">Gestionar contenidos →</div>
           </button>
         ))}
         {!isLoading && (courses ?? []).length === 0 && (
@@ -78,8 +78,8 @@ export function TeacherCoursesPage(): React.ReactElement {
                     <Td>{resumen?.secciones ?? 0}</Td>
                     <Td>{resumen?.actividades ?? 0}</Td>
                     <Td>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/students?course=${c.id}`)}>
-                        Gestionar secciones
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/content?course=${c.id}`)}>
+                        Gestionar contenidos
                       </Button>
                     </Td>
                   </tr>

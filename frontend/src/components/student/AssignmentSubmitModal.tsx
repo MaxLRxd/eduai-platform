@@ -3,7 +3,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { InfoBox } from "../ui/InfoBox";
 import { useSubmitAssignment, useUploadAssignmentFile } from "../../hooks/useAssignments";
-import { apiErrorMessage } from "../../services/api";
+import { apiErrorMessage, apiUrl } from "../../services/api";
 import { markFeedbackSeen } from "../../services/assignments.service";
 import type { Assignment, AssignmentType } from "../../types/domain";
 
@@ -226,7 +226,15 @@ export function AssignmentSubmitModal({
             )}
             {!archivo && previa?.archivo_url && (
               <p className="text-[11px] text-text-2 mt-1.5">
-                Archivo actual: {previa.archivo_nombre}
+                Archivo actual:{" "}
+                <a
+                  href={apiUrl(previa.archivo_url) ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {previa.archivo_nombre}
+                </a>
               </p>
             )}
           </div>

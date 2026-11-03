@@ -183,6 +183,16 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               <div className="px-3 py-2.5 bg-surface-2 rounded text-[13px] text-text-1 mb-3.5 border border-border max-h-24 overflow-y-auto">
                 {selected.submission}
               </div>
+              {selected.fileUrl && (
+                <a
+                  href={selected.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 -mt-1.5 mb-3.5 text-[13px] font-semibold text-primary hover:underline"
+                >
+                  📎 {selected.fileName ?? "Abrir archivo entregado"} · ver / descargar
+                </a>
+              )}
 
               <div className="text-xs font-bold text-info mb-1.5 uppercase tracking-wide">🤖 Feedback auto-generado por IA</div>
               <div className="px-3 py-2.5 bg-blue-50 rounded text-[13px] text-text-1 mb-3.5 border border-blue-200">{selected.aiFeedback}</div>

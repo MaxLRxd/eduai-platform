@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import {
   useCourseSections,
@@ -12,7 +13,9 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
+import { resolverMateriaActiva } from "../../utils/materiaActiva";
 import { ContentAccessCard } from "../../components/teacher/ContentAccessCard";
+import { MaterialRow } from "../../components/teacher/MaterialRow";
 import type { RagStatus, UploadedMaterial } from "../../types/domain";
 
 const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "", pptx: "", docx: "", txt: "", img: "", video: "" };
@@ -21,8 +24,11 @@ const RAG_LABEL: Record<RagStatus, string> = { Indexado: "RAG", "Indexando…": 
 
 export function TeacherContentPage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
-  const [courseId, setCourseId] = useState<string | null>(null);
-  const activeCourse = courseId ?? courses?.[0]?.id ?? null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  // La materia puede venir en la URL (?course=...), por ejemplo desde "Mis materias".
+  const [courseId, setCourseId] = useState<string | null>(searchParams.get("course"));
+  // Solo se respeta si es una materia del docente: un id ajeno o viejo cae a la primera.
+  const activeCourse = resolverMateriaActiva(courseId, courses);
 
   const { data: sections } = useCourseSections(activeCourse);
   const [sectionId, setSectionId] = useState<string | null>(null);
@@ -136,6 +142,7 @@ export function TeacherContentPage(): React.ReactElement {
                 onChange={(e) => {
                   setCourseId(e.target.value);
                   setSectionId(null);
+                  setSearchParams({ course: e.target.value }, { replace: true });
                 }}
                 className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
               >
@@ -297,27 +304,12 @@ export function TeacherContentPage(): React.ReactElement {
             {isLoading && <p className="text-sm text-text-2">Cargando…</p>}
             <div className="flex flex-col">
               {(materials ?? []).map((f) => (
-                <div key={f.name} className="flex items-center gap-2.5 py-2.5 border-b border-border last:border-0">
-                  <div className="w-8 h-8 rounded-sm bg-surface-2 flex items-center justify-center text-sm shrink-0">{FILE_ICON[f.fileType]}</div>
-                  <div className="flex-1 min-w-0">
-                    {f.url ? (
-                      <a
-                        href={f.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-semibold text-text-1 truncate block hover:text-primary hover:underline"
-                      >
-                        {f.name}
-                      </a>
-                    ) : (
-                      <div className="text-xs font-semibold text-text-1 truncate">{f.name}</div>
-                    )}
-                    <div className="text-[11px] text-text-3">
-                      {f.sizeLabel} · {f.date}
-                    </div>
-                  </div>
-                  <Tag color={RAG_COLOR[f.ragStatus]}>{RAG_LABEL[f.ragStatus]}</Tag>
-                </div>
+                <MaterialRow
+                  key={f.id}
+                  material={f}
+                  icon={FILE_ICON[f.fileType]}
+                  rag={{ color: RAG_COLOR[f.ragStatus], label: RAG_LABEL[f.ragStatus] }}
+                />
               ))}
               {!isLoading && (materials ?? []).length === 0 && (
                 <p className="text-xs text-text-2 py-2">Aún no hay material en esta sección.</p>

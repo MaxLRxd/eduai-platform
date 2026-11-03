@@ -21,7 +21,29 @@ export function MaterialItem({ material, color }: { material: CourseMaterial; co
       <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: color }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[13px] text-text-1 font-medium">{material.titulo}</div>
+          {/* El nombre abre el material: el archivo en otra pestana o el texto en la propia pantalla. */}
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => void registerContentAccess(material.id)}
+              className="text-[13px] text-text-1 font-medium hover:text-primary hover:underline"
+            >
+              {material.titulo}
+            </a>
+          ) : texto ? (
+            <button
+              type="button"
+              onClick={alAbrirTexto}
+              aria-expanded={abierto}
+              className="text-left text-[13px] text-text-1 font-medium hover:text-primary hover:underline"
+            >
+              {material.titulo}
+            </button>
+          ) : (
+            <div className="text-[13px] text-text-1 font-medium">{material.titulo}</div>
+          )}
           {url ? (
             <a
               href={url}

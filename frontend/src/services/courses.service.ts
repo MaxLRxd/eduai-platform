@@ -1,5 +1,5 @@
 import type { Course, CourseMaterial, CourseUnit } from "../types/domain";
-import { api } from "./api";
+import { api, apiUrl } from "./api";
 
 interface MateriaDto {
   id: string;
@@ -88,7 +88,8 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
           tipo: c.tipo,
           resumible: Boolean(c.texto_contenido?.trim()),
           ragIndexado: c.rag_indexado,
-          url: c.archivo_url ?? c.url ?? null,
+          // La ruta guardada es relativa (/uploads/...): sin esto el navegador la pide al frontend, no al backend.
+          url: apiUrl(c.archivo_url ?? c.url),
           archivo_nombre: c.archivo_nombre ?? null,
           texto: c.texto_contenido?.trim() ? c.texto_contenido : null,
         }))

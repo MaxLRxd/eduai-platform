@@ -33,7 +33,7 @@ El punto 14 (menú) va **al final**, porque depende de que existan Evaluaciones 
 
 ## Fase 1: bugs rápidos
 
-### 1. Alumno: el botón del material no abre ni descarga
+### 1. Alumno: el botón del material no abre ni descarga - Realizado
 
 - **Causa:** [`courses.service.ts`](../frontend/src/services/courses.service.ts) guarda `url: c.archivo_url`, que es una ruta relativa (`/uploads/x.pdf`). El navegador la resuelve contra el frontend (puerto 5173), que devuelve la app en vez del archivo. En la vista del docente funciona porque ahí sí se antepone `API_URL`.
 - **Pasos:**
@@ -42,7 +42,7 @@ El punto 14 (menú) va **al final**, porque depende de que existan Evaluaciones 
   3. Si el frontend se sirve con nginx, agregar `location /uploads/` hacia el backend en [`nginx.conf`](../frontend/nginx.conf).
 - **Verificar:** el enlace debe empezar con `http://localhost:3000/uploads/…`.
 
-### 2. Docente: no ve el documento de una entrega
+### 2. Docente: no ve el documento de una entrega - Realizado
 
 - **Causa:** [`corrections.service.ts`](../frontend/src/services/corrections.service.ts) (línea ~73) arma el texto `📎 nombre` y descarta la URL.
 - **Pasos:**
@@ -51,7 +51,7 @@ El punto 14 (menú) va **al final**, porque depende de que existan Evaluaciones 
   3. Hacer lo mismo en cualquier otra pantalla que liste entregas.
 - **Mejora opcional:** hoy la IA corrige una entrega con archivo viendo solo `[entrega adjunta: nombre]`, o sea que no corrige nada. Para que corrija de verdad, el ai-service tendría que extraer el texto del PDF o DOCX con su `DocumentService`.
 
-### 3. "Gestionar secciones" lleva a Mis estudiantes
+### 3. "Gestionar secciones" lleva a Mis estudiantes - Realizado
 
 - **Causa:** [`TeacherCoursesPage.tsx`](../frontend/src/pages/teacher/TeacherCoursesPage.tsx) (líneas ~35 y ~81) navega a `/teacher/students?course=…`.
 - **Pasos:**
