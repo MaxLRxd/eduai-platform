@@ -1,0 +1,41 @@
+Alumno:
+boton  para acceder al pdf/material ANDA MAL, no abre ni descarga material subido.
+"Mis estadisticas" esta completamente mockapeado, no trae realmente estadisticas: ni el Registro de asistencia, ni Detalle de calificaciones, ni los dashboards de arriba. Lo mismo en las estadisticas del inicio. Y supongo que los demás usuarios le deben ocurrir lo mismo(docente y admin)
+En "Mis cursos" ->pagina individual de materia, se debe cambiar la organización: jerarquicamente, una seccion o unidad contiene clases, la unidad puede contener archivos, y las clases tambien. Actualmente solo muestra unidades y sus archivos subidos. 
+-El chat con el tutor de IA no persiste, arreglarlo. Debe quedar un historial (privado obviamente) del chat.
+-El chat con el tutor debe poder ampliarse para una mejor lectura.
+-Agregar mensajeria desde el alumno hacia el profesor.
+
+Profesor: 
+-En "Mis materias" -> gestionar secciones: envia a la parte de "Mis alumnos", debería enviar a Contenidos, donde están las secciones.
+-Cuando un alumno hace una entrega y sube un documento, el docente no puede verla. Corregir.
+-No hay filtros en mensajería para envíar un mensaje a determinada materia o cantidad X de usuarios. Actualmente si se quiere enviar un mensaje no individual, no hay filtros y se envia a todos los usuarios del sistema.
+-No hay pantallas o logica para la simulación de TPs y examenes para que "Calificaciones" consuma. Analizar.
+-Reorganización de menus y jerarquías dentro del sitio:
+Para que esté todo más contenido y facil de entender, sin tener tantas opciones en el menu, se propone la siguiente redistribución:
+1.Para las unidades y clases: "Contenidos" debe ser la mayor jerarquicamente, conteniendo las clases como se mencionó antes. 
+Es decir que quedaría de la siguiente manera: "Contenidos" con los respectivos cambios que se mencionan más adelante, y además, un boton (como el que ya hay ahora en el menu) de "Planificación", ahora sí, enviando al profesor a esa pagina.
+2. Para manejo de alumnos: "Mis estudiantes" podría pasar a llamarse de manera más general para todo el manejo de alumnos, y contener "Calificaciones" y "Asistencia dentro suyo".
+3. Una nueva opción "Evaluaciones" que contenga los actuales "Actividades" y "Correciones", aunque sea redundante tambien debería contener un boton que lleve a "Calificaciones".
+4. Analytics queda igual en el menu.
+5. Asistente de IA tambien queda igual en el menu.
+
+El menu lateral quedaría de la siguiente manera: "Inicio", "Mis materias", "Mis estudiantes",  "Evaluaciones", "Analytics", "Asistente IA", "Mensajes".
+
+Respecto a las correciones de contenidos, se deben hacer las siguientes modificaciones:
+
+1. Se debe agregar el boton de "Planificacion" para crear clases y asociarla a una seccion/unidad de la materia, o viceversa, al crear una seccion asignarle una clase(con opcion de crearla tras crear una seccion). 
+2. "Subir archivo" queda redundante tal y como esta, si las clases ya permiten subir el material individualmente es un textbox molesto de más, hay que reemplazarlo por un boton en el formulario de creacion de sección que permita de forma opcional subir contenido a la unidad/seccion.
+3. "Agregar texto o consigna" es redundante, debe llamar a las opciones de evaluaciones ya desarrolladas y vincularlas con dicha clase o unidad/sección. Mostrando en estas secciones respectivamente la clase a la que perrtenecen(también corregir)
+
+-En "Material para estudiantes: subí un archivo (PDF, PPTX, DOCX, etc.) que los alumnos podrán ver con esta clase." -> debería dar dos opciones, seleccionar un material ya subido en "Contenidos" o subir archivo(como esta ahora).
+
+Administrador: 
+-El "editar" materia no trae los datos "descripción" y "nivel educativo", corroborar que en realidad si se guarden en la base de datos para empezar.
+
+General: 
+-Eliminar "SIMILAR A MOODLE"
+-Decidir tema de licencias. (Descartado para la IA, tarea bajo supervisión de integrantes del equipo)
+-Corregir problemas de encoding: en algunas secciones, los acentos/tildes, carcateres especiales y/o "Ñ" se muestran con caracteres extraños. También, en la parte de generacion de documentos, los csv se generan con estos caracteres extraños.
+-sacar buscador de la plataforma.
+-Se pueden hacer modificaciones a la seccion de prompting para que la respuesta de la IA no gaste tokens en saludos y palabrería innecesaria. Asi tambien, como que no intente remarcar con negrita o distintas cosas que suele hacer como con "*palabra*"

@@ -1,0 +1,179 @@
+﻿# ANÁLISIS RAG CONTRA requisitos-rag-checklist.md
+Fecha: 2026-10-24 18:19
+Proyecto: eduai-platform
+
+## Datos del RAG a evaluar
+| Campo | Detalle |
+| --- | --- |
+| Nombre / autor | EduAI (plataforma) |
+| Corpus (qué documento/s usa) | Materiales de cada materia (texto y archivos subidos por docentes) - indexados por contenido/materia |
+| Modelo de embeddings | gemini-embedding-2 (Google Gemini) via ai-services |
+| Modelo de chat | Google Gemini (configurable via ai-services) |
+| Almacenamiento de vectores | PostgreSQL + pgvector (tabla ai_materials) con fallback a Pinecone si configurado |
+| Tipo de front | Backend Node/Express + ai-services FastAPI; frontend integra chat/tutor (verificado en aiClient.ts) |
+| Fecha de evaluación | 2026-10-24 |
+
+## 1. Fundamento: ¿por qué es un RAG y no ""pegar todo""?
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 1.1 | Recupera solo los fragmentos relevantes; NO envía el corpus completo al modelo | ✅ Cumple | ai-services/src/use_cases/ask_tutor.py:47 usa retrieval.search con top_k; ai-services/src/use_cases/_helpers.py:6-22 construye contexto solo con resultados. |
+| 1.2 | El modelo responde en base a los fragmentos recuperados, no a su conocimiento propio | ✅ Cumple | ai-services/src/prompts/tutor.py:4-12 instruye estrictamente ""respondé únicamente en base al CONTEXTO provisto""; si no está en contexto, decirlo. |
+| 1.3 | Hay separación entre dos momentos: indexar (una vez o al cambiar el documento) y consultar (en cada pregunta) | ✅ Cumple | Endpoints separados en rag_router.py (indexar/borrar); router tutor para consultas. Casos de uso IndexMaterialUseCase vs AskTutorUseCase distintos. Backend script reindexar-rag.ts para reindexado masivo. |
+
+## 2. Troceado (chunking)
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 2.1 | El documento se parte en fragmentos manejables | ✅ Cumple | ai-services/src/services/chunking_service.py:12-88 chunk_text() genera chunks. |
+| 2.2 | La estrategia de troceado está justificada (fijo con solapamiento, o por estructura) | 🟡 Parcial | Fijo con solapamiento por oraciones (max_tokens=500, overlap_tokens=50). Justificación implícita, no documentada explícitamente. |
+| 2.3 | Si es tamaño fijo: usa solapamiento y se revisó dónde corta | 🟡 Parcial | Hay solapamiento 50 tokens. Corta por oraciones cuando posible. Si oración > max_chars (líneas 27-34) corta por caracteres sin solapamiento entre sub-bloques - puede partir palabras. |
+| 2.4 | Si tiene estructura (artículos/secciones/títulos): troceado por estructura | ❌ No cumple | Siempre estrategia por oraciones/tamaño fijo, sin detectar estructura. |
+| 2.5 | Cada fragmento guarda metadatos (archivo, sección, número de artículo, título) asignados por programa | 🟡 Parcial | Guarda material_id, subject_id, chunk_index en ai_materials. Título viene via material_titles desde backend. No guarda sección/artículo/título en el chunk mismo; metadata limitada. |
+
+## 3. Embeddings
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 3.1 | Búsqueda por significado (embeddings), capaz de resolver vocabulario distinto | ✅ Cumple | Usa Gemini embeddings, búsqueda vectorial semántica. |
+| 3.2 | Similitud usada es coseno (o equivalente) | ✅ Cumple | ai-services/src/services/retrieval_service.py:233-249 usa operador <=> (cosine distance). Score = 1 - (embedding <=> ...) |
+| 3.3 | Embeddings de fragmentos en lote, respetando tope por pedido | 🟡 Parcial | Una llamada por chunk (justificado por comportamiento de gemini-embedding-2) con concurrencia (Semaphore 4), rate limiting (40/min), reintentos. Procesado en lote lógico con límites. |
+| 3.4 | Mismo modelo para indexar y consultar | ✅ Cumple | Mismo settings.gemini_embedding_model. embed_documents() usa task_type=RETRIEVAL_DOCUMENT; embed_query() usa task_type=RETRIEVAL_QUERY. |
+| 3.5 | Dimensión configurada coincide con modelo y columna | ✅ Cumple | embedding_dimensions=1536, forzado con output_dimensionality, columna vector(1536). Tests validan migración. |
+
+## 4. Almacenamiento y búsqueda
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 4.1 | Vectores guardados de forma persistente (archivo o Postgres+pgvector) | ✅ Cumple | PostgreSQL + pgvector, tabla ai_materials. También soporta Pinecone. |
+| 4.2 | ORDER BY usa distancia (operador <=>), no similitud | ✅ Cumple | ORDER BY embedding <=> ::vector; similitud calculada como 1 - distancia. |
+| 4.3 | Devuelve los k fragmentos más cercanos (default 3) | ✅ Cumple | LIMIT , settings.retrieval_top_k configurable (default 5). |
+| 4.4 | Si corpus grande: índice HNSW para búsqueda aproximada | ✅ Cumple | Crea idx_ai_materials_embedding USING hnsw (embedding vector_cosine_ops). Maneja dimensiones >2000 con fallback a sequential scan. |
+| 4.5 | Reindexado sin duplicados: tabla vacía antes o actualización incremental | ✅ Cumple | IndexMaterialUseCase.delete_material() borra por (subject_id, material_id) antes de upsertar. upsert_chunks usa ON CONFLICT DO UPDATE. IDs f'{material_id}:{index}'. |
+| 4.6 | Si usa Docker: datos en volumen que sobreviva apagado | ➖ No aplica / No verificable desde código | No visible en código revisado; deployment concern. |
+
+## 5. Umbral: saber decir que no
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 5.1 | Existe un umbral de similitud mínima; por debajo se descarta | ❌ No cumple | No hay filtrado por threshold. search() solo hace ORDER BY ... LIMIT sin filtrar por score mínimo. |
+| 5.2 | Umbral calibrado con evidencia (preguntas sí/no en corpus) | ❌ No cumple | Sin evidencia de calibración en código. |
+| 5.3 | Recalibrado al cambiar modelo de embeddings o corpus | ❌ No cumple | No hay mecanismo de recalibración. |
+| 5.4 | Razonado falso positivo vs falso negativo | ❌ No cumple | No documentado. |
+| 5.5 | Si no hay fragmentos sobre umbral, responde que no tiene información sin llamar al modelo | 🟡 Parcial | Si no hay resultados, pasa mensaje ""(no hay material indexado disponible para esta materia)"" al prompt e instruye decir que no tiene info. Pero si hay resultados con score bajo igualmente pasan al contexto/modelo (sin corte). |
+
+## 6. Prompt (los cinco ejes)
+| # | Eje | Qué debe tener | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- | --- |
+| 6.1 | Rol | Desde qué lugar responde | ✅ Cumple | ai-services/src/prompts/tutor.py:1-2 ""Sos el tutor IA de EduAI, un campus educativo virtual. Tu función es ayudar a los alumnos a estudiar y comprender los contenidos de su cátedra."" |
+| 6.2 | Contexto | Los fragmentos recuperados, con su fuente | ✅ Cumple | ask_tutor.py:53-58 pasa contexto formateado; _helpers.py:6-22 agrega ""[Fuente: \"{titulo}\"]"" |
+| 6.3 | Tarea | Qué debe hacer con pregunta y contexto | ✅ Cumple | Ayudar a estudiar/comprender con base al material oficial. |
+| 6.4 | Restricciones | No usar conocimiento propio; si no está en fragmentos, decir que no lo especifica | ✅ Cumple | tutor.py:5 instruye responder únicamente en base al contexto; si no encuentra respuesta, decir que no cuenta con esa información y no inventar. |
+| 6.5 | Formato | Cómo presenta respuesta, incluyendo citar fuente para auditar | ✅ Cumple | Instruye citar cuando sea posible; build_sources() retorna material_id, titulo, chunk_index, content, score. |
+| 6.6 | Dos capas contra invención | Umbral (antes modelo) + instrucción (cubre lo que pasa umbral) | ❌ No cumple | Solo hay instrucción en prompt. Falta capa de umbral previo. |
+
+## 7. Elección de modelos y costos
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 7.1 | Justificación con 5 variables (costo, latencia, esfuerzo, ventana, privacidad) | ❌ No cumple | Sin documentación en código. |
+| 7.2 | Reparto local/nube coherente explicado | 🟡 Parcial | Todo via API Gemini (nube). No hay uso de Ollama/local visible. |
+| 7.3 | Considera privacidad si hay datos personales reales | 🟡 Parcial | Clave/API fuera del navegador (en ai-services), comunicación con token interno. Datos enviados a Gemini API (tercero) - configurable pero no documentado. |
+| 7.4 | Estimación de costo (tokens entrada/salida) | ❌ No cumple | Sin evidencia de estimación. |
+
+## 8. Seguridad y arquitectura
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 8.1 | Clave API no está en navegador; servidor (Node) hace intermediario | ✅ Cumple | Gemini key en ai-services (Python). Backend Node usa aiClient.ts con token interno X-Internal-Token. Frontend NO llama directamente con API key. |
+| 8.2 | Clave vive en .env que no se sube al repo | ✅ Cumple | Existe .env.example; .gitignore típico presente. |
+
+## 9. Front y trazabilidad (consigna de exposición final)
+| # | Requisito | Estado | Evidencia / observaciones |
+| --- | --- | --- | --- |
+| 9.1 | Tiene un front para que cualquiera pueda preguntar (formato libre) | ➖ No aplica / Verificación en UI | aiClient.ts expone chatTutor/streamTutor; hay integración. Requiere verificación en frontend repo. |
+| 9.2 | El front usa el RAG real (misma búsqueda, mismo umbral, respuesta con fuente) | ➖ No aplica / Verificación en UI | Arquitectura correcta (pasa por backend -> ai-services con RAG). Requiere verificación en frontend. |
+| 9.3 | Muestra de dónde sale la respuesta (archivo y sección), visible para quien pregunta | ✅ Cumple (API) | TutorResult.sources incluye material_id, titulo, chunk_index, content, score. Backend/Frontend pueden mostrarlo. |
+
+## 10. Pruebas de comportamiento en vivo
+| Tipo de prueba | Qué se espera | Pregunta usada | Resultado | Estado |
+| --- | --- | --- | --- | --- |
+| Pregunta que funciona | Respuesta correcta con fuente verificable | N/A (requiere entorno en vivo) | No ejecutado en análisis estático | Pendiente |
+| Pregunta con otras palabras (sinónimos) | Búsqueda por significado la resuelve | N/A | No ejecutado | Pendiente |
+| Pregunta ambigua | Recupera fragmento correcto o aclara | N/A | No ejecutado | Pendiente |
+| Pregunta que no está en el corpus | Dice que no lo especifica, sin inventar | N/A | No ejecutado | Pendiente |
+| Pregunta que falla | Diagnóstico búsqueda vs modelo | N/A | No ejecutado | Pendiente |
+
+## 11. Producción (mejoras sugeridas)
+| # | Mejora | ¿Está presente? | Comentario |
+| --- | --- | --- | --- |
+| 11.1 | Reranking | ❌ No | No implementado. |
+| 11.2 | Búsqueda híbrida (BM25 + embeddings) | ❌ No | Solo vectorial. |
+| 11.3 | Actualización incremental | ❌ No | Reindexado por material completo al actualizar; hay flag rag_indexado pero estrategia es reindexado completo del material. |
+| 11.4 | Medición formal con conjunto de preguntas/respuestas conocidas | ❌ No | Sin suite de evaluación. |
+
+## 12. Preguntas de comprensión
+1. ¿Qué es un embedding y por qué el vector tiene siempre la misma cantidad de números sin importar el largo del texto?  
+   R: Representación numérica semántica de un texto. Siempre misma dimensión por modelo (1536 para gemini-embedding-2) porque el encoder produce un vector fijo tras pooling/transformación.
+
+2. ¿Qué mide la similitud coseno y por qué no cambia si se alarga uno de los vectores?  
+   R: Mide ángulo entre vectores (no magnitud). Coseno = (A·B)/(||A|| ||B||); escalar vectores no cambia ángulo, por eso invariante a longitud.
+
+3. ¿Por qué no alcanza con pegar todo el corpus en el prompt?  
+   R: Ventana de contexto limitada, mayor costo/latencia, peor desempeño ("lost in the middle"). Mejor traer solo fragmentos relevantes.
+
+4. ¿Cómo encuentra HNSW los fragmentos sin compararlos con todos?  
+   R: Grafo jerárquico de vecinos aproximados (small world). Navega desde entrada por capas para encontrar vecinos más cercanos eficientemente sin búsqueda exhaustiva.
+
+5. ¿Qué evita que el modelo invente una respuesta?  
+   R: Principalmente instrucción en prompt ("solo contexto, si no está decirlo"). Actualmente ÚNICA capa (falta umbral). También contexto limitado a fragmentos recuperados.
+
+6. ¿Por qué el ORDER BY usa distancia y no similitud?  
+   R: <=> es cosine distance (menor = más similar). ORDER BY distancia ASC trae más cercanos primero. Si se ordenara por similitud DESC también correcto, pero código usa distancia + score = 1-distancia.
+
+7. ¿Por qué la clave de API no puede ir en el navegador?  
+   R: Expuesta a clientes, cualquiera puede robarla y usar cuota/costos. Debe estar en servidor (ai-services) con autenticación/intermediario (backend con token interno).
+
+8. ¿Qué pasa si se indexa con un modelo de embeddings y se consulta con otro?  
+   R: Espacios vectoriales incompatibles (diferentes dimensiones/distribuciones). Búsqueda fallaría o daría resultados sin sentido. Código fuerza misma dimensión/config.
+
+9. ¿Qué pasa si se corre la indexación dos veces sin vaciar la tabla?  
+   R: En implementación actual: delete_material() borra chunks del material antes de reindexar; upsert con ON CONFLICT evita duplicados. Sin esa lógica habría duplicados. Aquí está protegido.
+
+10. ¿Por qué hay que recalibrar el umbral al cambiar de modelo?  
+   R: Cada modelo produce embeddings con distribuciones/escalas diferentes; umbral de "relevante" cambia entre modelos/corpus.
+
+## 13. Resumen del análisis
+| Sección | Cumple | Parcial | No cumple | No aplica |
+| --- | --- | --- | --- | --- |
+| 1. Fundamento | 3 | 0 | 0 | 0 |
+| 2. Troceado | 1 | 3 | 1 | 0 |
+| 3. Embeddings | 4 | 1 | 0 | 0 |
+| 4. Almacenamiento y búsqueda | 6 | 0 | 0 | 1 |
+| 5. Umbral | 0 | 1 | 4 | 0 |
+| 6. Prompt | 5 | 0 | 1 | 0 |
+| 7. Modelos y costos | 0 | 2 | 2 | 0 |
+| 8. Seguridad y arquitectura | 2 | 0 | 0 | 0 |
+| 9. Front y trazabilidad | 1 | 0 | 0 | 2 |
+| 10. Pruebas en vivo | 0 | 0 | 0 | 5 |
+| **Total** | **22** | **7** | **8** | **8** |
+
+**Fortalezas principales:**
+- Arquitectura limpia (routers/use_cases/services), bien separada
+- RAG end-to-end funcional con pgvector + HNSW correctamente implementado
+- Reindexado sin duplicados, migración de dimensiones con transaccionalidad
+- Embeddings con concurrencia/rate limiting/reintentos robustos
+- Solo fragmentos relevantes van al contexto (no corpus completo)
+- Claves API fuera del navegador, token interno entre backend/ai-services
+- Trazabilidad con sources (material_id, titulo, chunk_index, score)
+- Prompt con restricciones claras
+
+**Incumplimientos críticos:**
+- Sin umbral de similitud mínima - principal brecha (6.6 dos capas). Fragmentos irrelevantes pueden pasar al modelo.
+- Sin calibración del umbral
+- Troceado estructurado ausente; metadatos de chunk limitados
+- Falta justificación de modelos/costos y medición formal
+
+**Recomendaciones de mejora:**
+1. **URGENTE**: Agregar umbral configurable (ej. RETRIEVAL_MIN_SCORE) filtrando en RetrievalService.search() o en ask_tutor. Si ningún resultado supera umbral → responder sin llamar al LLM indicando falta de info.
+2. Documentar/calibrar umbral con pruebas (preguntas sí/no en corpus)
+3. Mejorar chunking para preservar estructura o enriquecer metadatos (sección/artículo)
+4. Considerar búsqueda híbrida (vector + BM25) para nombres/fechas/números
+5. Agregar reranking
+6. Documentar justificación de modelos (costo/latencia/privacidad/ventana/esfuerzo)
+
+**Conclusión:**
+El RAG implementado es sólido y funcional. Cumple correctamente fundamentos, embeddings, almacenamiento vectorial con pgvector/HNSW, seguridad y trazabilidad. Las brechas principales son la ausencia de umbral de similitud mínima (única capa de protección = prompt) y troceado/metadatos más ricos. Con añadir un umbral calibrado se cumpliría mejor el requisito de ""saber decir que no"" sin inventar.
