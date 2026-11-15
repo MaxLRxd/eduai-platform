@@ -3,7 +3,7 @@ import { getAccessToken } from "./authToken";
 
 export type ModoTutor = "NORMAL" | "SOCRATIC" | "HINTS";
 
-interface SesionApi {
+export interface SesionApi {
   id: string;
   materia_id: string;
   modo: string;
@@ -19,6 +19,12 @@ export async function createTutorSession(materiaId: string, modo: ModoTutor = "N
     body: JSON.stringify({ modo }),
   });
   return data.sesion.id;
+}
+
+// GET /api/tutor/sesiones — historial privado del alumno, ordenado de más reciente a más antiguo.
+export async function listTutorSessions(): Promise<SesionApi[]> {
+  const data = await api<{ sesiones: SesionApi[] }>("/api/tutor/sesiones");
+  return data.sesiones ?? [];
 }
 
 export interface TutorMensaje {

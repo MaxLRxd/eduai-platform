@@ -38,6 +38,18 @@ const MODO_BANNER: Record<ModoTutor, string> = {
     "Modo pistas activo: el tutor te encamina paso a paso con pistas progresivas, sin revelar la respuesta completa.",
 };
 
+function formatoSesion(iso: string): string {
+  const fecha = new Date(iso);
+  return Number.isNaN(fecha.getTime())
+    ? ""
+    : fecha.toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
 /**
  * Arma la consulta de "Explicame fácil" con la unidad en curso y sus temas.
  * Antes se mandaba literal "la unidad actual": el tutor no sabia cual era y el
@@ -59,9 +71,22 @@ export function StudentCourseDetailPage(): React.ReactElement {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { data: course, isLoading } = useCourse(courseId);
-  const { messages, pending, lenta, ask, reintentar } = useTutorChat(course);
+  const {
+    messages,
+    pending,
+    lenta,
+    cargandoHistorial,
+    sesiones,
+    sesionActivaId,
+    sesionCerrada,
+    ask,
+    reintentar,
+    nuevaConversacion,
+    seleccionarConversacion,
+  } = useTutorChat(course);
   const [question, setQuestion] = useState("");
   const [activeModo, setActiveModo] = useState<ModoTutor>("NORMAL");
+  const [chatExpandido, setChatExpandido] = useState(false);
 
   if (isLoading) return <p className="text-sm text-text-2">Cargando materia…</p>;
   if (!course) return <p className="text-sm text-text-2">No se encontró la materia.</p>;
@@ -126,8 +151,33 @@ export function StudentCourseDetailPage(): React.ReactElement {
         </Card>
 
         <aside className="flex flex-col gap-4.5">
-          <Card>
-            <CardHeader title="Tutor IA de la materia" />
+          {chatExpandido && (
+            <button
+              type="button"
+              aria-label="Cerrar chat ampliado"
+              className="fixed inset-0 z-40 bg-black/40"
+              onClick={() => setChatExpandido(false)}
+            />
+          )}
+          <Card className={chatExpandido ? "fixed inset-3 md:inset-8 z-50 overflow-y-auto shadow-2xl" : ""}>
+            <CardHeader
+              title="Tutor IA de la materia"
+              action={
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={nuevaConversacion}
+                    disabled={pending || messages.length === 0}
+                  >
+                    Nueva
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setChatExpandido((v) => !v)}>
+                    {chatExpandido ? "Cerrar" : "Ampliar"}
+                  </Button>
+                </div>
+              }
+            />
             <p className="text-xs text-text-2 mb-3">
               Responde usando el contexto de <strong>{course.name}</strong>: {course.tutorFocus}.
             </p>
@@ -156,16 +206,51 @@ export function StudentCourseDetailPage(): React.ReactElement {
               </div>
             )}
 
+            {sesiones.length > 0 && (
+              <div className="mb-2.5">
+                <div className="text-[11px] font-semibold text-text-3 uppercase tracking-wide mb-1.5">
+                  Conversaciones guardadas
+                </div>
+                <div className={`flex flex-col gap-1 overflow-y-auto ${chatExpandido ? "max-h-48" : "max-h-28"}`}>
+                  {sesiones.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => seleccionarConversacion(s.id)}
+                      className={`text-left px-2.5 py-1.5 rounded border text-[12px] transition-colors ${
+                        s.id === sesionActivaId
+                          ? "border-primary bg-primary-light text-primary font-semibold"
+                          : "border-border bg-surface text-text-2 hover:bg-surface-2"
+                      }`}
+                    >
+                      {formatoSesion(s.iniciada_en)}
+                      {s.cerrada_en ? " · cerrada" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sesionCerrada && (
+              <div className="p-2.5 mb-2.5 rounded text-[12px] bg-surface-2 border border-border text-text-2">
+                Esta conversación está cerrada. Podés leerla o iniciar una nueva.
+              </div>
+            )}
+
             <div className="flex gap-2 flex-wrap mb-2.5">
-              <Button variant="secondary" size="sm" disabled={pending} onClick={() => submitQuestion(preguntaUnidadActual(course.units), "NORMAL")}>
+              <Button variant="secondary" size="sm" disabled={pending || sesionCerrada} onClick={() => submitQuestion(preguntaUnidadActual(course.units), "NORMAL")}>
                 Explicame fácil
               </Button>
-              <Button variant="secondary" size="sm" disabled={pending} onClick={() => submitQuestion("Dame preguntas para practicar", "NORMAL")}>
+              <Button variant="secondary" size="sm" disabled={pending || sesionCerrada} onClick={() => submitQuestion("Dame preguntas para practicar", "NORMAL")}>
                 Practicar
               </Button>
             </div>
 
-            <div className="flex flex-col gap-2 max-h-72 overflow-y-auto mb-2.5">
+            <div
+              className={`flex flex-col gap-2 overflow-y-auto mb-2.5 ${
+                chatExpandido ? "max-h-[60vh]" : "max-h-72"
+              }`}
+            >
               {messages.map((m, i) => (
                 <div
                   key={i}
@@ -176,6 +261,9 @@ export function StudentCourseDetailPage(): React.ReactElement {
                   {m.content}
                 </div>
               ))}
+              {cargandoHistorial && messages.length === 0 && (
+                <div className="text-[13px] text-text-3 italic">Cargando historial de la conversación…</div>
+              )}
               {pending && !lenta && <div className="text-[13px] text-text-3 italic">El tutor está pensando…</div>}
               {pending && lenta && (
                 <div className="text-[13px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2.5 flex items-center justify-between gap-2" role="status">
@@ -185,7 +273,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                   </Button>
                 </div>
               )}
-              {messages.length === 0 && !pending && (
+              {messages.length === 0 && !pending && !cargandoHistorial && (
                 <div className="p-3 rounded bg-surface-2 text-[13px] text-text-2 leading-relaxed">
                   El tutor está listo para responder sobre {course.name} usando las unidades y materiales de esta aula.
                 </div>
@@ -204,6 +292,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                     : "Preguntá sobre esta materia..."
               }
               value={question}
+              disabled={cargandoHistorial || sesionCerrada}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -212,7 +301,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                 }
               }}
             />
-            <Button fullWidth className="mt-2.5 justify-center" onClick={() => submitQuestion(question)} disabled={!question.trim() || pending}>
+            <Button fullWidth className="mt-2.5 justify-center" onClick={() => submitQuestion(question)} disabled={!question.trim() || pending || cargandoHistorial || sesionCerrada}>
               {activeModo === "NORMAL" ? "Preguntar al tutor" : `Enviar en modo ${MODO_NOMBRE[activeModo]}`}
             </Button>
           </Card>

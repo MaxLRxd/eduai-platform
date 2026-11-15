@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Course, CourseUnit } from "../types/domain";
 
@@ -6,13 +6,71 @@ const askTutorStreamMock = vi.fn();
 
 vi.mock("../services/tutor.service", () => ({
   createTutorSession: vi.fn(async () => "sesion-1"),
+  listTutorSessions: vi.fn(async () => []),
+  getTutorMessages: vi.fn(async () => []),
   askTutorStream: (...args: unknown[]) => askTutorStreamMock(...args),
 }));
 
 import { TUTOR_LENTO_MS, useTutorChat } from "../hooks/useTutorChat";
 import { preguntaUnidadActual } from "../pages/student/StudentCourseDetailPage";
+import { getTutorMessages, listTutorSessions } from "../services/tutor.service";
 
 const course = { id: "materia-1" } as Course;
+
+describe("useTutorChat: historial", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.mocked(listTutorSessions).mockReset().mockResolvedValue([]);
+    vi.mocked(getTutorMessages).mockReset().mockResolvedValue([]);
+  });
+
+  it("restaura la conversación guardada al abrir la materia", async () => {
+    vi.mocked(listTutorSessions).mockResolvedValueOnce([
+      {
+        id: "sesion-1",
+        materia_id: "materia-1",
+        modo: "NORMAL",
+        iniciada_en: "2026-11-15T10:00:00.000Z",
+        cerrada_en: null,
+        mensajes: 2,
+      },
+    ]);
+    vi.mocked(getTutorMessages).mockResolvedValueOnce([
+      { id: "m1", rol: "USER", contenido: "Hola", creado_en: "2026-11-15T10:00:00.000Z" },
+      { id: "m2", rol: "ASSISTANT", contenido: "¿En qué te ayudo?", creado_en: "2026-11-15T10:00:01.000Z" },
+    ]);
+
+    const { result } = renderHook(() => useTutorChat(course));
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(2));
+    expect(result.current.sesiones).toHaveLength(1);
+    expect(result.current.sesionActivaId).toBe("sesion-1");
+  });
+
+  it("nueva conversación conserva las conversaciones anteriores", async () => {
+    vi.mocked(listTutorSessions).mockResolvedValueOnce([
+      {
+        id: "sesion-1",
+        materia_id: "materia-1",
+        modo: "NORMAL",
+        iniciada_en: "2026-11-15T10:00:00.000Z",
+        cerrada_en: null,
+        mensajes: 1,
+      },
+    ]);
+    vi.mocked(getTutorMessages).mockResolvedValueOnce([
+      { id: "m1", rol: "USER", contenido: "Hola", creado_en: "2026-11-15T10:00:00.000Z" },
+    ]);
+
+    const { result } = renderHook(() => useTutorChat(course));
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+
+    act(() => result.current.nuevaConversacion());
+
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.sesiones).toHaveLength(1);
+  });
+});
 
 describe("useTutorChat", () => {
   beforeEach(() => {
