@@ -6,11 +6,13 @@ import {
   getDashboardProfesor,
 } from "../services/dashboard.service";
 
-export function useDashboard(rol: Role | undefined) {
+export function useDashboard(rol: Role | undefined, periodo?: string) {
   return useQuery({
-    queryKey: ["dashboard", rol],
+    queryKey: ["dashboard", rol, periodo ?? "todos"],
     queryFn: async () => {
-      if (rol === "ALUMNO") return { rol: "ALUMNO", data: await getDashboardAlumno() } as const;
+      if (rol === "ALUMNO") {
+        return { rol: "ALUMNO", data: await getDashboardAlumno(periodo) } as const;
+      }
       if (rol === "PROFESOR") return { rol: "PROFESOR", data: await getDashboardProfesor() } as const;
       return { rol: "ADMIN", data: await getDashboardAdmin() } as const;
     },

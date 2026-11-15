@@ -8,6 +8,8 @@ export interface DashboardResumenComun {
 
 export interface DashboardAlumno {
   rol: "ALUMNO";
+  periodos: string[];
+  periodo: string | null;
   resumen: DashboardResumenComun & {
     promedioGlobal: number;
     promedioPeriodoActual: number | null;
@@ -41,8 +43,9 @@ export interface DashboardAdmin {
   };
 }
 
-export function getDashboardAlumno(): Promise<DashboardAlumno> {
-  return api<DashboardAlumno>("/api/dashboard/alumno");
+export function getDashboardAlumno(periodo?: string): Promise<DashboardAlumno> {
+  const query = periodo ? `?periodo=${encodeURIComponent(periodo)}` : "";
+  return api<DashboardAlumno>(`/api/dashboard/alumno${query}`);
 }
 
 export function getDashboardProfesor(): Promise<DashboardProfesor> {

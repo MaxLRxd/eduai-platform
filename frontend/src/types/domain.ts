@@ -115,11 +115,9 @@ export interface TeacherStudentRow {
 }
 
 export interface TeacherGradeRow {
+  studentId: string;
   name: string;
-  tp1: string;
-  tp2: string;
-  tp3: string;
-  parcial: string;
+  grades: Record<string, string>;
   average: string;
 }
 
@@ -209,9 +207,11 @@ export interface PlanningClass {
 export interface InboxMessage {
   id: string;
   from: string;
+  participanteId: string | null;
   subject: string;
   when: string;
   unread: boolean;
+  noLeidos: number;
 }
 
 export type SubjectStatus = "Activa" | "Pendiente" | "Inactiva";

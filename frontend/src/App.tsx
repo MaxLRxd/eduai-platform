@@ -12,6 +12,7 @@ import { StudentAssignmentsPage } from "./pages/student/StudentAssignmentsPage";
 import { StudentProgressPage } from "./pages/student/StudentProgressPage";
 import { StudentProfilePage } from "./pages/student/StudentProfilePage";
 import { StudentEnrollPage } from "./pages/student/StudentEnrollPage";
+import { StudentMessagesPage } from "./pages/student/StudentMessagesPage";
 import { TeacherDashboardPage } from "./pages/teacher/TeacherDashboardPage";
 import { TeacherCoursesPage } from "./pages/teacher/TeacherCoursesPage";
 import { TeacherStudentsPage } from "./pages/teacher/TeacherStudentsPage";
@@ -103,6 +104,16 @@ export function App(): React.ReactElement {
           <ProtectedRoute allow="ALUMNO">
             <Shell title="Inscribirse a materia">
               <StudentEnrollPage />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/messages"
+        element={
+          <ProtectedRoute allow="ALUMNO">
+            <Shell title="Mensajes">
+              <StudentMessagesPage />
             </Shell>
           </ProtectedRoute>
         }

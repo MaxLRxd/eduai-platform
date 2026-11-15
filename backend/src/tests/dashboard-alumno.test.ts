@@ -7,7 +7,7 @@ jest.mock("../config/prisma", () => ({
   prisma: {
     inscripcion: { count: jest.fn(), findMany: jest.fn() },
     nota: { findMany: jest.fn() },
-    asistencia: { groupBy: jest.fn() },
+    asistencia: { findMany: jest.fn() },
     actividad: { findMany: jest.fn() },
     alertaRiesgoAcademico: { count: jest.fn() },
   },
@@ -16,7 +16,7 @@ jest.mock("../config/prisma", () => ({
 const prismaMock = prisma as unknown as {
   inscripcion: { count: jest.Mock; findMany: jest.Mock };
   nota: { findMany: jest.Mock };
-  asistencia: { groupBy: jest.Mock };
+  asistencia: { findMany: jest.Mock };
   actividad: { findMany: jest.Mock };
   alertaRiesgoAcademico: { count: jest.Mock };
 };
@@ -44,7 +44,12 @@ describe("dashboardAlumno", () => {
       { materia_id: "m1", calificacion: dec(8), periodo: "2026-1" },
       { materia_id: "m1", calificacion: dec(6), periodo: "2026-1" },
     ]);
-    prismaMock.asistencia.groupBy.mockResolvedValue([{ estado: "PRESENTE", _count: { _all: 9 } }]);
+    prismaMock.asistencia.findMany.mockResolvedValue([
+      {
+        estado: "PRESENTE",
+        fecha_clase: new Date(Date.UTC(2026, 3, 1)),
+      },
+    ]);
     prismaMock.alertaRiesgoAcademico.count.mockResolvedValue(1);
     prismaMock.actividad.findMany.mockResolvedValue([
       actividad("a1", "m1", true, 10),
@@ -80,6 +85,25 @@ describe("dashboardAlumno", () => {
 
     expect(d.resumen.entregasPendientes).toBe(8);
     expect(d.proximasActividades).toHaveLength(5);
+  });
+
+  it("filtra notas y asistencias por período", async () => {
+    prismaMock.nota.findMany.mockResolvedValue([
+      { materia_id: "m1", calificacion: dec(4), periodo: "2026-1" },
+      { materia_id: "m1", calificacion: dec(10), periodo: "2026-2" },
+    ]);
+    prismaMock.asistencia.findMany.mockResolvedValue([
+      { estado: "AUSENTE", fecha_clase: new Date(Date.UTC(2026, 2, 1)) },
+      { estado: "PRESENTE", fecha_clase: new Date(Date.UTC(2026, 7, 1)) },
+    ]);
+
+    const d = await dashboardAlumno(ALUMNO_ID, "2026-2");
+
+    expect(d.periodos).toEqual(["2026-1", "2026-2"]);
+    expect(d.periodo).toBe("2026-2");
+    expect(d.materias.find((m) => m.id === "m1")?.promedio).toBe(10);
+    expect(d.resumen.promedioGlobal).toBe(10);
+    expect(d.asistencia).toEqual([{ estado: "PRESENTE", count: 1 }]);
   });
 
   it("devuelve todo en cero para un alumno sin actividades ni notas", async () => {

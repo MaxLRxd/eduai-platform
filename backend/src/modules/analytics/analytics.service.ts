@@ -194,6 +194,13 @@ export async function eliminarPreguntaFrecuente(preguntaId: string, usuarioId: s
 
 const PERIODO_ACTUAL = "2026-1";
 
+/** Período académico (YYYY-1 / YYYY-2) al que pertenece una fecha de clase. */
+export function periodoDeFecha(fecha: Date): string {
+  const anio = fecha.getUTCFullYear();
+  const mes = fecha.getUTCMonth() + 1;
+  return `${anio}-${mes <= 6 ? 1 : 2}`;
+}
+
 export async function registrarConsultaTutor(
   materiaId: string,
   descripcion: string,
@@ -247,31 +254,38 @@ export async function registrarConsultaTutor(
   }
 }
 
-export async function progresoAlumno(alumnoId: string) {
-  const [inscripciones, notas, asistencias, entregas, totalActividades] = await Promise.all([
-    prisma.inscripcion.findMany({
-      where: { alumno_id: alumnoId },
-      include: { materia: { select: { id: true, nombre: true } } },
-      orderBy: { inscripto_en: "desc" },
-    }),
-    prisma.nota.findMany({
-      where: { alumno_id: alumnoId },
-      include: { materia: { select: { id: true, nombre: true } } },
-      orderBy: { registrado_en: "desc" },
-    }),
-    prisma.asistencia.findMany({
-      where: { alumno_id: alumnoId },
-      include: { materia: { select: { id: true, nombre: true } } },
-      orderBy: { fecha_clase: "desc" },
-    }),
-    prisma.entrega.findMany({
-      where: { alumno_id: alumnoId },
-      select: { id: true },
-    }),
-    prisma.actividad.count({
-      where: { seccion: { materia: { inscripciones: { some: { alumno_id: alumnoId } } } } },
-    }),
-  ]);
+export async function progresoAlumno(alumnoId: string, periodo?: string) {
+  const [inscripciones, todasLasNotas, todasLasAsistencias, entregas, totalActividades] =
+    await Promise.all([
+      prisma.inscripcion.findMany({
+        where: { alumno_id: alumnoId },
+        include: { materia: { select: { id: true, nombre: true } } },
+        orderBy: { inscripto_en: "desc" },
+      }),
+      prisma.nota.findMany({
+        where: { alumno_id: alumnoId },
+        include: { materia: { select: { id: true, nombre: true } } },
+        orderBy: { registrado_en: "desc" },
+      }),
+      prisma.asistencia.findMany({
+        where: { alumno_id: alumnoId },
+        include: { materia: { select: { id: true, nombre: true } } },
+        orderBy: { fecha_clase: "desc" },
+      }),
+      prisma.entrega.findMany({
+        where: { alumno_id: alumnoId },
+        select: { id: true },
+      }),
+      prisma.actividad.count({
+        where: { seccion: { materia: { inscripciones: { some: { alumno_id: alumnoId } } } } },
+      }),
+    ]);
+
+  const periodos = [...new Set(todasLasNotas.map((n) => n.periodo))].sort();
+  const notas = periodo ? todasLasNotas.filter((n) => n.periodo === periodo) : todasLasNotas;
+  const asistencias = periodo
+    ? todasLasAsistencias.filter((a) => periodoDeFecha(a.fecha_clase) === periodo)
+    : todasLasAsistencias;
 
   const notasPorMateria = new Map<string, number[]>();
   for (const n of notas) {
@@ -330,6 +344,8 @@ export async function progresoAlumno(alumnoId: string) {
       : 0;
 
   return {
+    periodos,
+    periodo: periodo ?? null,
     resumen,
     promedio_general: promedioGeneral,
     mejor_nota: mejorNota,

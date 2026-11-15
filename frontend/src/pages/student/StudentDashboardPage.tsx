@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCourses } from "../../hooks/useCourses";
@@ -23,8 +23,9 @@ function vencida(iso: string): boolean {
 export function StudentDashboardPage(): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [periodo, setPeriodo] = useState("");
   const { data: courses } = useCourses();
-  const { data: dashboard } = useDashboard(user?.role);
+  const { data: dashboard } = useDashboard(user?.role, periodo || undefined);
 
   const d = dashboard?.rol === "ALUMNO" ? dashboard.data : undefined;
   const upcoming = d?.proximasActividades ?? [];
@@ -34,14 +35,34 @@ export function StudentDashboardPage(): React.ReactElement {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">
-          Bienvenido, {user?.name}
-        </h2>
-        <p className="text-[13px] text-text-2 capitalize">
-          {hoy}
-          {d ? ` · ${d.resumen.materias} ${d.resumen.materias === 1 ? "materia" : "materias"}` : ""}
-        </p>
+      <div className="flex justify-between items-start gap-3.5 flex-wrap mb-6">
+        <div>
+          <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">
+            Bienvenido, {user?.name}
+          </h2>
+          <p className="text-[13px] text-text-2 capitalize">
+            {hoy}
+            {d ? ` · ${d.resumen.materias} ${d.resumen.materias === 1 ? "materia" : "materias"}` : ""}
+          </p>
+        </div>
+        <div>
+          <label htmlFor="dashboard-periodo" className="block text-[11px] font-semibold text-text-2 mb-1">
+            Período
+          </label>
+          <select
+            id="dashboard-periodo"
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value)}
+            className="px-3 py-2 border border-border rounded text-sm bg-surface"
+          >
+            <option value="">Todos los períodos</option>
+            {(d?.periodos ?? []).map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">

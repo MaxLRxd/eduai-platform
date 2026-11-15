@@ -16,6 +16,12 @@ export async function listarConversaciones(req: Request, res: Response): Promise
   res.json({ items });
 }
 
+export async function listarContactos(req: Request, res: Response): Promise<void> {
+  const user = requireUser(req);
+  const items = await messagesService.listarContactos(user.id, user.rol);
+  res.json({ items });
+}
+
 export async function obtenerMensajes(
   req: Request<unknown, unknown, unknown, { conversacionId?: string }>,
   res: Response
@@ -31,7 +37,7 @@ export async function enviarMensaje(
   res: Response
 ): Promise<void> {
   const user = requireUser(req);
-  const mensaje = await messagesService.enviarMensaje(user.id, req.body);
+  const mensaje = await messagesService.enviarMensaje(user.id, user.rol, req.body);
   res.status(201).json({ mensaje });
 }
 

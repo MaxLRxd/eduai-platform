@@ -64,7 +64,11 @@ export async function progreso(req: Request, res: Response): Promise<void> {
     throw new AppError(403, "Solo los alumnos tienen progreso academico");
   }
 
-  const data = await analyticsService.progresoAlumno(user.id);
+  const periodo =
+    typeof req.query.periodo === "string" && req.query.periodo.trim()
+      ? req.query.periodo.trim()
+      : undefined;
+  const data = await analyticsService.progresoAlumno(user.id, periodo);
   res.json(data);
 }
 

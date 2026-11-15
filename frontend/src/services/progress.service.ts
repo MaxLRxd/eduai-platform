@@ -14,6 +14,8 @@ interface ResumenProgresoApi {
 }
 
 interface ProgresoApi {
+  periodos: string[];
+  periodo: string | null;
   resumen: ResumenProgresoApi[];
   promedio_general: number;
   mejor_nota: number;
@@ -40,6 +42,15 @@ export interface ProgressOverview {
   actividades: { entregadas: number; total: number };
 }
 
+export interface ProgressData {
+  summary: CourseGradeSummary[];
+  grades: GradeDetail[];
+  attendance: AttendanceRecord[];
+  overview: ProgressOverview;
+  periodos: string[];
+  periodo: string | null;
+}
+
 const ESTADO_LABEL: Record<
   "PRESENTE" | "AUSENTE" | "TARDANZA" | "JUSTIFICADO",
   AttendanceStatus
@@ -56,54 +67,36 @@ function gradeColor(value: number): string {
   return "#dc2626";
 }
 
-let cache: Promise<ProgresoApi> | null = null;
+export async function getProgressData(periodo?: string): Promise<ProgressData> {
+  const query = periodo ? `?periodo=${encodeURIComponent(periodo)}` : "";
+  const data = await api<ProgresoApi>(`/api/analytics/progreso${query}`);
 
-async function getProgreso(): Promise<ProgresoApi> {
-  if (!cache) {
-    cache = api<ProgresoApi>("/api/analytics/progreso").catch((error) => {
-      cache = null;
-      throw error;
-    });
-  }
-  return cache;
-}
-
-export async function getCourseGradeSummary(): Promise<CourseGradeSummary[]> {
-  const data = await getProgreso();
-  return data.resumen.map((r) => ({
-    course: r.materia,
-    average: r.promedio ?? 0,
-    attendance: r.asistencia,
-    color: r.promedio !== null ? gradeColor(r.promedio) : "#94a3b8",
-  }));
-}
-
-export async function getGradeDetail(): Promise<GradeDetail[]> {
-  const data = await getProgreso();
-  return data.detalle.map((g) => ({
-    evaluation: g.evaluacion,
-    course: g.materia,
-    type: g.periodo,
-    date: g.fecha,
-    grade: g.nota,
-  }));
-}
-
-export async function getAttendanceLog(): Promise<AttendanceRecord[]> {
-  const data = await getProgreso();
-  return data.asistencia.map((a) => ({
-    date: a.fecha,
-    course: a.materia,
-    status: ESTADO_LABEL[a.estado],
-  }));
-}
-
-export async function getProgressOverview(): Promise<ProgressOverview> {
-  const data = await getProgreso();
   return {
-    promedioGeneral: data.promedio_general,
-    mejorNota: data.mejor_nota,
-    asistenciaGlobal: data.asistencia_global,
-    actividades: data.actividades,
+    periodos: data.periodos ?? [],
+    periodo: data.periodo ?? null,
+    summary: data.resumen.map((r) => ({
+      course: r.materia,
+      average: r.promedio ?? 0,
+      attendance: r.asistencia,
+      color: r.promedio !== null ? gradeColor(r.promedio) : "#94a3b8",
+    })),
+    grades: data.detalle.map((g) => ({
+      evaluation: g.evaluacion,
+      course: g.materia,
+      type: g.periodo,
+      date: g.fecha,
+      grade: g.nota,
+    })),
+    attendance: data.asistencia.map((a) => ({
+      date: a.fecha,
+      course: a.materia,
+      status: ESTADO_LABEL[a.estado],
+    })),
+    overview: {
+      promedioGeneral: data.promedio_general,
+      mejorNota: data.mejor_nota,
+      asistenciaGlobal: data.asistencia_global,
+      actividades: data.actividades,
+    },
   };
 }

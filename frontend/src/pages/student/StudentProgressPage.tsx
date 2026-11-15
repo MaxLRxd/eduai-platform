@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useProgress } from "../../hooks/useProgress";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { ProgressBar } from "../../components/ui/ProgressBar";
@@ -6,37 +6,66 @@ import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag } from "../../components/ui/Tag";
 
 export function StudentProgressPage(): React.ReactElement {
-  const { summary, grades, attendance, overview } = useProgress();
+  const [periodo, setPeriodo] = useState("");
+  const { data, isLoading } = useProgress(periodo || undefined);
+  const summary = data?.summary ?? [];
+  const grades = data?.grades ?? [];
+  const attendance = data?.attendance ?? [];
+  const overview = data?.overview;
 
   const tiles = [
     {
       label: "Promedio general",
-      value: (overview.data?.promedioGeneral ?? 0).toFixed(1),
+      value: (overview?.promedioGeneral ?? 0).toFixed(1),
       color: "#003d7a",
     },
     {
       label: "Asistencia global",
-      value: `${overview.data?.asistenciaGlobal ?? 0}%`,
+      value: `${overview?.asistenciaGlobal ?? 0}%`,
       color: "#059669",
     },
     {
       label: "Actividades entregadas",
-      value: `${overview.data?.actividades.entregadas ?? 0}/${overview.data?.actividades.total ?? 0}`,
+      value: `${overview?.actividades.entregadas ?? 0}/${overview?.actividades.total ?? 0}`,
       color: "#2563eb",
     },
     {
       label: "Mejor nota",
-      value: (overview.data?.mejorNota ?? 0).toFixed(1),
+      value: (overview?.mejorNota ?? 0).toFixed(1),
       color: "#d97706",
     },
   ];
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Mis estadísticas</h2>
-        <p className="text-[13px] text-text-2">Notas, asistencia y desempeño en actividades · Vista completa</p>
+      <div className="flex justify-between items-start gap-3.5 flex-wrap mb-6">
+        <div>
+          <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Mis estadísticas</h2>
+          <p className="text-[13px] text-text-2">Notas, asistencia y desempeño en actividades · Vista completa</p>
+        </div>
+        <div className="flex items-end gap-2">
+          <div>
+            <label htmlFor="progress-periodo" className="block text-[11px] font-semibold text-text-2 mb-1">
+              Período
+            </label>
+            <select
+              id="progress-periodo"
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
+              className="px-3 py-2 border border-border rounded text-sm bg-surface"
+            >
+              <option value="">Todos los períodos</option>
+              {(data?.periodos ?? []).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
+
+      {isLoading && <p className="text-sm text-text-2 mb-4">Cargando estadísticas…</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         {tiles.map((t) => (
@@ -50,7 +79,7 @@ export function StudentProgressPage(): React.ReactElement {
       </div>
 
       <div className="grid md:grid-cols-2 gap-5 mb-5">
-        {(summary.data ?? []).map((s) => (
+        {summary.map((s) => (
           <Card key={s.course}>
             <div className="flex justify-between items-start mb-3">
               <span className="font-display text-sm font-bold">{s.course}</span>
@@ -82,7 +111,7 @@ export function StudentProgressPage(): React.ReactElement {
             </div>
           </Card>
         ))}
-        {(summary.data ?? []).length === 0 && (
+        {summary.length === 0 && (
           <Card className="md:col-span-2">
             <div className="py-6 text-[12px] text-text-3 text-center">Todavía no hay notas cargadas en tus materias.</div>
           </Card>
@@ -103,7 +132,7 @@ export function StudentProgressPage(): React.ReactElement {
               </tr>
             </Thead>
             <tbody>
-              {(grades.data ?? []).map((g) => (
+              {grades.map((g) => (
                 <tr key={g.evaluation} className="hover:bg-surface-2">
                   <Td className="font-semibold text-text-1">{g.evaluation}</Td>
                   <Td>{g.course}</Td>
@@ -116,7 +145,7 @@ export function StudentProgressPage(): React.ReactElement {
                   </Td>
                 </tr>
               ))}
-              {(grades.data ?? []).length === 0 && (
+              {grades.length === 0 && (
                 <tr>
                   <Td colSpan={5} className="text-center text-[12px] text-text-3 py-4">
                     No hay calificaciones registradas todavía.
@@ -140,7 +169,7 @@ export function StudentProgressPage(): React.ReactElement {
               </tr>
             </Thead>
             <tbody>
-              {(attendance.data ?? []).map((a, i) => (
+              {attendance.map((a, i) => (
                 <tr key={i} className="hover:bg-surface-2">
                   <Td className="font-mono text-xs">{a.date}</Td>
                   <Td>{a.course}</Td>
@@ -149,7 +178,7 @@ export function StudentProgressPage(): React.ReactElement {
                   </Td>
                 </tr>
               ))}
-              {(attendance.data ?? []).length === 0 && (
+              {attendance.length === 0 && (
                 <tr>
                   <Td colSpan={3} className="text-center text-[12px] text-text-3 py-4">
                     No hay registros de asistencia todavía.

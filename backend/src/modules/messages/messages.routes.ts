@@ -7,6 +7,7 @@ import * as messagesController from "./messages.controller";
 const router = Router();
 
 router.get("/messages", requireAuth, messagesController.listarConversaciones);
+router.get("/messages/contactos", requireAuth, messagesController.listarContactos);
 router.get("/messages/historial", requireAuth, messagesController.obtenerMensajes);
 router.post(
   "/messages",

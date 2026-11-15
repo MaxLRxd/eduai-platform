@@ -1,3 +1,4 @@
+import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
@@ -22,6 +23,11 @@ export async function listarConversaciones(usuarioId: string) {
           miembros: {
             include: { usuario: { select: { id: true, nombre: true, email: true, rol: true } } },
           },
+          _count: {
+            select: {
+              mensajes: { where: { leido: false, emisor_id: { not: usuarioId } } },
+            },
+          },
         },
       },
     },
@@ -36,6 +42,8 @@ export async function listarConversaciones(usuarioId: string) {
     return {
       id: m.conversacion_id,
       participante: otros[0] ?? null,
+      participante_id: otros[0]?.id ?? null,
+      no_leidos: m.conversacion._count.mensajes,
       ultimo_mensaje: ultimo
         ? {
             contenido: ultimo.contenido,
@@ -65,16 +73,157 @@ export async function obtenerMensajes(conversacionId: string, usuarioId: string)
     orderBy: { enviado_en: "asc" },
   });
 
+  // Abrir el hilo marca como leídos los mensajes recibidos.
+  await prisma.mensajeDirecto.updateMany({
+    where: { conversacion_id: conversacionId, emisor_id: { not: usuarioId }, leido: false },
+    data: { leido: true },
+  });
+
   return mensajes.map((msg) => ({
     id: msg.id,
     emisor_id: msg.emisor_id,
     contenido: msg.contenido,
-    leido: msg.leido,
+    leido: msg.emisor_id === usuarioId ? msg.leido : true,
     enviado_en: msg.enviado_en,
   }));
 }
 
-export async function enviarMensaje(usuarioId: string, input: EnviarMensajeInput) {
+/**
+ * CU-A13: contactos habilitados según el rol. El alumno solo ve a los docentes de sus
+ * materias; el docente solo a los alumnos inscriptos en las materias que dicta.
+ */
+export async function listarContactos(usuarioId: string, rol: Rol) {
+  const mapa = new Map<
+    string,
+    { id: string; nombre: string; email: string; rol: Rol; materias: { id: string; nombre: string }[] }
+  >();
+
+  const agregar = (
+    usuario: { id: string; nombre: string; email: string; rol: Rol },
+    materia?: { id: string; nombre: string }
+  ): void => {
+    const actual = mapa.get(usuario.id) ?? { ...usuario, materias: [] };
+    if (materia && !actual.materias.some((m) => m.id === materia.id)) {
+      actual.materias.push(materia);
+    }
+    mapa.set(usuario.id, actual);
+  };
+
+  if (rol === "ALUMNO") {
+    const inscripciones = await prisma.inscripcion.findMany({
+      where: { alumno_id: usuarioId },
+      select: {
+        materia: {
+          select: {
+            id: true,
+            nombre: true,
+            profesores: {
+              where: { activo: true },
+              select: {
+                profesor: {
+                  select: {
+                    usuario: { select: { id: true, nombre: true, email: true, rol: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    for (const insc of inscripciones) {
+      for (const asignacion of insc.materia.profesores) {
+        agregar(asignacion.profesor.usuario, { id: insc.materia.id, nombre: insc.materia.nombre });
+      }
+    }
+  } else if (rol === "PROFESOR") {
+    const perfil = await prisma.profesor.findUnique({ where: { usuario_id: usuarioId } });
+
+    if (!perfil) {
+      return [];
+    }
+
+    const asignaciones = await prisma.materiaProfesor.findMany({
+      where: { profesor_id: perfil.id, activo: true },
+      select: {
+        materia: {
+          select: {
+            id: true,
+            nombre: true,
+            inscripciones: {
+              select: { alumno: { select: { id: true, nombre: true, email: true, rol: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    for (const asignacion of asignaciones) {
+      for (const insc of asignacion.materia.inscripciones) {
+        agregar(insc.alumno, { id: asignacion.materia.id, nombre: asignacion.materia.nombre });
+      }
+    }
+  } else {
+    const usuarios = await prisma.usuario.findMany({
+      where: { activo: true, id: { not: usuarioId } },
+      select: { id: true, nombre: true, email: true, rol: true },
+    });
+
+    for (const u of usuarios) {
+      agregar(u);
+    }
+  }
+
+  return [...mapa.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+async function exigirPuedeMensajear(
+  emisorId: string,
+  emisorRol: Rol,
+  destinatario: { id: string; rol: Rol }
+): Promise<void> {
+  if (emisorRol === "ADMIN" || destinatario.rol === "ADMIN") {
+    return;
+  }
+
+  if (emisorRol === "ALUMNO" && destinatario.rol === "PROFESOR") {
+    const vinculo = await prisma.materiaProfesor.findFirst({
+      where: {
+        activo: true,
+        profesor: { usuario_id: destinatario.id },
+        materia: { inscripciones: { some: { alumno_id: emisorId } } },
+      },
+      select: { id: true },
+    });
+
+    if (vinculo) return;
+    throw new AppError(403, "Solo podes escribirle a docentes de tus materias");
+  }
+
+  if (emisorRol === "PROFESOR" && destinatario.rol === "ALUMNO") {
+    const perfil = await prisma.profesor.findUnique({ where: { usuario_id: emisorId } });
+
+    if (perfil) {
+      const vinculo = await prisma.materiaProfesor.findFirst({
+        where: {
+          activo: true,
+          profesor_id: perfil.id,
+          materia: { inscripciones: { some: { alumno_id: destinatario.id } } },
+        },
+        select: { id: true },
+      });
+
+      if (vinculo) return;
+    }
+
+    throw new AppError(403, "Solo podes escribirle a alumnos de tus materias");
+  }
+
+  throw new AppError(403, "No podes enviarle mensajes a ese usuario");
+}
+
+export async function enviarMensaje(usuarioId: string, rol: Rol, input: EnviarMensajeInput) {
   assertUuid(input.destinatario_id, "Destinatario no encontrado");
 
   const destinatario = await prisma.usuario.findUnique({ where: { id: input.destinatario_id } });
@@ -87,11 +236,15 @@ export async function enviarMensaje(usuarioId: string, input: EnviarMensajeInput
     throw new AppError(400, "No podes enviarte un mensaje a vos mismo");
   }
 
+  await exigirPuedeMensajear(usuarioId, rol, destinatario);
+
   const existente = await prisma.conversacion.findFirst({
     where: {
       AND: [
         { miembros: { some: { usuario_id: usuarioId } } },
         { miembros: { some: { usuario_id: destinatario.id } } },
+        // Solo reutiliza conversaciones individuales entre estas dos personas.
+        { miembros: { every: { usuario_id: { in: [usuarioId, destinatario.id] } } } },
       ],
     },
   });

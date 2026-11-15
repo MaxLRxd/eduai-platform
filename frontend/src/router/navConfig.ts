@@ -25,6 +25,7 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { icon: "courses", label: "Mis cursos", path: "/student/courses" },
         { icon: "assignments", label: "Entregas", path: "/student/assignments" },
         { icon: "progress", label: "Mis estadísticas", path: "/student/progress" },
+        { icon: "messages", label: "Mensajes", path: "/student/messages" },
         { icon: "licencias", label: "Inscribirse a materia", path: "/student/enroll" },
       ],
     },

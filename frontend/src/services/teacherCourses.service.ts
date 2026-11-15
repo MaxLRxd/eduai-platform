@@ -106,24 +106,58 @@ export async function getTeacherCourseStudents(courseId: string): Promise<Teache
   return filas.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function getTeacherCourseGrades(courseId: string): Promise<TeacherGradeRow[]> {
-  const { notas } = await getDatosMateria(courseId);
+export async function getTeacherCourseGrades(
+  courseId: string
+): Promise<{ rows: TeacherGradeRow[]; periods: string[] }> {
+  const [inscriptos, { notas }] = await Promise.all([
+    getCourseEnrolledStudents(courseId),
+    getDatosMateria(courseId),
+  ]);
 
   const porAlumno = new Map<string, { name: string; porPeriodo: Map<string, number> }>();
+  for (const a of inscriptos) {
+    porAlumno.set(a.id, { name: a.nombre, porPeriodo: new Map() });
+  }
+
   for (const n of notas) {
-    const entry = porAlumno.get(n.alumno_id) ?? { name: n.alumno?.nombre ?? "—", porPeriodo: new Map() };
+    const entry =
+      porAlumno.get(n.alumno_id) ??
+      { name: n.alumno?.nombre ?? "—", porPeriodo: new Map<string, number>() };
     entry.porPeriodo.set(n.periodo, n.calificacion);
     porAlumno.set(n.alumno_id, entry);
   }
 
+  const periods = [...new Set(notas.map((n) => n.periodo))].sort();
   const filas: TeacherGradeRow[] = [];
-  for (const [, e] of porAlumno) {
-    const v1 = e.porPeriodo.get("2026-1");
-    const v2 = e.porPeriodo.get("2026-2");
+  for (const [studentId, e] of porAlumno) {
     const califs = [...e.porPeriodo.values()];
     const avg = califs.length ? califs.reduce((s, c) => s + c, 0) / califs.length : 0;
-    filas.push({ name: e.name, tp1: fmtNum(v1), tp2: fmtNum(v2), tp3: "—", parcial: "—", average: fmtNum(avg) });
+    const grades: Record<string, string> = {};
+    for (const p of periods) {
+      grades[p] = fmtNum(e.porPeriodo.get(p));
+    }
+    filas.push({
+      studentId,
+      name: e.name,
+      grades,
+      average: califs.length ? fmtNum(avg) : "—",
+    });
   }
 
-  return filas.sort((a, b) => a.name.localeCompare(b.name));
+  return { rows: filas.sort((a, b) => a.name.localeCompare(b.name)), periods };
+}
+
+export async function crearNota(
+  courseId: string,
+  input: {
+    alumno_id: string;
+    periodo: string;
+    calificacion: number;
+    observaciones?: string;
+  }
+): Promise<void> {
+  await api(`/api/materias/${courseId}/notas`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

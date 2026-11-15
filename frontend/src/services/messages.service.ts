@@ -5,11 +5,23 @@ export interface MessageContact {
   id: string;
   nombre: string;
   email: string;
+  rol: "ALUMNO" | "PROFESOR" | "ADMIN";
+  materias: { id: string; nombre: string }[];
+}
+
+export interface MessageItem {
+  id: string;
+  emisor_id: string;
+  contenido: string;
+  leido: boolean;
+  enviado_en: string;
 }
 
 interface ConversacionItem {
   id: string;
   participante: { id: string; nombre: string; email: string; rol: string } | null;
+  participante_id: string | null;
+  no_leidos: number;
   ultimo_mensaje: { contenido: string; emisor_id: string; enviado_en: string } | null;
 }
 
@@ -26,47 +38,43 @@ function formatWhen(iso: string): string {
   return fecha.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export async function getInbox(usuarioId?: string): Promise<InboxMessage[]> {
+export async function getInbox(): Promise<InboxMessage[]> {
   const data = await api<{ items: ConversacionItem[] }>("/api/messages");
   return (data.items ?? []).map((c) => {
     const ultimo = c.ultimo_mensaje;
     return {
       id: c.id,
       from: c.participante?.nombre ?? "Sistema",
+      participanteId: c.participante_id ?? c.participante?.id ?? null,
       subject: ultimo?.contenido ?? "(Sin mensajes aún)",
       when: ultimo ? formatWhen(ultimo.enviado_en) : "",
-      unread: usuarioId ? Boolean(ultimo && ultimo.emisor_id !== usuarioId) : false,
+      unread: c.no_leidos > 0,
+      noLeidos: c.no_leidos ?? 0,
     };
   });
 }
 
-export async function getAlumnosContactos(): Promise<MessageContact[]> {
-  const materias = await api<{ materias: { id: string }[] }>("/api/materias/mias");
-  const listas = await Promise.all(
-    (materias.materias ?? []).map((m) =>
-      api<{ notas: { alumno: MessageContact }[] }>(`/api/materias/${m.id}/notas`).catch(() => ({
-        notas: [] as { alumno: MessageContact }[],
-      }))
-    )
-  );
+export async function getContactos(): Promise<MessageContact[]> {
+  const data = await api<{ items: MessageContact[] }>("/api/messages/contactos");
+  return data.items ?? [];
+}
 
-  const mapa = new Map<string, MessageContact>();
-  for (const lista of listas) {
-    for (const nota of lista.notas ?? []) {
-      if (nota.alumno) {
-        mapa.set(nota.alumno.id, nota.alumno);
-      }
-    }
-  }
-  return [...mapa.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+export async function getConversationMessages(conversacionId: string): Promise<MessageItem[]> {
+  const data = await api<{ items: MessageItem[] }>(
+    `/api/messages/historial?conversacionId=${encodeURIComponent(conversacionId)}`
+  );
+  return data.items ?? [];
 }
 
 export async function sendMessage(input: {
   destinatario_id: string;
   contenido: string;
-}): Promise<{ success: boolean }> {
-  await api("/api/messages", { method: "POST", body: JSON.stringify(input) });
-  return { success: true };
+}): Promise<{ success: boolean; conversacionId: string }> {
+  const data = await api<{ mensaje: { conversacion_id: string } }>("/api/messages", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return { success: true, conversacionId: data.mensaje.conversacion_id };
 }
 
 export async function sendBroadcast(input: {

@@ -115,7 +115,12 @@ export function StudentCourseDetailPage(): React.ReactElement {
             <h3 className="font-display text-base mb-1">Aula de {course.name}</h3>
             <p className="text-[13px] text-text-2">{course.intro}</p>
           </div>
-          <Button onClick={() => document.getElementById("tutor-input")?.focus()}>Consultar al Tutor IA</Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => document.getElementById("tutor-input")?.focus()}>Consultar al Tutor IA</Button>
+            <Button variant="secondary" onClick={() => navigate("/student/messages")}>
+              Contactar docente
+            </Button>
+          </div>
         </div>
       </Card>
 

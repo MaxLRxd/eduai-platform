@@ -1,18 +1,37 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAuth } from "../contexts/AuthContext";
-import { getAlumnosContactos, getInbox, sendBroadcast, sendMessage } from "../services/messages.service";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getContactos,
+  getConversationMessages,
+  getInbox,
+  sendBroadcast,
+  sendMessage,
+} from "../services/messages.service";
 
 export function useInbox() {
-  const { user } = useAuth();
-  return useQuery({ queryKey: ["messages", "inbox"], queryFn: () => getInbox(user?.id) });
+  return useQuery({ queryKey: ["messages", "inbox"], queryFn: getInbox });
 }
 
 export function useContacts() {
-  return useQuery({ queryKey: ["messages", "contacts"], queryFn: getAlumnosContactos });
+  return useQuery({ queryKey: ["messages", "contacts"], queryFn: getContactos });
+}
+
+export function useConversation(conversacionId: string | null) {
+  return useQuery({
+    queryKey: ["messages", "conversation", conversacionId],
+    queryFn: () => getConversationMessages(conversacionId as string),
+    enabled: Boolean(conversacionId),
+  });
 }
 
 export function useSendMessage() {
-  return useMutation({ mutationFn: sendMessage });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: sendMessage,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["messages", "inbox"] });
+      void queryClient.invalidateQueries({ queryKey: ["messages", "conversation"] });
+    },
+  });
 }
 
 export function useSendBroadcast() {

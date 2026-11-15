@@ -2,7 +2,14 @@ import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 
-export async function dashboardAlumno(alumnoId: string) {
+/** Período académico (YYYY-1 / YYYY-2) al que pertenece una fecha de clase. */
+function periodoDeFecha(fecha: Date): string {
+  const anio = fecha.getUTCFullYear();
+  const mes = fecha.getUTCMonth() + 1;
+  return `${anio}-${mes <= 6 ? 1 : 2}`;
+}
+
+export async function dashboardAlumno(alumnoId: string, periodo?: string) {
   const [inscripciones, materias, notas, asistencias, actividades, alertas] = await Promise.all([
     prisma.inscripcion.count({ where: { alumno_id: alumnoId } }),
     prisma.inscripcion.findMany({
@@ -16,10 +23,9 @@ export async function dashboardAlumno(alumnoId: string) {
       where: { alumno_id: alumnoId },
       select: { materia_id: true, calificacion: true, periodo: true },
     }),
-    prisma.asistencia.groupBy({
-      by: ["estado"],
+    prisma.asistencia.findMany({
       where: { alumno_id: alumnoId },
-      _count: { _all: true },
+      select: { estado: true, fecha_clase: true },
     }),
     // Actividades activas de las materias del alumno, con su entrega (si existe).
     prisma.actividad.findMany({
@@ -38,8 +44,14 @@ export async function dashboardAlumno(alumnoId: string) {
     }),
   ]);
 
+  const periodos = [...new Set(notas.map((n) => n.periodo))].sort();
+  const notasFiltradas = periodo ? notas.filter((n) => n.periodo === periodo) : notas;
+  const asistenciasFiltradas = periodo
+    ? asistencias.filter((a) => periodoDeFecha(a.fecha_clase) === periodo)
+    : asistencias;
+
   const notaPorMateria = new Map<string, number[]>();
-  for (const n of notas) {
+  for (const n of notasFiltradas) {
     const arr = notaPorMateria.get(n.materia_id) ?? [];
     arr.push(n.calificacion.toNumber());
     notaPorMateria.set(n.materia_id, arr);
@@ -98,20 +110,27 @@ export async function dashboardAlumno(alumnoId: string) {
       promedioGlobal = promedioGlobal / conPromedio.length;
     }
 
-    const notasPeriodo = notas.filter((n) => n.periodo === PERIODO_ACTUAL);
+    const notasPeriodo = notasFiltradas.filter((n) => n.periodo === (periodo ?? PERIODO_ACTUAL));
     if (notasPeriodo.length > 0) {
       promPeriodoActual =
         notasPeriodo.reduce((a, b) => a + b.calificacion.toNumber(), 0) / notasPeriodo.length;
     }
   }
 
-  const asistencia = asistencias.map((a) => ({
-    estado: a.estado,
-    count: a._count._all,
+  const asistenciaConteo = new Map<string, number>();
+  for (const a of asistenciasFiltradas) {
+    asistenciaConteo.set(a.estado, (asistenciaConteo.get(a.estado) ?? 0) + 1);
+  }
+
+  const asistencia = [...asistenciaConteo.entries()].map(([estado, count]) => ({
+    estado,
+    count,
   }));
 
   return {
     rol: "ALUMNO",
+    periodos,
+    periodo: periodo ?? null,
     resumen: {
       materias: inscripciones,
       entregasPendientes: proximasActividades.length,
@@ -204,9 +223,9 @@ export async function dashboardProfesor(usuarioId: string) {
   };
 }
 
-export async function dashboard(usuarioId: string, rol: Rol) {
+export async function dashboard(usuarioId: string, rol: Rol, periodo?: string) {
   if (rol === "ALUMNO") {
-    return dashboardAlumno(usuarioId);
+    return dashboardAlumno(usuarioId, periodo);
   }
   if (rol === "PROFESOR") {
     return dashboardProfesor(usuarioId);
