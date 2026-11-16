@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import {
+  useAssignPlanningMaterial,
   useDeletePlanningMaterial,
   usePlanning,
   useSavePlanning,
@@ -9,7 +11,8 @@ import {
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
-import { useCourseSections } from "../../hooks/useContent";
+import { useCourseSections, useCourseContentTree } from "../../hooks/useContent";
+import { resolverMateriaActiva } from "../../utils/materiaActiva";
 
 function shortDate(iso: string): string {
   const f = new Date(iso);
@@ -18,13 +21,16 @@ function shortDate(iso: string): string {
 
 export function TeacherPlanningPage(): React.ReactElement {
   const { data: courses } = useTeacherCourses();
-  const [courseId, setCourseId] = useState<string | null>(null);
-  const activeCourse = courseId ?? courses?.[0]?.id ?? null;
+  const [searchParams] = useSearchParams();
+  const [courseId, setCourseId] = useState<string | null>(searchParams.get("course"));
+  const activeCourse = resolverMateriaActiva(courseId, courses);
   const activeName = courses?.find((c) => c.id === activeCourse)?.label ?? "la materia seleccionada";
 
   const { data: planning, isLoading } = usePlanning(activeCourse, activeName);
   const { data: sections } = useCourseSections(activeCourse);
+  const { data: contentTree } = useCourseContentTree(activeCourse);
   const save = useSavePlanning();
+  const assignMaterial = useAssignPlanningMaterial();
   const uploadMaterial = useUploadPlanningMaterial();
   const deleteMaterial = useDeletePlanningMaterial();
 
@@ -34,8 +40,20 @@ export function TeacherPlanningPage(): React.ReactElement {
   const [sectionSel, setSectionSel] = useState<string>("");
   const [newDate, setNewDate] = useState("");
   const [draftDate, setDraftDate] = useState<string | null>(null);
+  const [contentId, setContentId] = useState("");
   const [materialMsg, setMaterialMsg] = useState("");
   const [materialError, setMaterialError] = useState<string | null>(null);
+
+  const contentOptions = (contentTree ?? []).flatMap((s) => [
+    ...s.materials
+      .filter((m) => m.url && !m.id.startsWith("clase-"))
+      .map((m) => ({ id: m.id, label: `${s.nombre} · ${m.name}` })),
+    ...s.classes.flatMap((c) =>
+      c.materials
+        .filter((m) => m.url && !m.id.startsWith("clase-"))
+        .map((m) => ({ id: m.id, label: `${s.nombre} · ${c.title} · ${m.name}` }))
+    ),
+  ]);
 
   const current = planning?.[classIndex];
   const editingDate = draftDate ?? current?.date ?? null;
@@ -55,6 +73,7 @@ export function TeacherPlanningPage(): React.ReactElement {
     setClassIndex(0);
     setDraftDate(null);
     setSectionSel("");
+    setContentId("");
     setMaterialMsg("");
     setMaterialError(null);
   };
@@ -64,6 +83,7 @@ export function TeacherPlanningPage(): React.ReactElement {
     setDraftDate(newDate);
     setTitle("");
     setVisible(false);
+    setContentId("");
     setMaterialMsg("");
     setMaterialError(null);
     save.reset();
@@ -81,6 +101,22 @@ export function TeacherPlanningPage(): React.ReactElement {
         sectionId: sectionSel || null,
       },
       { onSuccess: () => setDraftDate(null) }
+    );
+  };
+
+  const handleAssignMaterial = (): void => {
+    if (!activeCourse || !editingDate || !contentId) return;
+    setMaterialMsg("");
+    setMaterialError(null);
+    assignMaterial.mutate(
+      { courseId: activeCourse, date: editingDate, contentId },
+      {
+        onSuccess: () => {
+          setMaterialMsg("Material de Contenidos asignado a la clase.");
+          setContentId("");
+        },
+        onError: (err) => setMaterialError(apiErrorMessage(err, "No se pudo asignar el material")),
+      }
     );
   };
 
@@ -156,6 +192,7 @@ export function TeacherPlanningPage(): React.ReactElement {
                     setClassIndex(idx);
                     setDraftDate(null);
                     setSectionSel(p.sectionId ?? "");
+                    setContentId("");
                     setMaterialMsg("");
                     setMaterialError(null);
                   }}
@@ -234,10 +271,10 @@ export function TeacherPlanningPage(): React.ReactElement {
           <div className="mb-3.5">
             <span className="block text-xs font-semibold text-text-1 mb-1.5">Material para estudiantes</span>
             <p className="text-[11px] text-text-2 mb-2">
-              Subí un archivo (PDF, PPTX, DOCX, etc.) que los alumnos podrán ver con esta clase.
+              Elegí un material ya subido en Contenidos o subí un archivo nuevo.
             </p>
             {adjunto ? (
-              <div className="flex items-center gap-2 px-3 py-2 border border-border rounded bg-surface-2">
+              <div className="flex items-center gap-2 px-3 py-2 border border-border rounded bg-surface-2 mb-2">
                 <span className="text-lg">📎</span>
                 <div className="flex-1 min-w-0">
                   {adjunto.url ? (
@@ -260,19 +297,52 @@ export function TeacherPlanningPage(): React.ReactElement {
                 </Button>
               </div>
             ) : (
-              <label
-                htmlFor="planning-material-file"
-                className={`w-full px-3 py-6 border-2 border-dashed border-border-strong rounded flex flex-col items-center justify-center text-center gap-1 ${
-                  !activeCourse || !editingDate ? "opacity-50" : "cursor-pointer hover:border-primary hover:bg-primary-light"
-                }`}
-              >
-                <span className="text-2xl">📎</span>
-                <span className="text-[13px] font-semibold text-text-1">
-                  {uploadMaterial.isPending ? "Subiendo…" : "Cargar archivo"}
-                </span>
-                <span className="text-[11px] text-text-3">o arrastralo y soltalo acá</span>
-              </label>
+              <p className="text-[11px] text-text-3 mb-2">Esta clase todavía no tiene material asignado.</p>
             )}
+
+            <div className="border border-border rounded p-2.5 mb-2">
+              <label htmlFor="planning-content-material" className="block text-[11px] font-semibold text-text-1 mb-1.5">
+                Usar material de Contenidos
+              </label>
+              <div className="flex gap-2">
+                <select
+                  id="planning-content-material"
+                  value={contentId}
+                  onChange={(e) => setContentId(e.target.value)}
+                  disabled={!editingDate || !activeCourse || contentOptions.length === 0}
+                  className="flex-1 min-w-0 px-3 py-2 border border-border rounded text-sm bg-surface"
+                >
+                  <option value="">
+                    {contentOptions.length > 0 ? "Seleccionar material…" : "No hay materiales con archivo"}
+                  </option>
+                  {contentOptions.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="secondary"
+                  onClick={handleAssignMaterial}
+                  disabled={!contentId || !editingDate || assignMaterial.isPending}
+                >
+                  {assignMaterial.isPending ? "Asignando…" : "Usar"}
+                </Button>
+              </div>
+            </div>
+
+            <label
+              htmlFor="planning-material-file"
+              className={`w-full px-3 py-4 border-2 border-dashed border-border-strong rounded flex flex-col items-center justify-center text-center gap-1 ${
+                !activeCourse || !editingDate ? "opacity-50" : "cursor-pointer hover:border-primary hover:bg-primary-light"
+              }`}
+            >
+              <span className="text-2xl">📎</span>
+              <span className="text-[13px] font-semibold text-text-1">
+                {uploadMaterial.isPending ? "Subiendo…" : adjunto ? "Reemplazar con un archivo nuevo" : "Subir archivo"}
+              </span>
+              <span className="text-[11px] text-text-3">PDF, PPTX, DOCX, etc.</span>
+            </label>
             <input
               id="planning-material-file"
               type="file"

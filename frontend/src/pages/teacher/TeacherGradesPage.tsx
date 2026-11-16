@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { useTeacherCourses, useTeacherCourseGrades, useCreateNota } from "../../hooks/useTeacherCourses";
+import { useTeacherCourses, useTeacherCourseGrades, useTeacherGradeSources, useCreateNota } from "../../hooks/useTeacherCourses";
 import { CourseFilter } from "../../components/ui/CourseFilter";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
+import { STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 
 const PERIODOS_BASE = ["2026-1", "2026-2"];
 
@@ -12,6 +13,7 @@ export function TeacherGradesPage(): React.ReactElement {
   const [selected, setSelected] = useState("");
   const courseId = selected || courses?.[0]?.id || "";
   const { data, isLoading } = useTeacherCourseGrades(courseId);
+  const { data: fuentes } = useTeacherGradeSources(courseId);
   const createNota = useCreateNota(courseId);
   const course = courses?.find((c) => c.id === courseId);
 
@@ -60,6 +62,8 @@ export function TeacherGradesPage(): React.ReactElement {
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Calificaciones</h2>
         <p className="text-[13px] text-text-2">Ingreso y gestión de notas por materia y período</p>
       </div>
+
+      <TeacherAreaTabs tabs={STUDENTS_AREA_TABS} />
 
       <CourseFilter courses={courses ?? []} value={courseId} onChange={setSelected} />
 
@@ -157,6 +161,64 @@ export function TeacherGradesPage(): React.ReactElement {
 
       {okMsg && <p className="text-xs text-success mb-2">{okMsg}</p>}
       {isLoading && <p className="text-sm text-text-2">Cargando calificaciones…</p>}
+
+      {(fuentes ?? []).length > 0 && (
+        <div className="border border-border rounded bg-surface mb-4 overflow-hidden">
+          <div className="px-4 py-2.5 bg-surface-2 border-b border-border">
+            <div className="font-display text-sm font-bold text-text-1">Insumos: TPs y simulacros</div>
+            <p className="text-[11px] text-text-2">
+              Promedios de trabajos corregidos y exámenes simulados. Podés usarlos para precargar una nota.
+            </p>
+          </div>
+          <TableWrap>
+            <Table ariaLabel="Insumos de calificación">
+              <Thead>
+                <tr>
+                  <Th>Estudiante</Th>
+                  <Th>TPs</Th>
+                  <Th>Prom. TP</Th>
+                  <Th>Simulacros</Th>
+                  <Th>Prom. simulacros</Th>
+                  <Th>Acciones</Th>
+                </tr>
+              </Thead>
+              <tbody>
+                {(fuentes ?? []).map((f) => (
+                  <tr key={f.alumno_id} className="hover:bg-surface-2">
+                    <Td className="font-semibold text-text-1">{f.nombre}</Td>
+                    <Td>{f.tps.cantidad}</Td>
+                    <Td>{f.tps.promedio == null ? "-" : f.tps.promedio.toFixed(2)}</Td>
+                    <Td>{f.simulacros.cantidad}</Td>
+                    <Td>{f.simulacros.promedio == null ? "-" : f.simulacros.promedio.toFixed(2)}</Td>
+                    <Td>
+                      <div className="flex gap-1.5 flex-wrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={f.tps.promedio == null}
+                          onClick={() => abrirFormulario(f.alumno_id, "TP", f.tps.promedio?.toFixed(2) ?? "")}
+                        >
+                          Usar TP
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={f.simulacros.promedio == null}
+                          onClick={() =>
+                            abrirFormulario(f.alumno_id, "SIMULACRO", f.simulacros.promedio?.toFixed(2) ?? "")
+                          }
+                        >
+                          Usar simulacro
+                        </Button>
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
+        </div>
+      )}
 
       <TableWrap>
         <Table ariaLabel="Tabla de calificaciones">

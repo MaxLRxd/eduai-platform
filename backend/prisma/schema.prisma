@@ -326,6 +326,7 @@ model Rubrica {
 model Actividad {
   id                  String        @id @default(uuid()) @db.Uuid
   seccion_id          String        @db.Uuid
+  clase_id            String?       @db.Uuid
   rubrica_id          String?       @db.Uuid
   nombre              String        @db.VarChar(200)
   consigna            String
@@ -339,9 +340,11 @@ model Actividad {
   updated_at          DateTime      @updatedAt
 
   seccion  Seccion   @relation(fields: [seccion_id], references: [id])
+  clase    PlanningClase? @relation(fields: [clase_id], references: [id], onDelete: SetNull)
   rubrica  Rubrica?  @relation(fields: [rubrica_id], references: [id])
   entregas Entrega[]
 
+  @@index([clase_id])
   @@map("actividades")
 }
 
@@ -546,6 +549,7 @@ model PlanningClase {
   materia Materia @relation(fields: [materia_id], references: [id])
   seccion Seccion? @relation(fields: [seccion_id], references: [id], onDelete: SetNull)
   contenidos Contenido[]
+  actividades Actividad[]
 
   @@index([seccion_id])
   @@unique([materia_id, fecha_clase])

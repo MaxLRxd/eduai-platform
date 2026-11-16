@@ -287,16 +287,68 @@ export async function enviarMensaje(usuarioId: string, rol: Rol, input: EnviarMe
 }
 
 export async function enviarBroadcast(usuarioId: string, input: BroadcastInput) {
-  const destinatarios = await prisma.usuario.findMany({
-    where: { activo: true, rol: input.dirigido_a ?? undefined },
-  });
+  const perfil = await prisma.profesor.findUnique({ where: { usuario_id: usuarioId } });
+
+  if (!perfil) {
+    throw new AppError(403, "Solo los docentes pueden enviar difusiones");
+  }
+
+  if (input.dirigido_a && input.dirigido_a !== "ALUMNO") {
+    throw new AppError(403, "Las difusiones docentes se envían a estudiantes");
+  }
+
+  let destinatarios: { id: string }[];
+
+  if (input.materia_id) {
+    assertUuid(input.materia_id, "Materia no encontrada");
+    const asignacion = await prisma.materiaProfesor.findFirst({
+      where: { materia_id: input.materia_id, profesor_id: perfil.id, activo: true },
+      select: { id: true },
+    });
+
+    if (!asignacion) {
+      throw new AppError(403, "No dictás esa materia");
+    }
+
+    destinatarios = await prisma.usuario.findMany({
+      where: {
+        activo: true,
+        rol: "ALUMNO",
+        inscripciones: { some: { materia_id: input.materia_id } },
+      },
+      select: { id: true },
+    });
+  } else if (input.destinatario_ids?.length) {
+    const contactos = await listarContactos(usuarioId, "PROFESOR");
+    const permitidos = new Set(contactos.map((c) => c.id));
+    const ids = [...new Set(input.destinatario_ids)].filter((id) => permitidos.has(id));
+
+    if (ids.length === 0) {
+      throw new AppError(400, "No hay destinatarios válidos para enviar la difusión");
+    }
+
+    destinatarios = await prisma.usuario.findMany({
+      where: { id: { in: ids }, activo: true, rol: "ALUMNO" },
+      select: { id: true },
+    });
+  } else {
+    // Sin filtros, la difusión llega solo a los estudiantes del docente, nunca a toda la institución.
+    const contactos = await listarContactos(usuarioId, "PROFESOR");
+    const ids = contactos.map((c) => c.id);
+    destinatarios = ids.length
+      ? await prisma.usuario.findMany({
+          where: { id: { in: ids }, activo: true, rol: "ALUMNO" },
+          select: { id: true },
+        })
+      : [];
+  }
 
   const broadcast = await prisma.mensajeBroadcast.create({
     data: {
       emisor_id: usuarioId,
       titulo: input.titulo,
       contenido: input.contenido,
-      dirigido_a: input.dirigido_a,
+      dirigido_a: "ALUMNO",
     },
   });
 

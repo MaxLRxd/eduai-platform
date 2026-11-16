@@ -4,7 +4,9 @@ import type { AssignmentOption, AssignmentType } from "../types/domain";
 export interface TeacherActivity {
   id: string;
   seccion_id: string;
+  clase_id: string | null;
   seccion: { id: string; nombre: string; tipo: string } | null;
+  clase: { id: string; titulo: string; fecha_clase: string } | null;
   nombre: string;
   consigna: string;
   tipo: AssignmentType;
@@ -20,6 +22,7 @@ export interface TeacherActivity {
 
 export interface ActivityInput {
   seccion_id: string;
+  clase_id?: string | null;
   /** `null` desvincula la rubrica de la actividad. */
   rubrica_id?: string | null;
   nombre: string;
@@ -54,7 +57,9 @@ export async function getTeacherActivities(materiaId: string): Promise<TeacherAc
     return {
       id: a.id,
       seccion_id: a.seccion_id,
+      clase_id: a.clase_id ?? null,
       seccion: a.seccion ?? null,
+      clase: a.clase ?? null,
       nombre: a.nombre,
       consigna: a.consigna,
       tipo: a.tipo,

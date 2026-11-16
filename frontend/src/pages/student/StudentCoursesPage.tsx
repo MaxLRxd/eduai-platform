@@ -50,7 +50,7 @@ export function StudentCoursesPage(): React.ReactElement {
               </span>
             </div>
             <div className="mt-3 pt-2.5 border-t border-border flex justify-between items-center">
-              <span className="text-xs text-text-2">Ver unidades, materiales y tutor</span>
+              <span className="text-xs text-text-2">Ver unidades, clases y materiales</span>
               <strong className="text-primary text-xs">Ingresar →</strong>
             </div>
           </button>

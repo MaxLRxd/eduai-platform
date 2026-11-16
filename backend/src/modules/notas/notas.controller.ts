@@ -14,6 +14,17 @@ export async function listarPorMateria(
   res.json({ notas });
 }
 
+export async function listarFuentesCalificacion(
+  req: Request<{ materiaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const alumnos = await notasService.listarFuentesCalificacion(req.params.materiaId, req.user.id);
+  res.json({ alumnos });
+}
+
 export async function crear(
   req: Request<{ materiaId: string }, unknown, CrearNotaInput>,
   res: Response

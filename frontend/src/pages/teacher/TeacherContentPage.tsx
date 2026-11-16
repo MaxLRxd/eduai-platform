@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import {
   useCourseContentTree,
@@ -15,6 +15,10 @@ import { apiErrorMessage } from "../../services/api";
 import { resolverMateriaActiva } from "../../utils/materiaActiva";
 import { ContentAccessCard } from "../../components/teacher/ContentAccessCard";
 import { MaterialRow } from "../../components/teacher/MaterialRow";
+import { ActivityFormModal } from "../../components/teacher/ActivityFormModal";
+import { useTeacherActivities } from "../../hooks/useActivities";
+import { useRubrics } from "../../hooks/useCorrections";
+import { TIPO_ACTIVIDAD_LABEL } from "../../services/activities.service";
 import type { RagStatus, UploadedMaterial } from "../../types/domain";
 
 const FILE_ICON: Record<UploadedMaterial["fileType"], string> = { pdf: "", pptx: "", docx: "", txt: "", img: "", video: "" };
@@ -22,6 +26,7 @@ const RAG_COLOR: Record<RagStatus, TagColor> = { Indexado: "green", "Indexando�
 const RAG_LABEL: Record<RagStatus, string> = { Indexado: "RAG", "Indexando…": "RAG", "Sin indexar": "RAG" };
 
 export function TeacherContentPage(): React.ReactElement {
+  const navigate = useNavigate();
   const { data: courses } = useTeacherCourses();
   const [searchParams, setSearchParams] = useSearchParams();
   // La materia puede venir en la URL (?course=...), por ejemplo desde "Mis materias".
@@ -31,22 +36,33 @@ export function TeacherContentPage(): React.ReactElement {
 
   const { data: sections } = useCourseSections(activeCourse);
   const { data: tree, isLoading: treeLoading } = useCourseContentTree(activeCourse);
+  const { data: activities } = useTeacherActivities(activeCourse);
+  const { data: rubrics } = useRubrics(activeCourse ?? undefined);
+  const allClasses = (tree ?? []).flatMap((s) => s.classes);
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [classId, setClassId] = useState<string | null>(null);
   const activeSection = sectionId ?? sections?.[0]?.id ?? null;
   const activeTreeSection = (tree ?? []).find((s) => s.id === activeSection);
   const activeClass = activeTreeSection?.classes.find((c) => c.id === classId) ?? null;
-  const activeSectionName = (sections ?? []).find((s) => s.id === activeSection)?.nombre ?? null;
 
   const uploadFile = useUploadMaterialFile();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [savedMsg, setSavedMsg] = useState("");
+  const [uploadTarget, setUploadTarget] = useState<{
+    sectionId: string;
+    classId: string | null;
+    label: string;
+  } | null>(null);
 
   const createSection = useCreateSection();
   const deleteSection = useDeleteSection();
   const [sectionName, setSectionName] = useState("");
   const [sectionTipo, setSectionTipo] = useState<"TEORIA" | "PRACTICA">("TEORIA");
+  const [sectionFile, setSectionFile] = useState<File | null>(null);
   const [sectionMsg, setSectionMsg] = useState("");
   const [sectionError, setSectionError] = useState<string | null>(null);
+  const [evalTarget, setEvalTarget] = useState<{ sectionId: string; classId: string | null } | null>(null);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const handleCreateSection = (): void => {
     if (!activeCourse || !sectionName.trim()) return;
@@ -62,9 +78,22 @@ export function TeacherContentPage(): React.ReactElement {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
           setSectionMsg("Sección creada.");
           setSectionName("");
+          if (sectionFile) {
+            uploadFile.mutate(
+              { sectionId: created.id, file: sectionFile },
+              {
+                onSuccess: () => setSectionMsg("Sección creada con material indexado."),
+                onError: (err) =>
+                  setSectionError(
+                    apiErrorMessage(err, "La sección se creó, pero no se pudo subir el material")
+                  ),
+              }
+            );
+            setSectionFile(null);
+          }
         },
         onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo crear la sección")),
       }
@@ -84,16 +113,26 @@ export function TeacherContentPage(): React.ReactElement {
     });
   };
 
+  const beginUpload = (sectionId: string, classId: string | null, label: string): void => {
+    setSavedMsg("");
+    setSectionId(sectionId);
+    setClassId(classId);
+    setUploadTarget({ sectionId, classId, label });
+    setTimeout(() => uploadInputRef.current?.click(), 0);
+  };
+
+  const openEvaluation = (sectionId: string, classId: string | null): void => {
+    setEvalTarget({ sectionId, classId });
+    setActivityOpen(true);
+  };
+
   const handleUpload = (file: File): void => {
-    if (!activeSection) {
-      setSavedMsg("Seleccioná una materia y una unidad destino.");
-      return;
-    }
+    if (!uploadTarget) return;
     setSavedMsg("");
     uploadFile.mutate(
-      { sectionId: activeSection, file, classId },
+      { sectionId: uploadTarget.sectionId, file, classId: uploadTarget.classId },
       {
-        onSuccess: () => setSavedMsg("Archivo guardado e indexado por el RAG Pipeline"),
+        onSuccess: () => setSavedMsg(`Archivo guardado en ${uploadTarget.label} e indexado por el RAG Pipeline`),
         onError: (err) => {
           const msg = apiErrorMessage(err, "");
           setSavedMsg(`No se pudo subir el archivo. ${msg}`);
@@ -103,9 +142,6 @@ export function TeacherContentPage(): React.ReactElement {
   };
 
   const materialesDestino = activeClass ? activeClass.materials : (activeTreeSection?.materials ?? []);
-  const destinoNombre = activeClass
-    ? `${activeSectionName ?? "Unidad"} · ${activeClass.title}`
-    : activeSectionName;
 
   return (
     <div>
@@ -115,6 +151,14 @@ export function TeacherContentPage(): React.ReactElement {
           <p className="text-[13px] text-text-2">Organizá la materia en unidades y clases. Los archivos de cada clase quedan disponibles para el Tutor IA.</p>
         </div>
         <Tag color="green">RAG Pipeline activo</Tag>
+        <Button
+          variant="secondary"
+          onClick={() =>
+            navigate(activeCourse ? `/teacher/planning?course=${activeCourse}` : "/teacher/planning")
+          }
+        >
+          Ir a Planificación
+        </Button>
       </div>
 
       <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
@@ -153,6 +197,9 @@ export function TeacherContentPage(): React.ReactElement {
             <div className="flex flex-col gap-2.5 mb-3">
               {(tree ?? []).map((s) => {
                 const esUnidadDestino = activeSection === s.id && !activeClass;
+                const actividadesUnidad = (activities ?? []).filter(
+                  (a) => a.seccion_id === s.id && !a.clase_id
+                );
                 return (
                   <div key={s.id} className="border border-border rounded overflow-hidden">
                     <div className="px-3 py-2 bg-surface-2 flex justify-between gap-2 items-center">
@@ -164,12 +211,12 @@ export function TeacherContentPage(): React.ReactElement {
                         <Button
                           size="sm"
                           variant={esUnidadDestino ? "primary" : "secondary"}
-                          onClick={() => {
-                            setSectionId(s.id);
-                            setClassId(null);
-                          }}
+                          onClick={() => beginUpload(s.id, null, s.nombre)}
                         >
                           Subir a la unidad
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEvaluation(s.id, null)}>
+                          + Evaluación
                         </Button>
                         <Button
                           variant="ghost"
@@ -197,11 +244,27 @@ export function TeacherContentPage(): React.ReactElement {
                         </div>
                       )}
 
+                      {actividadesUnidad.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[10px] font-semibold text-text-3 uppercase tracking-wide">Evaluaciones de la unidad</div>
+                          {actividadesUnidad.map((a) => (
+                            <div key={a.id} className="rounded border border-border bg-surface-2 px-2 py-1.5">
+                              <div className="text-[12px] font-semibold text-text-1">{a.nombre}</div>
+                              <div className="text-[10px] text-text-3">
+                                {TIPO_ACTIVIDAD_LABEL[a.tipo]} · vence{" "}
+                                {new Date(a.fecha_limite).toLocaleDateString("es-AR")}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {s.classes.length > 0 && (
                         <div className="flex flex-col gap-1.5">
                           <div className="text-[10px] font-semibold text-text-3 uppercase tracking-wide">Clases</div>
                           {s.classes.map((c) => {
                             const esClaseDestino = activeSection === s.id && activeClass?.id === c.id;
+                            const actividadesClase = (activities ?? []).filter((a) => a.clase_id === c.id);
                             return (
                               <div
                                 key={c.id}
@@ -217,16 +280,18 @@ export function TeacherContentPage(): React.ReactElement {
                                       {c.studentVisible ? "Visible para estudiantes" : "Planificada"}
                                     </div>
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant={esClaseDestino ? "primary" : "secondary"}
-                                    onClick={() => {
-                                      setSectionId(s.id);
-                                      setClassId(c.id);
-                                    }}
-                                  >
-                                    Subir aquí
-                                  </Button>
+                                  <div className="flex flex-wrap gap-1 justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant={esClaseDestino ? "primary" : "secondary"}
+                                      onClick={() => beginUpload(s.id, c.id, c.title)}
+                                    >
+                                      Subir aquí
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => openEvaluation(s.id, c.id)}>
+                                      + Evaluación
+                                    </Button>
+                                  </div>
                                 </div>
                                 {c.materials.length > 0 && (
                                   <div className="mt-1.5 flex flex-col gap-0.5">
@@ -237,6 +302,17 @@ export function TeacherContentPage(): React.ReactElement {
                                         icon={FILE_ICON[m.fileType]}
                                         rag={{ color: RAG_COLOR[m.ragStatus], label: RAG_LABEL[m.ragStatus] }}
                                       />
+                                    ))}
+                                  </div>
+                                )}
+                                {actividadesClase.length > 0 && (
+                                  <div className="mt-1.5 flex flex-col gap-0.5">
+                                    {actividadesClase.map((a) => (
+                                      <div key={a.id} className="rounded bg-surface-2 px-2 py-1 text-[11px] text-text-2">
+                                        <span className="font-semibold text-text-1">{a.nombre}</span> ·{" "}
+                                        {TIPO_ACTIVIDAD_LABEL[a.tipo]} · vence{" "}
+                                        {new Date(a.fecha_limite).toLocaleDateString("es-AR")}
+                                      </div>
                                     ))}
                                   </div>
                                 )}
@@ -259,6 +335,20 @@ export function TeacherContentPage(): React.ReactElement {
                 <p className="text-xs text-text-2">Esta materia todavía no tiene unidades.</p>
               )}
             </div>
+
+            <input
+              ref={uploadInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp,.svg,.txt,.md,.mp4,.mov,.webm"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleUpload(file);
+                e.target.value = "";
+              }}
+            />
+            {uploadFile.isPending && <p className="text-xs text-text-2 mb-3">Subiendo e indexando…</p>}
+            {savedMsg && <p className="text-xs text-success mb-3">{savedMsg}</p>}
 
             <div className="grid md:grid-cols-[1fr_auto_auto] gap-2 items-end">
               <div>
@@ -294,46 +384,25 @@ export function TeacherContentPage(): React.ReactElement {
                 {createSection.isPending ? "Creando…" : "+ Crear unidad"}
               </Button>
             </div>
+            <div className="mt-2">
+              <label htmlFor="section-file" className="block text-xs font-semibold text-text-1 mb-1.5">
+                Material inicial de la unidad (opcional)
+              </label>
+              <input
+                id="section-file"
+                type="file"
+                accept=".pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp,.svg,.txt,.md,.mp4,.mov,.webm"
+                onChange={(e) => setSectionFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-xs text-text-2 file:mr-2 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-text-1"
+              />
+              <p className="text-[11px] text-text-3 mt-1">
+                Se sube y se indexa junto con la creación de la unidad.
+              </p>
+            </div>
             {sectionMsg && <p className="text-xs text-success mt-2">{sectionMsg}</p>}
             {sectionError && <p className="text-xs text-danger mt-2">{sectionError}</p>}
           </Card>
 
-          <Card>
-            <CardHeader title="Subir archivo" />
-            <p className="text-xs text-text-2 mb-3">
-              Destino:{" "}
-              {destinoNombre ? (
-                <strong className="text-text-1">{destinoNombre}</strong>
-              ) : (
-                <span className="text-danger">elegí una unidad o clase</span>
-              )}
-            </p>
-            <label
-              htmlFor="content-file-input"
-              className={`block border-2 border-dashed border-border-strong rounded p-7 bg-surface-2 text-center ${
-                activeSection ? "cursor-pointer" : "opacity-50"
-              }`}
-            >
-              <div className="text-2xl mb-2"></div>
-              <div className="font-semibold text-text-1 mb-1">Hacé click o arrastrá un archivo aquí</div>
-              <div className="text-xs text-text-3">PDF, PPTX, DOCX, JPG, PNG, TXT · Máx. 50 MB</div>
-              <input
-                id="content-file-input"
-                type="file"
-                className="hidden"
-                multiple={false}
-                accept=".pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp,.svg,.txt,.md,.mp4,.mov,.webm"
-                disabled={uploadFile.isPending || !activeSection}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleUpload(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-            {uploadFile.isPending && <p className="text-xs text-text-2 mt-2">Subiendo e indexando…</p>}
-            {savedMsg && <p className="text-xs text-success mt-2">{savedMsg}</p>}
-          </Card>
         </div>
 
         <aside>
@@ -362,6 +431,21 @@ export function TeacherContentPage(): React.ReactElement {
           <ContentAccessCard materiaId={activeCourse} />
         </aside>
       </div>
+
+      <ActivityFormModal
+        open={activityOpen}
+        onClose={() => {
+          setActivityOpen(false);
+          setEvalTarget(null);
+        }}
+        materiaId={activeCourse}
+        sections={sections ?? []}
+        classes={allClasses}
+        rubrics={rubrics ?? []}
+        editing={null}
+        initialSectionId={evalTarget?.sectionId}
+        initialClassId={evalTarget?.classId}
+      />
     </div>
   );
 }

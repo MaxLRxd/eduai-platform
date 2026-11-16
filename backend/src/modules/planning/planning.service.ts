@@ -1,7 +1,7 @@
 import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { eliminarArchivo, guardarArchivo } from "../../config/storage";
+import { eliminarArchivo, guardarArchivo, leerArchivo } from "../../config/storage";
 import { obtenerInscripcion, obtenerProfesorAsignado } from "../materias/materias.service";
 import type { UpsertPlanningInput } from "./planning.schemas";
 
@@ -158,6 +158,76 @@ export async function subirMaterial(
   const fechaClase = validarFecha(fecha);
   const guardado = await guardarArchivo(archivo.buffer, archivo.nombreOriginal);
 
+  const existente = await prisma.planningClase.findUnique({
+    where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
+  });
+
+  const planning = await prisma.planningClase.upsert({
+    where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
+    update: {
+      material_url: guardado.url,
+      material_nombre: guardado.nombre,
+      material_formato: guardado.formato,
+      material_tamano_kb: guardado.tamanoKb,
+    },
+    create: {
+      materia_id: materiaId,
+      fecha_clase: fechaClase,
+      titulo: `Clase ${fechaClase.toISOString().slice(0, 10)}`,
+      estado: "PLANIFICADO",
+      material_url: guardado.url,
+      material_nombre: guardado.nombre,
+      material_formato: guardado.formato,
+      material_tamano_kb: guardado.tamanoKb,
+    },
+  });
+
+  if (existente?.material_url && existente.material_url !== guardado.url) {
+    await eliminarArchivo(existente.material_url);
+  }
+
+  return toPlanningDto(planning);
+}
+
+export async function asignarMaterialDesdeContenido(
+  materiaId: string,
+  fecha: string,
+  contenidoId: string,
+  usuarioId: string
+) {
+  assertUuid(materiaId, "Materia no encontrada");
+  assertUuid(contenidoId, "Material no encontrado");
+
+  const materia = await prisma.materia.findUnique({ where: { id: materiaId } });
+  if (!materia) {
+    throw new AppError(404, "Materia no encontrada");
+  }
+
+  const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+  if (!perfil) {
+    throw new AppError(403, "Solo un profesor asignado puede planificar");
+  }
+
+  const contenido = await prisma.contenido.findUnique({
+    where: { id: contenidoId },
+    include: { seccion: { select: { materia_id: true } } },
+  });
+  if (!contenido || contenido.seccion.materia_id !== materiaId) {
+    throw new AppError(404, "Material no encontrado en esta materia");
+  }
+  if (!contenido.archivo_url) {
+    throw new AppError(400, "El contenido seleccionado no tiene un archivo descargable");
+  }
+
+  const buffer = await leerArchivo(contenido.archivo_url);
+  if (!buffer) {
+    throw new AppError(404, "No se pudo leer el archivo del material seleccionado");
+  }
+
+  const fechaClase = validarFecha(fecha);
+  const nombreArchivo =
+    contenido.archivo_nombre ?? contenido.archivo_url.split("/").pop() ?? contenido.titulo;
+  const guardado = await guardarArchivo(buffer, nombreArchivo);
   const existente = await prisma.planningClase.findUnique({
     where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
   });

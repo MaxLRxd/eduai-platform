@@ -16,6 +16,8 @@ function toAdminSubject(m: MateriaApi): AdminSubject {
   return {
     id: m.id,
     nombre: m.nombre,
+    descripcion: m.descripcion,
+    nivelEducativo: m.nivel_educativo,
     profesor: (m.profesores ?? []).map((p) => p.nombre).join(", "),
     alumnos: m.inscriptos,
     estado: m.activa ? "Activa" : "Inactiva",

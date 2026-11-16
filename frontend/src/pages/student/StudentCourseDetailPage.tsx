@@ -50,6 +50,15 @@ function formatoSesion(iso: string): string {
       });
 }
 
+function formatoFechaClase(iso: string): string {
+  // fecha_clase es una fecha sin hora: parsearla con `new Date` la corre un dia en husos negativos.
+  const soloFecha = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (soloFecha) return `${soloFecha[3]}/${soloFecha[2]}/${soloFecha[1]}`;
+
+  const fecha = new Date(iso);
+  return Number.isNaN(fecha.getTime()) ? "" : fecha.toLocaleDateString("es-AR");
+}
+
 /**
  * Arma la consulta de "Explicame fácil" con la unidad en curso y sus temas.
  * Antes se mandaba literal "la unidad actual": el tutor no sabia cual era y el
@@ -104,7 +113,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
             ← Volver a mis materias
           </Button>
           <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">{course.name}</h2>
-          <p className="text-[13px] text-text-2">{course.professor} · Aula virtual con unidades, materiales y tutor IA contextual</p>
+          <p className="text-[13px] text-text-2">{course.professor} · Aula virtual con unidades, clases y materiales</p>
         </div>
         <Tag color="green">{course.progress}% cursado</Tag>
       </div>
@@ -158,7 +167,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                             <div className="flex justify-between gap-2 items-start mb-1">
                               <div>
                                 <div className="text-[13px] font-semibold text-text-1">{c.title}</div>
-                                <div className="text-[11px] text-text-3">{new Date(c.date).toLocaleDateString("es-AR")}</div>
+                                <div className="text-[11px] text-text-3">{formatoFechaClase(c.date)}</div>
                               </div>
                             </div>
                             {c.content && <p className="text-[12px] text-text-2 mb-1.5 whitespace-pre-line">{c.content}</p>}
@@ -343,18 +352,6 @@ export function StudentCourseDetailPage(): React.ReactElement {
             <Button fullWidth className="mt-2.5 justify-center" onClick={() => submitQuestion(question)} disabled={!question.trim() || pending || cargandoHistorial || sesionCerrada}>
               {activeModo === "NORMAL" ? "Preguntar al tutor" : `Enviar en modo ${MODO_NOMBRE[activeModo]}`}
             </Button>
-          </Card>
-
-          <Card>
-            <CardHeader title="Materiales" />
-            <div className="flex flex-col gap-2">
-              {course.materiales.map((m) => (
-                <MaterialItem key={m.id} material={m} color={course.color} />
-              ))}
-              {course.materiales.length === 0 && (
-                <div className="py-4 text-center text-[12px] text-text-3">Todavía no hay materiales indexados para el tutor.</div>
-              )}
-            </div>
           </Card>
 
           <ResumenPanel course={course} />

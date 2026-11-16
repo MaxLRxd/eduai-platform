@@ -79,6 +79,8 @@ export async function sendMessage(input: {
 
 export async function sendBroadcast(input: {
   dirigido_a?: "ALUMNO" | "PROFESOR" | "ADMIN";
+  materia_id?: string;
+  destinatario_ids?: string[];
   titulo: string;
   contenido: string;
 }): Promise<{ success: boolean; recipients: number }> {

@@ -14,6 +14,7 @@ import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
 import { RubricFormModal, errorDeFormulario } from "../../components/teacher/RubricFormModal";
+import { EVALUATIONS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 import { apiErrorMessage } from "../../services/api";
 import type { Rubric } from "../../types/domain";
 import type { RubricInput } from "../../services/corrections.service";
@@ -123,6 +124,8 @@ export function TeacherCorrectionsPage(): React.ReactElement {
         </div>
         <Tag color="red">{queue?.length ?? 0} entregas pendientes</Tag>
       </div>
+
+      <TeacherAreaTabs tabs={EVALUATIONS_AREA_TABS} />
 
       {isLoading && <p className="text-sm text-text-2">Cargando cola de correcciones…</p>}
 

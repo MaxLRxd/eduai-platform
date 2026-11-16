@@ -46,6 +46,7 @@ interface SeccionArbolApi {
 
 export interface ContentClass {
   id: string;
+  sectionId: string;
   title: string;
   date: string;
   content: string;
@@ -102,7 +103,7 @@ function toUploadedMaterial(c: ContenidoApi): UploadedMaterial {
   };
 }
 
-function toContentClass(c: ClaseArbolApi): ContentClass {
+function toContentClass(c: ClaseArbolApi, sectionId: string): ContentClass {
   const materialPlanificacion: UploadedMaterial | null = c.material_url
     ? {
         id: `clase-${c.id}-material`,
@@ -117,6 +118,7 @@ function toContentClass(c: ClaseArbolApi): ContentClass {
 
   return {
     id: c.id,
+    sectionId,
     title: c.titulo,
     date: c.fecha_clase,
     content: c.contenido ?? "",
@@ -135,7 +137,7 @@ export async function getCourseContentTree(courseId: string): Promise<ContentTre
     nombre: s.nombre,
     tipo: s.tipo,
     materials: s.contenidos.map(toUploadedMaterial),
-    classes: s.clases.map(toContentClass),
+    classes: s.clases.map((c) => toContentClass(c, s.id)),
   }));
 }
 

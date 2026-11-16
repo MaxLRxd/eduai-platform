@@ -160,3 +160,103 @@ export async function listarMias(usuarioId: string, rol: Rol) {
 
   return notas.map(toNotaDto);
 }
+
+type FuenteAlumno = {
+  alumno_id: string;
+  nombre: string;
+  tps: { nombre: string; tipo: string; nota: number; publicado: boolean }[];
+  simulacros: { titulo: string; dificultad: string; puntaje: number; creado_en: Date }[];
+};
+
+function promedio(valores: number[]): number | null {
+  if (valores.length === 0) return null;
+  return Math.round((valores.reduce((s, v) => s + v, 0) / valores.length) * 100) / 100;
+}
+
+/**
+ * Fuentes de calificación del docente: TPs/actividades corregidas y simulacros
+ * de examen rendidos por los alumnos. Calificaciones las muestra como insumo
+ * antes de registrar la nota definitiva del período.
+ */
+export async function listarFuentesCalificacion(materiaId: string, usuarioId: string) {
+  const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+  if (!perfil) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const [entregas, simulacros] = await Promise.all([
+    prisma.entrega.findMany({
+      where: {
+        actividad: { seccion: { materia_id: materiaId } },
+        OR: [{ calificacion_final: { not: null } }, { calificacion_ia: { not: null } }],
+      },
+      select: {
+        alumno_id: true,
+        calificacion_final: true,
+        calificacion_ia: true,
+        publicado: true,
+        alumno: { select: { nombre: true } },
+        actividad: { select: { nombre: true, tipo: true } },
+      },
+      orderBy: { entregado_en: "desc" },
+    }),
+    prisma.intentoSimulacro.findMany({
+      where: { materia_id: materiaId },
+      select: {
+        alumno_id: true,
+        titulo: true,
+        dificultad: true,
+        puntaje: true,
+        creado_en: true,
+        alumno: { select: { nombre: true } },
+      },
+      orderBy: { creado_en: "desc" },
+    }),
+  ]);
+
+  const alumnos = new Map<string, FuenteAlumno>();
+  const obtener = (alumnoId: string, nombre: string): FuenteAlumno => {
+    const existente = alumnos.get(alumnoId);
+    if (existente) return existente;
+    const nuevo: FuenteAlumno = { alumno_id: alumnoId, nombre, tps: [], simulacros: [] };
+    alumnos.set(alumnoId, nuevo);
+    return nuevo;
+  };
+
+  for (const e of entregas) {
+    const nota = e.calificacion_final ?? e.calificacion_ia;
+    if (nota == null) continue;
+    obtener(e.alumno_id, e.alumno.nombre).tps.push({
+      nombre: e.actividad.nombre,
+      tipo: e.actividad.tipo,
+      nota: nota.toNumber(),
+      publicado: e.publicado,
+    });
+  }
+
+  for (const s of simulacros) {
+    obtener(s.alumno_id, s.alumno.nombre).simulacros.push({
+      titulo: s.titulo,
+      dificultad: s.dificultad,
+      puntaje: s.puntaje.toNumber(),
+      creado_en: s.creado_en,
+    });
+  }
+
+  return [...alumnos.values()]
+    .map((a) => ({
+      alumno_id: a.alumno_id,
+      nombre: a.nombre,
+      tps: {
+        cantidad: a.tps.length,
+        promedio: promedio(a.tps.map((t) => t.nota)),
+        detalle: a.tps,
+      },
+      simulacros: {
+        cantidad: a.simulacros.length,
+        promedio: promedio(a.simulacros.map((s) => s.puntaje)),
+        detalle: a.simulacros,
+      },
+    }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+}

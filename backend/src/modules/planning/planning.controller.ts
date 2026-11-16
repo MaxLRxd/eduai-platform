@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as planningService from "./planning.service";
-import type { UpsertPlanningInput } from "./planning.schemas";
+import type { MaterialDesdeContenidoInput, UpsertPlanningInput } from "./planning.schemas";
 import { AppError } from "../../middlewares/error";
 
 function requireUser(req: Request) {
@@ -47,6 +47,20 @@ export async function subirMaterial(
     req.params.fecha,
     user.id,
     { buffer: archivo.buffer, nombreOriginal: archivo.originalname }
+  );
+  res.status(201).json({ item });
+}
+
+export async function asignarMaterialDesdeContenido(
+  req: Request<{ materiaId: string; fecha: string }, unknown, MaterialDesdeContenidoInput>,
+  res: Response
+): Promise<void> {
+  const user = requireUser(req);
+  const item = await planningService.asignarMaterialDesdeContenido(
+    req.params.materiaId,
+    req.params.fecha,
+    req.body.contenido_id,
+    user.id
   );
   res.status(201).json({ item });
 }

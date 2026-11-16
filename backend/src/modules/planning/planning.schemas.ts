@@ -10,3 +10,9 @@ export const upsertPlanningSchema = z.object({
 });
 
 export type UpsertPlanningInput = z.infer<typeof upsertPlanningSchema>;
+
+export const materialDesdeContenidoSchema = z.object({
+  contenido_id: z.string().uuid("contenido invalido"),
+});
+
+export type MaterialDesdeContenidoInput = z.infer<typeof materialDesdeContenidoSchema>;

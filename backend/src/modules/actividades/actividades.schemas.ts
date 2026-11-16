@@ -9,6 +9,7 @@ export const opcionMcSchema = z.object({
 
 export const crearActividadSchema = z.object({
   seccion_id: z.string().uuid(),
+  clase_id: z.string().uuid().nullable().optional(),
   // `null` desvincula la rubrica: si no, no habria forma de sacarle una rubrica
   // a una actividad y la rubrica quedaria bloqueada para siempre.
   rubrica_id: z.string().uuid().nullable().optional(),

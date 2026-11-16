@@ -6,7 +6,7 @@ import { useCreateActivity, useUpdateActivity } from "../../hooks/useActivities"
 import { apiErrorMessage } from "../../services/api";
 import { TIPO_ACTIVIDAD_LABEL } from "../../services/activities.service";
 import type { Rubric } from "../../types/domain";
-import type { ContentSection } from "../../services/content.service";
+import type { ContentClass, ContentSection } from "../../services/content.service";
 import type { AssignmentOption, AssignmentType } from "../../types/domain";
 import type { TeacherActivity } from "../../services/activities.service";
 
@@ -38,17 +38,24 @@ export function ActivityFormModal({
   onClose,
   materiaId,
   sections,
+  classes,
   rubrics,
   editing,
+  initialSectionId,
+  initialClassId,
 }: {
   open: boolean;
   onClose: () => void;
   materiaId: string | null;
   sections: ContentSection[];
+  classes: ContentClass[];
   rubrics: Rubric[];
   editing: TeacherActivity | null;
+  initialSectionId?: string | null;
+  initialClassId?: string | null;
 }): React.ReactElement | null {
   const [seccionId, setSeccionId] = useState("");
+  const [claseId, setClaseId] = useState("");
   const [rubricaId, setRubricaId] = useState("");
   const [nombre, setNombre] = useState("");
   const [consigna, setConsigna] = useState("");
@@ -67,6 +74,7 @@ export function ActivityFormModal({
     setError(null);
     if (editing) {
       setSeccionId(editing.seccion_id);
+      setClaseId(editing.clase_id ?? "");
       setRubricaId(editing.rubrica_id ?? "");
       setNombre(editing.nombre);
       setConsigna(editing.consigna);
@@ -76,7 +84,8 @@ export function ActivityFormModal({
       setFechaLimite(toInputDate(editing.fecha_limite));
       setCorreccionManual(editing.correccion_manual);
     } else {
-      setSeccionId(sections[0]?.id ?? "");
+      setSeccionId(initialSectionId ?? sections[0]?.id ?? "");
+      setClaseId(initialClassId ?? "");
       setRubricaId("");
       setNombre("");
       setConsigna("");
@@ -87,11 +96,12 @@ export function ActivityFormModal({
       setFechaLimite(toInputDate(en7.toISOString()));
       setCorreccionManual(false);
     }
-  }, [open, editing, sections]);
+  }, [open, editing, sections, initialSectionId, initialClassId]);
 
   if (!open) return null;
 
   const guardando = crear.isPending || actualizar.isPending;
+  const clasesDeSeccion = classes.filter((c) => c.sectionId === seccionId);
 
   const validar = (): string | null => {
     if (!seccionId) return "Elegí la sección donde vive la actividad";
@@ -116,6 +126,7 @@ export function ActivityFormModal({
 
     const payload = {
       seccion_id: seccionId,
+      clase_id: editing ? claseId || null : claseId || undefined,
       // Al editar tiene que ir null explícito: sin esto, vaciar el selector no
       // desvincula la rubrica y sigue dibujada en la actividad.
       rubrica_id: editing ? rubricaId || null : rubricaId || undefined,
@@ -190,7 +201,10 @@ export function ActivityFormModal({
           <select
             id="act-seccion"
             value={seccionId}
-            onChange={(e) => setSeccionId(e.target.value)}
+            onChange={(e) => {
+              setSeccionId(e.target.value);
+              setClaseId("");
+            }}
             className={inputClass}
           >
             {sections.map((s) => (
@@ -213,6 +227,30 @@ export function ActivityFormModal({
           />
         </div>
       </div>
+
+      {clasesDeSeccion.length > 0 && (
+        <div className="mb-3">
+          <label htmlFor="act-clase" className="block text-xs font-semibold text-text-1 mb-1.5">
+            Clase de la unidad (opcional)
+          </label>
+          <select
+            id="act-clase"
+            value={claseId}
+            onChange={(e) => setClaseId(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Sin clase asociada</option>
+            {clasesDeSeccion.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-text-3 mt-1">
+            La evaluación aparecerá en Contenidos junto a esta clase.
+          </p>
+        </div>
+      )}
 
       <div className="mb-2">
         <span className="block text-xs font-semibold text-text-1 mb-1.5">Tipo de entrega</span>

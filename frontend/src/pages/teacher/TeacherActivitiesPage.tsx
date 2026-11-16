@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useCourseSections } from "../../hooks/useContent";
+import { useCourseSections, useCourseContentTree } from "../../hooks/useContent";
 import { useDeleteActivity, useTeacherActivities, useUpdateActivity } from "../../hooks/useActivities";
 import { useRubrics } from "../../hooks/useCorrections";
 import { apiErrorMessage } from "../../services/api";
@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
 import { Tag, type TagColor } from "../../components/ui/Tag";
 import { ActivityFormModal } from "../../components/teacher/ActivityFormModal";
+import { EVALUATIONS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 import { TIPO_ACTIVIDAD_LABEL } from "../../services/activities.service";
 import type { AssignmentType, Rubric } from "../../types/domain";
 import type { TeacherActivity } from "../../services/activities.service";
@@ -33,6 +34,8 @@ export function TeacherActivitiesPage(): React.ReactElement {
   const materiaId = courseId || courses?.[0]?.id || "";
 
   const { data: sections } = useCourseSections(materiaId || null);
+  const { data: contentTree } = useCourseContentTree(materiaId || null);
+  const classes = (contentTree ?? []).flatMap((s) => s.classes);
   const { data: activities, isLoading } = useTeacherActivities(materiaId || null);
   const { data: rubrics } = useRubrics(materiaId || undefined);
 
@@ -92,6 +95,8 @@ export function TeacherActivitiesPage(): React.ReactElement {
         </Button>
       </div>
 
+      <TeacherAreaTabs tabs={EVALUATIONS_AREA_TABS} />
+
       {courses && courses.length > 0 && (
         <CourseFilter courses={courses} value={materiaId} onChange={setCourseId} />
       )}
@@ -123,7 +128,8 @@ export function TeacherActivitiesPage(): React.ReactElement {
                   </div>
                   <p className="text-xs text-text-2 line-clamp-2 mb-1">{a.consigna}</p>
                   <p className="text-[11px] text-text-3">
-                    {a.seccion?.nombre ?? "—"} · Vence {formatDue(a.fecha_limite)} ·{" "}
+                    {a.seccion?.nombre ?? "-"}
+                    {a.clase ? ` · ${a.clase.titulo}` : ""} · Vence {formatDue(a.fecha_limite)} ·{" "}
                     {a.entregasCount === 0
                       ? "sin entregas"
                       : `${a.entregasCount} entrega${a.entregasCount === 1 ? "" : "s"}`}
@@ -179,6 +185,7 @@ export function TeacherActivitiesPage(): React.ReactElement {
         }}
         materiaId={materiaId || null}
         sections={sections ?? []}
+        classes={classes}
         rubrics={(rubrics ?? []) as Rubric[]}
         editing={editing}
       />

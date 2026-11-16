@@ -147,6 +147,28 @@ export async function getTeacherCourseGrades(
   return { rows: filas.sort((a, b) => a.name.localeCompare(b.name)), periods };
 }
 
+export interface GradeSourceStudent {
+  alumno_id: string;
+  nombre: string;
+  tps: {
+    cantidad: number;
+    promedio: number | null;
+    detalle: { nombre: string; tipo: string; nota: number; publicado: boolean }[];
+  };
+  simulacros: {
+    cantidad: number;
+    promedio: number | null;
+    detalle: { titulo: string; dificultad: string; puntaje: number; creado_en: string }[];
+  };
+}
+
+export async function getTeacherGradeSources(courseId: string): Promise<GradeSourceStudent[]> {
+  const data = await api<{ alumnos: GradeSourceStudent[] }>(
+    `/api/materias/${courseId}/calificaciones/fuentes`
+  );
+  return data.alumnos ?? [];
+}
+
 export async function crearNota(
   courseId: string,
   input: {

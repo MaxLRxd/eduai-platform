@@ -5,6 +5,7 @@ import { CourseFilter } from "../../components/ui/CourseFilter";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
+import { STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 
 export function TeacherStudentsPage(): React.ReactElement {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ export function TeacherStudentsPage(): React.ReactElement {
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Mis estudiantes</h2>
         <p className="text-[13px] text-text-2">Listado de alumnos por materia y curso</p>
       </div>
+
+      <TeacherAreaTabs tabs={STUDENTS_AREA_TABS} />
 
       <CourseFilter courses={courses ?? []} value={courseId} onChange={setSelected} />
 

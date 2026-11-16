@@ -69,14 +69,14 @@ export function AdminMateriasPage(): React.ReactElement {
   };
 
   const loadForEdit = (id: string, nombre: string, estado: SubjectStatus): void => {
-    const existing = subjects?.find((s) => s.id === id) as Record<string, string | undefined> | undefined;
+    const existing = subjects?.find((s) => s.id === id);
     setForm({
       id,
       nombre,
-      nivelEducativo: existing?.nivelEducativo ?? existing?.nivel_educativo ?? "",
+      nivelEducativo: existing?.nivelEducativo ?? "",
       descripcion: existing?.descripcion ?? "",
       activa: estado === "Activa",
-      profesorId: existing?.profesorId ?? "",
+      profesorId: "",
     });
   };
 

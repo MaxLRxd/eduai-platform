@@ -109,9 +109,10 @@ export async function listarPorMateria(materiaId: string, usuarioId: string, rol
 
     const actividades = await prisma.actividad.findMany({
       where: { seccion: { materia_id: materiaId } },
-      include: {
-        seccion: { select: { id: true, nombre: true, tipo: true } },
-        rubrica: { select: { id: true, nombre: true } },
+    include: {
+      seccion: { select: { id: true, nombre: true, tipo: true } },
+      clase: { select: { id: true, titulo: true, fecha_clase: true } },
+      rubrica: { select: { id: true, nombre: true } },
         _count: { select: { entregas: true } },
       },
       orderBy: { created_at: "asc" },
@@ -167,6 +168,17 @@ export async function listarPorMateria(materiaId: string, usuarioId: string, rol
   });
 }
 
+async function validarClaseDeSeccion(materiaId: string, seccionId: string, claseId: string | null | undefined) {
+  if (!claseId) return;
+  const clase = await prisma.planningClase.findUnique({
+    where: { id: claseId },
+    select: { materia_id: true, seccion_id: true },
+  });
+  if (!clase || clase.materia_id !== materiaId || clase.seccion_id !== seccionId) {
+    throw new AppError(400, "La clase no pertenece a la unidad seleccionada");
+  }
+}
+
 export async function crear(materiaId: string, input: CrearActividadInput, usuarioId: string) {
   const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
 
@@ -179,6 +191,8 @@ export async function crear(materiaId: string, input: CrearActividadInput, usuar
   if (!seccion || seccion.materia_id !== materiaId) {
     throw new AppError(400, "La seccion no pertenece a esta materia");
   }
+
+  await validarClaseDeSeccion(materiaId, input.seccion_id, input.clase_id);
 
   if (input.rubrica_id) {
     const rubrica = await prisma.rubrica.findUnique({ where: { id: input.rubrica_id } });
@@ -197,6 +211,7 @@ export async function crear(materiaId: string, input: CrearActividadInput, usuar
   const actividad = await prisma.actividad.create({
     data: {
       seccion_id: input.seccion_id,
+      clase_id: input.clase_id ?? null,
       rubrica_id: input.rubrica_id ?? null,
       nombre: input.nombre,
       consigna: input.consigna,
@@ -209,6 +224,7 @@ export async function crear(materiaId: string, input: CrearActividadInput, usuar
     },
     include: {
       seccion: { select: { id: true, nombre: true, tipo: true } },
+      clase: { select: { id: true, titulo: true, fecha_clase: true } },
       rubrica: { select: { id: true, nombre: true } },
     },
   });
@@ -241,9 +257,26 @@ export async function actualizar(
     throw new AppError(403, "No tenes acceso a esta materia");
   }
 
+  const seccionId = input.seccion_id ?? actividad.seccion_id;
+  if (input.seccion_id && input.seccion_id !== actividad.seccion_id) {
+    const seccion = await prisma.seccion.findUnique({ where: { id: input.seccion_id } });
+    if (!seccion || seccion.materia_id !== materiaId) {
+      throw new AppError(400, "La seccion no pertenece a esta materia");
+    }
+  }
+  await validarClaseDeSeccion(materiaId, seccionId, input.clase_id);
+  const claseData =
+    input.clase_id !== undefined
+      ? { clase_id: input.clase_id }
+      : input.seccion_id && input.seccion_id !== actividad.seccion_id
+        ? { clase_id: null }
+        : {};
+
   const actualizada = await prisma.actividad.update({
     where: { id: actividadId },
     data: {
+      seccion_id: input.seccion_id,
+      ...claseData,
       nombre: input.nombre,
       consigna: input.consigna,
       tipo: input.tipo,
@@ -256,6 +289,7 @@ export async function actualizar(
     },
     include: {
       seccion: { select: { id: true, nombre: true, tipo: true } },
+      clase: { select: { id: true, titulo: true, fecha_clase: true } },
       rubrica: { select: { id: true, nombre: true } },
       _count: { select: { entregas: true } },
     },

@@ -84,6 +84,18 @@ export async function uploadPlanningMaterial(input: {
   });
 }
 
+// POST /api/materias/:materiaId/planning/:fecha/material/desde-contenido — usa un material de Contenidos.
+export async function assignPlanningMaterial(input: {
+  courseId: string;
+  date: string;
+  contentId: string;
+}): Promise<void> {
+  await api(`/api/materias/${input.courseId}/planning/${input.date}/material/desde-contenido`, {
+    method: "POST",
+    body: JSON.stringify({ contenido_id: input.contentId }),
+  });
+}
+
 // DELETE /api/materias/:materiaId/planning/:fecha/material — quita el material de la clase.
 export async function deletePlanningMaterial(input: {
   courseId: string;

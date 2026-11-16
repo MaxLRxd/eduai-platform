@@ -232,6 +232,8 @@ export type SubjectStatus = "Activa" | "Pendiente" | "Inactiva";
 export interface AdminSubject {
   id: string;
   nombre: string;
+  descripcion: string | null;
+  nivelEducativo: string;
   profesor: string;
   alumnos: number;
   estado: SubjectStatus;

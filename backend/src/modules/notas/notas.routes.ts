@@ -7,6 +7,12 @@ import * as notasController from "./notas.controller";
 const router = Router();
 
 router.get("/materias/:materiaId/notas", requireAuth, notasController.listarPorMateria);
+router.get(
+  "/materias/:materiaId/calificaciones/fuentes",
+  requireAuth,
+  requireRole("PROFESOR", "ADMIN"),
+  notasController.listarFuentesCalificacion
+);
 router.post(
   "/materias/:materiaId/notas",
   requireAuth,

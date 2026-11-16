@@ -6,6 +6,7 @@ import { Table, TableWrap, Td, Th, Thead } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
 import type { DailyAttendanceStatus } from "../../types/domain";
+import { STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 
 const STATUS_META: Record<DailyAttendanceStatus, { label: string; short: string; classes: string }> = {
   present: { label: "Presente", short: "P", classes: "bg-emerald-100 border-success text-emerald-800" },
@@ -67,6 +68,8 @@ export function TeacherAttendancePage(): React.ReactElement {
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Asistencia</h2>
         <p className="text-[13px] text-text-2">Registro de presencias por materia y curso</p>
       </div>
+
+      <TeacherAreaTabs tabs={STUDENTS_AREA_TABS} />
 
       <CourseFilter courses={courses ?? []} value={courseId} onChange={setSelected} />
 

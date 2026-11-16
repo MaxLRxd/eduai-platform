@@ -3,7 +3,7 @@ import multer from "multer";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { validateBody } from "../../middlewares/validate";
 import { env } from "../../config/env";
-import { upsertPlanningSchema } from "./planning.schemas";
+import { materialDesdeContenidoSchema, upsertPlanningSchema } from "./planning.schemas";
 import * as planningController from "./planning.controller";
 
 const router = Router();
@@ -20,6 +20,13 @@ router.put(
   requireRole("PROFESOR"),
   validateBody(upsertPlanningSchema),
   planningController.upsertPlanning
+);
+router.post(
+  "/materias/:materiaId/planning/:fecha/material/desde-contenido",
+  requireAuth,
+  requireRole("PROFESOR"),
+  validateBody(materialDesdeContenidoSchema),
+  planningController.asignarMaterialDesdeContenido
 );
 router.post(
   "/materias/:materiaId/planning/:fecha/material",

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  assignPlanningMaterial,
   deletePlanningMaterial,
   getPlanning,
   savePlanning,
@@ -29,6 +30,17 @@ export function useUploadPlanningMaterial() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: uploadPlanningMaterial,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      queryClient.invalidateQueries({ queryKey: ["content"] });
+    },
+  });
+}
+
+export function useAssignPlanningMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: assignPlanningMaterial,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planning"] });
       queryClient.invalidateQueries({ queryKey: ["content"] });
