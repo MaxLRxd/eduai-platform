@@ -10,6 +10,7 @@ export const crearContenidoSchema = z.object({
   archivo_nombre: z.string().max(255).optional(),
   archivo_formato: z.string().max(20).optional(),
   archivo_tamano_kb: z.number().int().nonnegative().optional(),
+  clase_id: z.string().uuid("clase invalida").nullable().optional(),
 });
 
 export const actualizarContenidoSchema = crearContenidoSchema.partial();

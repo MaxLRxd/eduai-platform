@@ -45,6 +45,7 @@ export function inferirTipo(nombreArchivo: string): TipoContenido {
 function toContenidoDto(contenido: {
   id: string;
   seccion_id: string;
+  clase_id: string | null;
   tipo: TipoContenido;
   titulo: string;
   texto_contenido: string | null;
@@ -59,6 +60,7 @@ function toContenidoDto(contenido: {
   return {
     id: contenido.id,
     seccion_id: contenido.seccion_id,
+    clase_id: contenido.clase_id,
     tipo: contenido.tipo,
     titulo: contenido.titulo,
     texto_contenido: contenido.texto_contenido,
@@ -139,16 +141,115 @@ async function obtenerContenidoYVerificarEscritura(contenidoId: string, usuarioI
 export async function listarPorSeccion(
   seccionId: string,
   usuarioId: string,
-  rol: Rol
+  rol: Rol,
+  claseId?: string
 ) {
   await obtenerSeccionYVerificarAccesoLectura(seccionId, usuarioId, rol);
 
   const contenidos = await prisma.contenido.findMany({
-    where: { seccion_id: seccionId },
+    where: {
+      seccion_id: seccionId,
+      ...(claseId ? { clase_id: claseId } : {}),
+      ...(rol === "ALUMNO"
+        ? { OR: [{ clase_id: null }, { clase: { estado: "PUBLICADO" } }] }
+        : {}),
+    },
     orderBy: { created_at: "asc" },
   });
 
   return contenidos.map(toContenidoDto);
+}
+
+async function verificarAccesoLecturaMateria(materiaId: string, usuarioId: string, rol: Rol) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(materiaId)) {
+    throw new AppError(404, "Materia no encontrada");
+  }
+
+  if (rol === "PROFESOR" || rol === "ADMIN") {
+    const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+    if (!perfil) {
+      throw new AppError(403, "No tenes acceso a esta materia");
+    }
+  } else {
+    const inscripcion = await obtenerInscripcion(materiaId, usuarioId);
+    if (!inscripcion) {
+      throw new AppError(403, "No tenes acceso a esta materia");
+    }
+  }
+}
+
+/**
+ * Árbol de la materia para el aula: unidades con sus archivos propios y sus clases.
+ * Los alumnos solo reciben las clases publicadas y los materiales de esas clases.
+ */
+export async function obtenerArbol(materiaId: string, usuarioId: string, rol: Rol) {
+  await verificarAccesoLecturaMateria(materiaId, usuarioId, rol);
+
+  const secciones = await prisma.seccion.findMany({
+    where: { materia_id: materiaId },
+    orderBy: { orden: "asc" },
+    include: {
+      contenidos: {
+        where: { clase_id: null },
+        orderBy: { created_at: "asc" },
+      },
+      clases: {
+        where: rol === "ALUMNO" ? { estado: "PUBLICADO" } : {},
+        orderBy: { fecha_clase: "asc" },
+        include: {
+          contenidos: { orderBy: { created_at: "asc" } },
+        },
+      },
+    },
+  });
+
+  return {
+    secciones: secciones.map((s) => ({
+      id: s.id,
+      materia_id: s.materia_id,
+      nombre: s.nombre,
+      descripcion: s.descripcion,
+      tipo: s.tipo,
+      orden: s.orden,
+      contenidos: s.contenidos.map(toContenidoDto),
+      clases: s.clases.map((c) => ({
+        id: c.id,
+        materia_id: c.materia_id,
+        seccion_id: c.seccion_id,
+        fecha_clase: c.fecha_clase,
+        titulo: c.titulo,
+        contenido: c.contenido,
+        estado: c.estado,
+        material_url: c.material_url,
+        material_nombre: c.material_nombre,
+        material_formato: c.material_formato,
+        material_tamano_kb: c.material_tamano_kb,
+        contenidos: c.contenidos.map(toContenidoDto),
+      })),
+    })),
+  };
+}
+
+async function obtenerClaseDeSeccion(claseId: string, seccionId: string, materiaId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claseId)) {
+    throw new AppError(404, "Clase no encontrada");
+  }
+
+  const clase = await prisma.planningClase.findUnique({ where: { id: claseId } });
+
+  if (!clase || clase.materia_id !== materiaId) {
+    throw new AppError(404, "Clase no encontrada");
+  }
+
+  if (clase.seccion_id && clase.seccion_id !== seccionId) {
+    throw new AppError(400, "La clase pertenece a otra unidad");
+  }
+
+  if (!clase.seccion_id) {
+    await prisma.planningClase.update({ where: { id: clase.id }, data: { seccion_id: seccionId } });
+  }
+
+  return clase;
 }
 
 export async function crear(
@@ -157,10 +258,14 @@ export async function crear(
   usuarioId: string
 ) {
   const seccion = await obtenerSeccionYVerificarEscritura(seccionId, usuarioId);
+  const clase = input.clase_id
+    ? await obtenerClaseDeSeccion(input.clase_id, seccionId, seccion.materia_id)
+    : null;
 
   const contenido = await prisma.contenido.create({
     data: {
       seccion_id: seccionId,
+      clase_id: clase?.id ?? null,
       tipo: input.tipo,
       titulo: input.titulo,
       texto_contenido: input.texto_contenido,
@@ -184,15 +289,19 @@ export async function crear(
 export async function crearArchivo(
   seccionId: string,
   usuarioId: string,
-  archivo: { buffer: Buffer; nombreOriginal: string; titulo: string }
+  archivo: { buffer: Buffer; nombreOriginal: string; titulo: string; claseId?: string }
 ) {
   const seccion = await obtenerSeccionYVerificarEscritura(seccionId, usuarioId);
+  const clase = archivo.claseId
+    ? await obtenerClaseDeSeccion(archivo.claseId, seccionId, seccion.materia_id)
+    : null;
   const tipo = inferirTipo(archivo.nombreOriginal);
   const guardado = await guardarArchivo(archivo.buffer, archivo.nombreOriginal);
 
   const contenido = await prisma.contenido.create({
     data: {
       seccion_id: seccionId,
+      clase_id: clase?.id ?? null,
       tipo,
       titulo: archivo.titulo,
       archivo_url: guardado.url,
@@ -224,6 +333,12 @@ export async function actualizar(
   const contenido = await obtenerContenidoYVerificarEscritura(contenidoId, usuarioId);
 
   const seccion = await prisma.seccion.findUnique({ where: { id: contenido.seccion_id } });
+  const claseFinal =
+    input.clase_id === undefined
+      ? undefined
+      : input.clase_id
+        ? await obtenerClaseDeSeccion(input.clase_id, contenido.seccion_id, seccion!.materia_id)
+        : null;
 
   const tipoFinal = input.tipo ?? contenido.tipo;
   const textoFinal = input.texto_contenido !== undefined
@@ -235,6 +350,7 @@ export async function actualizar(
     where: { id: contenidoId },
     data: {
       tipo: input.tipo,
+      clase_id: claseFinal === undefined ? undefined : claseFinal?.id ?? null,
       titulo: input.titulo,
       texto_contenido: input.texto_contenido,
       archivo_url: input.archivo_url,

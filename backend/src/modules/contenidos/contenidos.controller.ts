@@ -13,12 +13,32 @@ export async function listarPorSeccion(
   if (!req.user) {
     throw new AppError(401, "No autenticado");
   }
+  const claseId =
+    typeof req.query.clase_id === "string" && req.query.clase_id.trim()
+      ? req.query.clase_id.trim()
+      : undefined;
   const contenidos = await contenidosService.listarPorSeccion(
     req.params.seccionId,
     req.user.id,
-    req.user.rol
+    req.user.rol,
+    claseId
   );
   res.json({ contenidos });
+}
+
+export async function obtenerArbol(
+  req: Request<{ materiaId: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const arbol = await contenidosService.obtenerArbol(
+    req.params.materiaId,
+    req.user.id,
+    req.user.rol
+  );
+  res.json(arbol);
 }
 
 export async function crear(
@@ -44,10 +64,11 @@ export async function crearArchivo(
     throw new AppError(400, "Archivo requerido (campo 'archivo')");
   }
   const titulo = (req.body?.titulo as string | undefined)?.trim() || archivo.originalname;
+  const claseId = (req.body?.clase_id as string | undefined)?.trim() || undefined;
   const contenido = await contenidosService.crearArchivo(
     req.params.seccionId,
     req.user.id,
-    { buffer: archivo.buffer, nombreOriginal: archivo.originalname, titulo }
+    { buffer: archivo.buffer, nombreOriginal: archivo.originalname, titulo, claseId }
   );
   res.status(201).json({ contenido });
 }

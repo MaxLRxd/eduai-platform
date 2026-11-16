@@ -22,6 +22,8 @@ interface SeccionDto {
 
 interface ContenidoDto {
   id: string;
+  seccion_id: string;
+  clase_id?: string | null;
   titulo: string;
   tipo: string;
   texto_contenido: string | null;
@@ -29,6 +31,30 @@ interface ContenidoDto {
   archivo_url?: string | null;
   url?: string | null;
   archivo_nombre?: string | null;
+}
+
+interface ClaseArbolDto {
+  id: string;
+  seccion_id: string | null;
+  fecha_clase: string;
+  titulo: string;
+  contenido: string | null;
+  estado: "PLANIFICADO" | "PUBLICADO";
+  material_url: string | null;
+  material_nombre: string | null;
+  material_formato: string | null;
+  material_tamano_kb: number | null;
+  contenidos: ContenidoDto[];
+}
+
+interface SeccionArbolDto {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tipo: "TEORIA" | "PRACTICA";
+  orden: number;
+  contenidos: ContenidoDto[];
+  clases: ClaseArbolDto[];
 }
 
 const COLOR_PALETTE = ["#003d7a", "#059669", "#2563eb", "#d97706", "#7c3aed", "#db2777"];
@@ -67,37 +93,72 @@ export async function getCourses(): Promise<Course[]> {
   return data.materias.filter((m) => m.activa).map(toCourseDto);
 }
 
+function toCourseMaterial(c: ContenidoDto): CourseMaterial {
+  return {
+    id: c.id,
+    titulo: c.titulo,
+    tipo: c.tipo,
+    resumible: Boolean(c.texto_contenido?.trim()),
+    ragIndexado: c.rag_indexado,
+    // La ruta guardada es relativa (/uploads/...): sin esto el navegador la pide al frontend, no al backend.
+    url: apiUrl(c.archivo_url ?? c.url),
+    archivo_nombre: c.archivo_nombre ?? null,
+    texto: c.texto_contenido?.trim() ? c.texto_contenido : null,
+  };
+}
+
+function materialDePlanificacion(clase: ClaseArbolDto): CourseMaterial | null {
+  if (!clase.material_url) return null;
+  return {
+    id: `clase-${clase.id}-material`,
+    titulo: clase.material_nombre ?? clase.titulo,
+    tipo: clase.material_formato ?? "ARCHIVO",
+    resumible: false,
+    ragIndexado: false,
+    url: apiUrl(clase.material_url),
+    archivo_nombre: clase.material_nombre,
+    texto: null,
+  };
+}
+
 export async function getCourseById(id: string): Promise<Course | undefined> {
   try {
-    const [respuesta, secciones] = await Promise.all([
+    const [respuesta, arbol] = await Promise.all([
       api<{ materia: MateriaDto }>(`/api/materias/${id}`),
-      api<{ secciones: SeccionDto[] }>(`/api/materias/${id}/secciones`),
+      api<{ secciones: SeccionArbolDto[] }>(`/api/materias/${id}/contenidos`),
     ]);
     const materia = respuesta.materia;
 
     const unidades: CourseUnit[] = [];
     const materiales: CourseMaterial[] = [];
 
-    for (const s of secciones.secciones) {
-      const data = await api<{ contenidos: ContenidoDto[] }>(`/api/secciones/${s.id}/contenidos`);
-      const items = data.contenidos.map((c) => c.titulo);
-      materiales.push(
-        ...data.contenidos.map((c) => ({
+    for (const s of arbol.secciones) {
+      const materialesUnidad = s.contenidos.map(toCourseMaterial);
+      const clases = s.clases.map((c) => {
+        const adjunto = materialDePlanificacion(c);
+        const materialesClase = [...c.contenidos.map(toCourseMaterial), ...(adjunto ? [adjunto] : [])];
+        return {
           id: c.id,
-          titulo: c.titulo,
-          tipo: c.tipo,
-          resumible: Boolean(c.texto_contenido?.trim()),
-          ragIndexado: c.rag_indexado,
-          // La ruta guardada es relativa (/uploads/...): sin esto el navegador la pide al frontend, no al backend.
-          url: apiUrl(c.archivo_url ?? c.url),
-          archivo_nombre: c.archivo_nombre ?? null,
-          texto: c.texto_contenido?.trim() ? c.texto_contenido : null,
-        }))
-      );
+          title: c.titulo,
+          date: c.fecha_clase,
+          content: c.contenido ?? "",
+          studentVisible: c.estado === "PUBLICADO",
+          materials: materialesClase,
+        };
+      });
+
+      const items = [
+        ...materialesUnidad.map((m) => m.titulo),
+        ...clases.map((c) => c.title),
+      ];
+
+      materiales.push(...materialesUnidad, ...clases.flatMap((c) => c.materials));
       unidades.push({
         title: s.nombre,
-        status: estadoUnidad({ ...s, contenidos: items.length }),
+        status: estadoUnidad({ ...s, contenidos: items.length } as SeccionDto),
         items,
+        materials: materialesUnidad,
+        classes: clases,
       });
     }
 

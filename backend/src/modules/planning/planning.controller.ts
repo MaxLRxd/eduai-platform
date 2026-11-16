@@ -15,7 +15,7 @@ export async function listarPlanning(
   res: Response
 ): Promise<void> {
   const user = requireUser(req);
-  const items = await planningService.listarPlanning(req.params.materiaId, user.id);
+  const items = await planningService.listarPlanning(req.params.materiaId, user.id, user.rol);
   res.json({ items });
 }
 

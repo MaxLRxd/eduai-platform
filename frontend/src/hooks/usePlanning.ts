@@ -18,7 +18,10 @@ export function useSavePlanning() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: savePlanning,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      queryClient.invalidateQueries({ queryKey: ["content"] });
+    },
   });
 }
 
@@ -26,7 +29,10 @@ export function useUploadPlanningMaterial() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: uploadPlanningMaterial,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      queryClient.invalidateQueries({ queryKey: ["content"] });
+    },
   });
 }
 
@@ -34,6 +40,10 @@ export function useDeletePlanningMaterial() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deletePlanningMaterial,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      queryClient.invalidateQueries({ queryKey: ["content"] });
+    },
   });
 }
+

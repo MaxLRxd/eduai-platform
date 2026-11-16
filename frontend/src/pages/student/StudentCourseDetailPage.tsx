@@ -126,29 +126,63 @@ export function StudentCourseDetailPage(): React.ReactElement {
 
       <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
         <Card>
-          <CardHeader title="Unidades de estudio" action={<Tag color="gray">Similar a Moodle</Tag>} />
+          <CardHeader title="Unidades y clases" />
           <div className="flex flex-col gap-3">
-            {course.units.map((u, idx) => (
-              <div key={u.title} className="border border-border rounded overflow-hidden">
-                <div className="px-3.5 py-3 bg-surface-2 flex justify-between gap-2.5 items-center">
-                  <strong className="text-[13px] text-text-1">{u.title}</strong>
-                  <Tag color={UNIT_TAG_COLOR[u.status]}>{u.status}</Tag>
-                </div>
-                <div className="px-3.5 py-3 flex flex-col gap-2">
-                  {u.items.map((it, i) => (
-                    <div key={it} className="flex items-start gap-3 py-1.5">
-                      <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: i === 0 ? course.color : "#94a3b8" }} />
-                      <div className="flex-1">
-                        <div className="text-[13px] text-text-1 font-medium">{it}</div>
-                        <div className="text-[11px] text-text-3 mt-0.5">
-                          Recurso de la materia · {idx === 1 ? "visible para estudiantes" : "habilitado por el profesor"}
+            {course.units.map((u) => {
+              const materials = u.materials ?? [];
+              const classes = u.classes ?? [];
+              return (
+                <div key={u.title} className="border border-border rounded overflow-hidden">
+                  <div className="px-3.5 py-3 bg-surface-2 flex justify-between gap-2.5 items-center">
+                    <strong className="text-[13px] text-text-1">{u.title}</strong>
+                    <Tag color={UNIT_TAG_COLOR[u.status]}>{u.status}</Tag>
+                  </div>
+                  <div className="px-3.5 py-3 flex flex-col gap-3">
+                    {materials.length > 0 && (
+                      <div>
+                        <div className="text-[11px] font-semibold text-text-3 uppercase tracking-wide mb-1">
+                          Archivos de la unidad
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {materials.map((m) => (
+                            <MaterialItem key={m.id} material={m} color={course.color} />
+                          ))}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+
+                    {classes.length > 0 && (
+                      <div className="flex flex-col gap-2.5">
+                        {classes.map((c) => (
+                          <div key={c.id} className="rounded border border-border bg-surface px-3 py-2.5">
+                            <div className="flex justify-between gap-2 items-start mb-1">
+                              <div>
+                                <div className="text-[13px] font-semibold text-text-1">{c.title}</div>
+                                <div className="text-[11px] text-text-3">{new Date(c.date).toLocaleDateString("es-AR")}</div>
+                              </div>
+                            </div>
+                            {c.content && <p className="text-[12px] text-text-2 mb-1.5 whitespace-pre-line">{c.content}</p>}
+                            {c.materials.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {c.materials.map((m) => (
+                                  <MaterialItem key={m.id} material={m} color={course.color} />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-text-3">Sin archivos en esta clase.</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {materials.length === 0 && classes.length === 0 && (
+                      <div className="text-[12px] text-text-3">Esta unidad todavía no tiene contenido.</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {course.units.length === 0 && (
               <div className="py-6 text-center text-[12px] text-text-3">El profesor todavía no cargó unidades en esta materia.</div>
             )}

@@ -20,7 +20,7 @@ function toSeccionDto(seccion: {
   orden: number;
   created_at: Date;
   updated_at: Date;
-  _count?: { contenidos: number; actividades: number };
+  _count?: { contenidos: number; actividades: number; clases: number };
 }) {
   return {
     id: seccion.id,
@@ -31,13 +31,14 @@ function toSeccionDto(seccion: {
     orden: seccion.orden,
     contenidos: seccion._count?.contenidos ?? 0,
     actividades: seccion._count?.actividades ?? 0,
+    clases: seccion._count?.clases ?? 0,
     created_at: seccion.created_at,
     updated_at: seccion.updated_at,
   };
 }
 
 const seccionInclude = {
-  _count: { select: { contenidos: true, actividades: true } },
+  _count: { select: { contenidos: true, actividades: true, clases: true } },
 } as const;
 
 export async function listarPorMateria(materiaId: string, usuarioId: string, rol: Rol) {

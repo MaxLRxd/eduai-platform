@@ -9,6 +9,7 @@ import {
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
+import { useCourseSections } from "../../hooks/useContent";
 
 function shortDate(iso: string): string {
   const f = new Date(iso);
@@ -22,6 +23,7 @@ export function TeacherPlanningPage(): React.ReactElement {
   const activeName = courses?.find((c) => c.id === activeCourse)?.label ?? "la materia seleccionada";
 
   const { data: planning, isLoading } = usePlanning(activeCourse, activeName);
+  const { data: sections } = useCourseSections(activeCourse);
   const save = useSavePlanning();
   const uploadMaterial = useUploadPlanningMaterial();
   const deleteMaterial = useDeletePlanningMaterial();
@@ -29,6 +31,7 @@ export function TeacherPlanningPage(): React.ReactElement {
   const [classIndex, setClassIndex] = useState(0);
   const [title, setTitle] = useState("");
   const [visible, setVisible] = useState(false);
+  const [sectionSel, setSectionSel] = useState<string>("");
   const [newDate, setNewDate] = useState("");
   const [draftDate, setDraftDate] = useState<string | null>(null);
   const [materialMsg, setMaterialMsg] = useState("");
@@ -43,6 +46,7 @@ export function TeacherPlanningPage(): React.ReactElement {
     if (current) {
       setTitle(current.title);
       setVisible(current.studentVisible);
+      setSectionSel(current.sectionId ?? "");
     }
   }, [current]);
 
@@ -50,6 +54,7 @@ export function TeacherPlanningPage(): React.ReactElement {
     setCourseId(id);
     setClassIndex(0);
     setDraftDate(null);
+    setSectionSel("");
     setMaterialMsg("");
     setMaterialError(null);
   };
@@ -73,6 +78,7 @@ export function TeacherPlanningPage(): React.ReactElement {
         title,
         material: editingItem?.material ?? "",
         studentVisible: visible,
+        sectionId: sectionSel || null,
       },
       { onSuccess: () => setDraftDate(null) }
     );
@@ -149,6 +155,7 @@ export function TeacherPlanningPage(): React.ReactElement {
                   onClick={() => {
                     setClassIndex(idx);
                     setDraftDate(null);
+                    setSectionSel(p.sectionId ?? "");
                     setMaterialMsg("");
                     setMaterialError(null);
                   }}
@@ -200,6 +207,28 @@ export function TeacherPlanningPage(): React.ReactElement {
               placeholder="Ej.: Clases y objetos"
               className="w-full px-3 py-2 border border-border rounded text-sm"
             />
+          </div>
+
+          <div className="mb-3.5">
+            <label htmlFor="planning-section" className="block text-xs font-semibold text-text-1 mb-1.5">
+              Unidad de la clase
+            </label>
+            <select
+              id="planning-section"
+              value={sectionSel}
+              onChange={(e) => setSectionSel(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+            >
+              <option value="">Sin unidad asignada</option>
+              {(sections ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-text-2 mt-1">
+              La clase aparecerá dentro de esta unidad en el aula virtual.
+            </p>
           </div>
 
           <div className="mb-3.5">

@@ -1,7 +1,18 @@
+export interface CourseClass {
+  id: string;
+  title: string;
+  date: string;
+  content: string;
+  studentVisible: boolean;
+  materials: CourseMaterial[];
+}
+
 export interface CourseUnit {
   title: string;
   status: "Disponible" | "En curso" | "Completada" | "Próxima";
   items: string[];
+  materials?: CourseMaterial[];
+  classes?: CourseClass[];
 }
 
 export interface CourseMaterial {
@@ -195,6 +206,7 @@ export interface PlanningAttachment {
 }
 
 export interface PlanningClass {
+  id?: string;
   date: string;
   title: string;
   course: string;
@@ -202,6 +214,7 @@ export interface PlanningClass {
   studentVisible: boolean;
   aiEnabled: boolean;
   attachments: PlanningAttachment[];
+  sectionId?: string | null;
 }
 
 export interface InboxMessage {

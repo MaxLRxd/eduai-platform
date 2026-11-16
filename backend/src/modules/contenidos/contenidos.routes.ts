@@ -26,6 +26,11 @@ router.get(
   contenidosController.estadisticasDeAcceso
 );
 router.get(
+  "/materias/:materiaId/contenidos",
+  requireAuth,
+  contenidosController.obtenerArbol
+);
+router.get(
   "/secciones/:seccionId/contenidos",
   requireAuth,
   contenidosController.listarPorSeccion

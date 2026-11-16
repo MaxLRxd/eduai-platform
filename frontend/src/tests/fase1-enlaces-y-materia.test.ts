@@ -24,15 +24,36 @@ describe("materiales del alumno: la URL apunta al backend", () => {
           materia: { id: "m1", nombre: "Redes", descripcion: null, nivel_educativo: "Terciario", activa: true, inscriptos: 3, created_at: "2026-01-01" },
         };
       }
-      if (ruta === "/api/materias/m1/secciones") {
-        return { secciones: [{ id: "s1", nombre: "Unidad 1", tipo: "TEORIA", contenidos: 2 }] };
-      }
-      if (ruta === "/api/secciones/s1/contenidos") {
+      if (ruta === "/api/materias/m1/contenidos") {
         return {
-          contenidos: [
-            { id: "c1", titulo: "Apunte", tipo: "PDF", texto_contenido: null, rag_indexado: true, archivo_url: "/uploads/apunte-123.pdf", archivo_nombre: "apunte.pdf" },
-            { id: "c2", titulo: "Texto", tipo: "TEXTO", texto_contenido: "contenido", rag_indexado: false, archivo_url: null },
-            { id: "c3", titulo: "Externo", tipo: "PDF", texto_contenido: null, rag_indexado: true, archivo_url: "https://cdn.ejemplo.com/a.pdf" },
+          secciones: [
+            {
+              id: "s1",
+              nombre: "Unidad 1",
+              tipo: "TEORIA",
+              contenidos: [
+                { id: "c1", seccion_id: "s1", titulo: "Apunte", tipo: "PDF", texto_contenido: null, rag_indexado: true, archivo_url: "/uploads/apunte-123.pdf", archivo_nombre: "apunte.pdf" },
+                { id: "c2", seccion_id: "s1", titulo: "Texto", tipo: "TEXTO", texto_contenido: "contenido", rag_indexado: false, archivo_url: null },
+                { id: "c3", seccion_id: "s1", titulo: "Externo", tipo: "PDF", texto_contenido: null, rag_indexado: true, archivo_url: "https://cdn.ejemplo.com/a.pdf" },
+              ],
+              clases: [
+                {
+                  id: "cl1",
+                  seccion_id: "s1",
+                  fecha_clase: "2026-03-10",
+                  titulo: "Clase 1",
+                  contenido: null,
+                  estado: "PUBLICADO",
+                  material_url: null,
+                  material_nombre: null,
+                  material_formato: null,
+                  material_tamano_kb: null,
+                  contenidos: [
+                    { id: "c4", seccion_id: "s1", clase_id: "cl1", titulo: "Guía de clase", tipo: "PDF", texto_contenido: null, rag_indexado: true, archivo_url: "/uploads/guia.pdf", archivo_nombre: "guia.pdf" },
+                  ],
+                },
+              ],
+            },
           ],
         };
       }
@@ -53,6 +74,15 @@ describe("materiales del alumno: la URL apunta al backend", () => {
 
     expect(curso?.materiales.find((m) => m.id === "c3")?.url).toBe("https://cdn.ejemplo.com/a.pdf");
     expect(curso?.materiales.find((m) => m.id === "c2")?.url).toBeNull();
+  });
+
+  it("arma la jerarquía unidad → clases → archivos", async () => {
+    const curso = await getCourseById("m1");
+    const unidad = curso?.units[0];
+
+    expect(unidad?.materials?.map((m) => m.id)).toEqual(["c1", "c2", "c3"]);
+    expect(unidad?.classes?.[0].title).toBe("Clase 1");
+    expect(unidad?.classes?.[0].materials.map((m) => m.id)).toEqual(["c4"]);
   });
 });
 

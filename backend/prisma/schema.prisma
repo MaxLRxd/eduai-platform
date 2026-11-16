@@ -237,6 +237,7 @@ model Seccion {
 
   materia      Materia                    @relation(fields: [materia_id], references: [id])
   contenidos   Contenido[]
+  clases       PlanningClase[]
   actividades  Actividad[]
   analyticsComprension AnalyticsComprensionTema[]
   erroresDudas ErrorDudaFrecuente[]
@@ -247,6 +248,7 @@ model Seccion {
 model Contenido {
   id                String       @id @default(uuid()) @db.Uuid
   seccion_id        String       @db.Uuid
+  clase_id          String?      @db.Uuid
   tipo              TipoContenido
   titulo            String       @db.VarChar(200)
   texto_contenido   String?
@@ -259,8 +261,10 @@ model Contenido {
   updated_at        DateTime     @updatedAt
 
   seccion  Seccion           @relation(fields: [seccion_id], references: [id])
+  clase    PlanningClase?    @relation(fields: [clase_id], references: [id], onDelete: SetNull)
   accesos  AccesoContenido[]
 
+  @@index([clase_id])
   @@map("contenidos")
 }
 
@@ -527,6 +531,7 @@ model Notificacion {
 model PlanningClase {
   id          String              @id @default(uuid()) @db.Uuid
   materia_id  String              @db.Uuid
+  seccion_id  String?             @db.Uuid
   fecha_clase DateTime            @db.Date
   titulo      String              @db.VarChar(200)
   contenido   String?
@@ -539,7 +544,10 @@ model PlanningClase {
   updated_at  DateTime            @updatedAt
 
   materia Materia @relation(fields: [materia_id], references: [id])
+  seccion Seccion? @relation(fields: [seccion_id], references: [id], onDelete: SetNull)
+  contenidos Contenido[]
 
+  @@index([seccion_id])
   @@unique([materia_id, fecha_clase])
   @@map("planning_clases")
 }

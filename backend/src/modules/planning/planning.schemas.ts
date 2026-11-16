@@ -6,6 +6,7 @@ export const upsertPlanningSchema = z.object({
   titulo: z.string().min(2).max(200),
   contenido: z.string().max(10000).optional(),
   estado: estadoPlanningSchema.optional(),
+  seccion_id: z.string().uuid("seccion invalida").nullable().optional(),
 });
 
 export type UpsertPlanningInput = z.infer<typeof upsertPlanningSchema>;

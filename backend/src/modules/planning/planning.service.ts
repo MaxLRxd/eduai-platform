@@ -1,3 +1,4 @@
+import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { eliminarArchivo, guardarArchivo } from "../../config/storage";
@@ -20,6 +21,7 @@ function assertUuid(id: string, mensaje: string) {
 
 type PlanningRow = {
   id: string;
+  seccion_id: string | null;
   fecha_clase: Date;
   titulo: string;
   contenido: string | null;
@@ -33,6 +35,7 @@ type PlanningRow = {
 function toPlanningDto(p: PlanningRow) {
   return {
     id: p.id,
+    seccion_id: p.seccion_id,
     fecha_clase: p.fecha_clase,
     titulo: p.titulo,
     contenido: p.contenido,
@@ -44,7 +47,7 @@ function toPlanningDto(p: PlanningRow) {
   };
 }
 
-export async function listarPlanning(materiaId: string, usuarioId: string) {
+export async function listarPlanning(materiaId: string, usuarioId: string, rol: Rol) {
   assertUuid(materiaId, "Materia no encontrada");
 
   const materia = await prisma.materia.findUnique({ where: { id: materiaId } });
@@ -63,11 +66,23 @@ export async function listarPlanning(materiaId: string, usuarioId: string) {
   }
 
   const planning = await prisma.planningClase.findMany({
-    where: { materia_id: materiaId },
+    where: {
+      materia_id: materiaId,
+      ...(rol === "ALUMNO" ? { estado: "PUBLICADO" } : {}),
+    },
     orderBy: { fecha_clase: "asc" },
   });
 
   return planning.map(toPlanningDto);
+}
+
+async function validarSeccionDeMateria(materiaId: string, seccionId: string) {
+  assertUuid(seccionId, "Seccion no encontrada");
+  const seccion = await prisma.seccion.findUnique({ where: { id: seccionId }, select: { materia_id: true } });
+  if (!seccion || seccion.materia_id !== materiaId) {
+    throw new AppError(400, "La unidad no pertenece a esta materia");
+  }
+  return seccion;
 }
 
 export async function upsertPlanning(
@@ -92,6 +107,12 @@ export async function upsertPlanning(
 
   const fechaClase = validarFecha(fecha);
 
+  if (input.seccion_id) {
+    await validarSeccionDeMateria(materiaId, input.seccion_id);
+  }
+
+  const seccionData = input.seccion_id !== undefined ? { seccion_id: input.seccion_id } : {};
+
   const planning = await prisma.planningClase.upsert({
     where: {
       materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase },
@@ -100,6 +121,7 @@ export async function upsertPlanning(
       titulo: input.titulo,
       contenido: input.contenido,
       estado: input.estado,
+      ...seccionData,
     },
     create: {
       materia_id: materiaId,
@@ -107,6 +129,7 @@ export async function upsertPlanning(
       titulo: input.titulo,
       contenido: input.contenido,
       estado: input.estado ?? "PLANIFICADO",
+      ...seccionData,
     },
   });
 

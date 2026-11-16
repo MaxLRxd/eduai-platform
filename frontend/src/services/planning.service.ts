@@ -3,6 +3,7 @@ import type { PlanningClass } from "../types/domain";
 
 export interface PlanningItemApi {
   id: string;
+  seccion_id: string | null;
   fecha_clase: string;
   titulo: string;
   contenido: string | null;
@@ -22,12 +23,14 @@ function sizeLabel(kb: number | null): string {
 function toPlanningClass(item: PlanningItemApi, course: string): PlanningClass {
   const fecha = new Date(item.fecha_clase);
   return {
+    id: item.id,
     date: Number.isNaN(fecha.getTime()) ? item.fecha_clase : fecha.toISOString().slice(0, 10),
     title: item.titulo,
     course,
     material: item.contenido ?? "",
     studentVisible: item.estado === "PUBLICADO",
     aiEnabled: true,
+    sectionId: item.seccion_id,
     attachments: item.material_url
       ? [
           {
@@ -53,6 +56,7 @@ export async function savePlanning(input: {
   title: string;
   material: string;
   studentVisible: boolean;
+  sectionId?: string | null;
 }): Promise<{ success: boolean }> {
   await api(`/api/materias/${input.courseId}/planning/${input.date}`, {
     method: "PUT",
@@ -60,6 +64,7 @@ export async function savePlanning(input: {
       titulo: input.title,
       contenido: input.material,
       estado: input.studentVisible ? "PUBLICADO" : "PLANIFICADO",
+      seccion_id: input.sectionId ?? undefined,
     }),
   });
   return { success: true };
