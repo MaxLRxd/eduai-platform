@@ -146,7 +146,7 @@ docker-compose.yml    entorno local completo
 
 ## 6. Modelo de datos
 
-29 tablas en PostgreSQL, definidas en `backend/prisma/schema.prisma` y versionadas con migraciones.
+30 tablas en PostgreSQL, definidas en `backend/prisma/schema.prisma` y versionadas con migraciones.
 
 | Dominio | Tablas |
 | --- | --- |
@@ -155,19 +155,20 @@ docker-compose.yml    entorno local completo
 | Contenido | `secciones`, `contenidos`, `accesos_contenido` |
 | Actividades | `rubricas`, `actividades`, `entregas` |
 | Tutor IA | `sesiones_ia`, `mensajes_ia`, `preguntas_frecuentes`, `intentos_simulacro` |
-| Seguimiento | `notas`, `asistencias`, `analytics_comprension_temas`, `alertas_riesgo_academico`, `errores_dudas_frecuentes` |
+| Seguimiento | `notas`, `categorias_nota`, `asistencias`, `analytics_comprension_temas`, `alertas_riesgo_academico`, `errores_dudas_frecuentes` |
 | Comunicación | `notificaciones`, `conversaciones`, `conversacion_miembros`, `mensajes_directos`, `mensajes_broadcast`, `planning_clases` |
 
 Reglas relevantes:
 
 - **Integridad:** claves foráneas en todas las relaciones; unicidad de (alumno, materia) en inscripciones, (alumno, actividad) en entregas y (alumno, materia, fecha) en asistencias.
 - **Historial conservado:** dar de baja a un usuario o desmatricular a un alumno **no borra** sus notas, entregas ni asistencias.
+- **Calificaciones:** cada nota tiene evaluación, categoría (con peso por materia) y, si viene de una actividad, queda ligada a ella. La nota final es el promedio ponderado por categoría (promedio simple si la materia no definió categorías), calculado en un único lugar (`notas.promedio.ts`).
 - **Latencia medida:** `mensajes_ia.primer_token_ms` guarda cuánto tardó en verse la primera palabra de cada respuesta.
 - **Vectores:** los *embeddings* viven en el almacén vectorial del servicio de IA (tabla propia con índice HNSW en pgvector), no en el esquema de Prisma.
 
 ## 7. Backend: módulos y API
 
-La API completa (114 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
+La API completa (118 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -178,7 +179,7 @@ La API completa (114 endpoints, con rol requerido y esquema de validación de ca
 | `correccion` | Corrección sugerida por IA |
 | `tutor` | Sesiones, mensajes (normal y streaming), resumen, simulacro, corrección de simulacro, latencia |
 | `asistente` | Generación de material docente y exportación a PDF |
-| `notas`, `asistencias` | Registro y consulta |
+| `notas`, `asistencias` | Calificaciones por categoría con peso (nota final ponderada), notas ligadas a actividades, asistencia |
 | `analytics`, `dashboard` | Indicadores del docente, del alumno y de la institución |
 | `planning`, `messages`, `notificaciones` | Planificación, mensajería y avisos |
 | `admin` | Usuarios, materias, asignación de docentes, claves, desmatriculación, reportes |
@@ -243,9 +244,9 @@ Casos de uso (`ai-services/src/use_cases`):
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 208 pruebas en 28 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Backend | Jest + Supertest | 240 pruebas en 30 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
 | Servicio de IA | pytest | 107 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 56 pruebas en 11 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales |
+| Frontend | Vitest + Testing Library | 84 pruebas en 15 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
 | **E2E** | `node:test` | **42 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.

@@ -160,8 +160,9 @@ export async function listarPorMateria(materiaId: string, usuarioId: string, rol
             archivo_nombre: entrega.archivo_nombre,
             entregado_en: entrega.entregado_en,
             publicado: entrega.publicado,
-            calificacion_final: entrega.calificacion_final?.toNumber() ?? null,
-            feedback_final: entrega.feedback_final,
+            // La nota y el feedback son del alumno solo cuando el docente los publica.
+            calificacion_final: entrega.publicado ? (entrega.calificacion_final?.toNumber() ?? null) : null,
+            feedback_final: entrega.publicado ? entrega.feedback_final : null,
           }
         : null,
       estado_entrega: !entrega ? "PENDIENTE" : entrega.publicado ? "PUBLICADA" : "ENVIADA",

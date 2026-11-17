@@ -119,6 +119,8 @@ Si la corrección falla (por ejemplo, el servicio de IA no responde), **tus resp
 2. Abrí la actividad y completá según su tipo: elegir opciones, escribir un desarrollo, adjuntar un archivo o escribir código. Si es de archivo, solo se aceptan los formatos que indica la actividad.
 3. Tocá **Enviar**.
 
+La tabla muestra, por actividad: **Actividad · Curso · Vencimiento · Estado · Acciones · Nota**. La **Nota** aparece cuando el docente publica la corrección; hasta entonces ves un guion.
+
 Importante:
 
 - **Pasada la fecha límite ya no se pueden enviar entregas ni archivos.** La ventana te lo avisa y bloquea el envío; si necesitás una extensión, hablá con tu docente.
@@ -133,6 +135,10 @@ Cuando el docente revisa y **publica** la corrección, recibís un aviso y en la
 ### 2.9 Mis estadísticas
 
 Muestra tu **detalle de calificaciones** y tu **registro de asistencia** por materia. Si todavía no hay datos cargados por el docente, el panel aparece vacío con un mensaje.
+
+En cada materia, **Cómo se arma tu nota** te muestra las categorías (por ejemplo *TP*, *Parcial*, *Final*), cuánto vale cada una y tu promedio en ella. Una categoría en la que todavía no tenés notas aparece como *sin notas* y no te resta. El detalle indica la categoría de cada nota.
+
+Tu **promedio** en cada materia es el que calcula el docente: si definió categorías (por ejemplo TP, Parcial y Final), es un promedio ponderado por el peso de cada una; si no, es el promedio simple de tus notas. En el detalle ves el nombre de cada evaluación.
 
 ### 2.10 Mensajes
 
@@ -190,7 +196,13 @@ La IA **solo sugiere**: nada llega al alumno hasta que vos publiques. Si la IA n
 
 ### 3.4 Calificaciones y asistencia (dentro de Mis estudiantes)
 
-- **Calificaciones**: cargá o editá la nota de cada alumno por período. Cada cambio queda registrado. Podés exportar a Excel.
+- **Calificaciones**: la nota final de cada alumno es el **promedio ponderado por categorías**.
+  1. En **Categorías y pesos** definí las categorías de la materia (por ejemplo *Trabajos prácticos 30 %*, *Parcial 40 %*, *Final 30 %*). **Los pesos deben sumar 100.** Si no definís categorías, la nota final es el promedio simple de todas las notas.
+  2. Cargá notas con **+ Cargar nota** o **+ Nota** en la fila del alumno: elegí la **evaluación** (nombre, por ejemplo *Parcial 1*), su **categoría**, el **período** y la nota. Cargar de nuevo la misma evaluación del mismo período la actualiza.
+  3. Con **Importar notas de una actividad** traés a Calificaciones las correcciones **ya publicadas** de un TP o examen (se ligan a la actividad). Podés repetirlo sin duplicar. Las entregas sin publicar no se importan.
+  4. Con **Ver notas** de cada alumno ves todas sus notas y las editás. Si una categoría todavía no tiene notas de un alumno, no lo perjudica: su peso se reparte entre las demás.
+  5. Las notas **sin categoría** no cuentan en la nota final mientras la materia use categorías: la pantalla te avisa para que se la asignes.
+  El filtro **Período** limita la tabla a un período. Cada cambio queda registrado.
 - **Asistencia**: elegí la clase, marcá *presente*, *ausente* o *tardanza* para cada alumno y tocá **Confirmar asistencia del día**. Si ya cargaste esa clase, el sistema te ofrece editar el registro existente en vez de duplicarlo.
 
 ### 3.5 Mis estudiantes y perfil del alumno

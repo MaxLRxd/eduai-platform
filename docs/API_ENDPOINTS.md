@@ -2,7 +2,7 @@
 
 > Generado automáticamente desde `backend/src/**/*.routes.ts` con `npm run docs:api`. No editar a mano.
 
-Total: **114 endpoints** en 18 módulos.
+Total: **118 endpoints** en 18 módulos.
 
 **Acceso:** *Público* no pide sesión; *Autenticado* cualquier rol con sesión; los demás exigen ese rol.
 **Validación:** esquema Zod que valida el cuerpo antes de llegar al controlador. **Límite:** limitador de intentos.
@@ -37,6 +37,10 @@ Total: **114 endpoints** en 18 módulos.
 | GET | `/api/materias/:materiaId/notas` | Autenticado |  |  |
 | GET | `/api/materias/:materiaId/calificaciones/fuentes` | PROFESOR · ADMIN |  |  |
 | POST | `/api/materias/:materiaId/notas` | PROFESOR | `crearNotaSchema` |  |
+| GET | `/api/materias/:materiaId/categorias-nota` | Autenticado |  |  |
+| PUT | `/api/materias/:materiaId/categorias-nota` | PROFESOR | `categoriasNotaSchema` |  |
+| GET | `/api/materias/:materiaId/calificaciones` | PROFESOR |  |  |
+| POST | `/api/actividades/:actividadId/notas/sincronizar` | PROFESOR | `sincronizarActividadSchema` |  |
 | GET | `/api/notas/mias` | Autenticado |  |  |
 | PUT | `/api/notas/:notaId` | PROFESOR | `actualizarNotaSchema` |  |
 

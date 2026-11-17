@@ -78,15 +78,29 @@ export interface Assignment {
   submitted: SubmittedAssignment | null;
 }
 
+export interface GradeCategoryBreakdown {
+  id: string;
+  name: string;
+  /** Peso de la categoria en la nota final (0-100). */
+  weight: number;
+  /** Promedio del alumno en la categoria; null si todavia no tiene notas ahi. */
+  average: number | null;
+}
+
 export interface CourseGradeSummary {
   course: string;
   average: number;
   attendance: number;
   color: string;
+  /** Como se arma la nota final: vacio si la materia no definio categorias. */
+  categories: GradeCategoryBreakdown[];
+  /** Notas sin categoria: no cuentan en la nota final mientras la materia use categorias. */
+  uncategorized: number;
 }
 
 export interface GradeDetail {
   evaluation: string;
+  category: string | null;
   course: string;
   type: string;
   date: string;
@@ -123,13 +137,6 @@ export interface TeacherStudentRow {
   average: string;
   attendance: string;
   standing: StudentStanding;
-}
-
-export interface TeacherGradeRow {
-  studentId: string;
-  name: string;
-  grades: Record<string, string>;
-  average: string;
 }
 
 export type DailyAttendanceStatus = "present" | "absent" | "late";

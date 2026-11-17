@@ -35,6 +35,7 @@ async function limpiar(): Promise<void> {
     prisma.claveMatriculacion.deleteMany(),
     prisma.asistencia.deleteMany(),
     prisma.nota.deleteMany(),
+    prisma.categoriaNota.deleteMany(),
     prisma.sesion.deleteMany(),
     prisma.materiaProfesor.deleteMany(),
     prisma.materia.deleteMany(),
@@ -212,19 +213,34 @@ async function main(): Promise<void> {
 
     // Notas y asistencias por alumno por materia
     const periodos = ["2026-1", "2026-2"];
+    // Categorias de calificacion de la materia: la nota final es el promedio ponderado.
+    const [catTp, catParcial, catFinal] = await Promise.all(
+      [
+        { nombre: "Trabajos prácticos", peso: 30, orden: 0 },
+        { nombre: "Parcial", peso: 40, orden: 1 },
+        { nombre: "Final", peso: 30, orden: 2 },
+      ].map((c) => prisma.categoriaNota.create({ data: { materia_id: materia.id, ...c } }))
+    );
     for (let a = 0; a < alumnos.length; a++) {
       const alumno = alumnos[a];
       const base = 0.6 + (((a * 7 + m * 3 + 5) % 40) / 100); // 0.60..0.99
 
-      for (const periodo of periodos) {
+      const notasDelAlumno = [
+        { periodo: periodos[0], evaluacion: "TP 1", categoria_id: catTp.id, delta: 0.3 },
+        { periodo: periodos[0], evaluacion: "Parcial 1", categoria_id: catParcial.id, delta: 0 },
+        { periodo: periodos[1], evaluacion: "Final", categoria_id: catFinal.id, delta: -0.2 },
+      ];
+      for (const n of notasDelAlumno) {
         await prisma.nota.create({
           data: {
             alumno_id: alumno.id,
             materia_id: materia.id,
             profesor_id: def.profe.perfil.id,
-            periodo,
-            calificacion: Math.round(base * 10 * 100) / 100,
-            observaciones: `Nota ${periodo} de ${def.nombre}`,
+            periodo: n.periodo,
+            evaluacion: n.evaluacion,
+            categoria_id: n.categoria_id,
+            calificacion: Math.min(10, Math.max(1, Math.round((base * 10 + n.delta) * 100) / 100)),
+            observaciones: `${n.evaluacion} de ${def.nombre}`,
           },
         });
       }

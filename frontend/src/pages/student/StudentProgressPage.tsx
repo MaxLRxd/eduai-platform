@@ -109,6 +109,35 @@ export function StudentProgressPage(): React.ReactElement {
                 <ProgressBar value={s.attendance} color={s.attendance >= 90 ? "#059669" : s.attendance >= 75 ? "#d97706" : "#dc2626"} />
               </div>
             </div>
+            {s.categories.length > 0 && (
+              <div className="mt-3.5 pt-3 border-t border-border">
+                <div className="text-[11px] font-semibold text-text-2 uppercase tracking-wide mb-1.5">
+                  Cómo se arma tu nota
+                </div>
+                <ul aria-label={`Categorías de ${s.course}`} className="flex flex-col gap-1">
+                  {s.categories.map((c) => (
+                    <li key={c.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-text-1">
+                        {c.name} <span className="text-text-3">· vale {c.weight}%</span>
+                      </span>
+                      <span className={c.average === null ? "text-text-3" : "font-bold text-text-1"}>
+                        {c.average === null ? "sin notas" : c.average.toFixed(2).replace(".", ",")}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-text-3 mt-1.5">
+                  Tu promedio es el de cada categoría ponderado por su valor. Las categorías sin notas todavía no te
+                  restan.
+                </p>
+                {s.uncategorized > 0 && (
+                  <p className="text-[11px] text-warning mt-1">
+                    {s.uncategorized} nota{s.uncategorized === 1 ? "" : "s"} sin categoría no cuenta
+                    {s.uncategorized === 1 ? "" : "n"} todavía: consultalo con tu docente.
+                  </p>
+                )}
+              </div>
+            )}
           </Card>
         ))}
         {summary.length === 0 && (
@@ -126,16 +155,18 @@ export function StudentProgressPage(): React.ReactElement {
               <tr>
                 <Th>Evaluación</Th>
                 <Th>Materia</Th>
-                <Th>Tipo</Th>
+                <Th>Categoría</Th>
+                <Th>Período</Th>
                 <Th>Fecha</Th>
                 <Th>Nota</Th>
               </tr>
             </Thead>
             <tbody>
-              {grades.map((g) => (
-                <tr key={g.evaluation} className="hover:bg-surface-2">
+              {grades.map((g, i) => (
+                <tr key={`${g.evaluation}-${g.course}-${i}`} className="hover:bg-surface-2">
                   <Td className="font-semibold text-text-1">{g.evaluation}</Td>
                   <Td>{g.course}</Td>
+                  <Td>{g.category ?? <span className="text-text-3">—</span>}</Td>
                   <Td>
                     <Tag color="gray">{g.type}</Tag>
                   </Td>
@@ -147,7 +178,7 @@ export function StudentProgressPage(): React.ReactElement {
               ))}
               {grades.length === 0 && (
                 <tr>
-                  <Td colSpan={5} className="text-center text-[12px] text-text-3 py-4">
+                  <Td colSpan={6} className="text-center text-[12px] text-text-3 py-4">
                     No hay calificaciones registradas todavía.
                   </Td>
                 </tr>

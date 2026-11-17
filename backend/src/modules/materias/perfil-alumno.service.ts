@@ -1,3 +1,4 @@
+import { calcularPromediosPorMateria } from "../notas/notas.service";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { obtenerProfesorAsignado } from "./materias.service";
@@ -77,13 +78,23 @@ export async function perfilAlumno(materiaId: string, alumnoId: string, docenteU
     .filter((e) => e.publicado && e.calificacion_final !== null)
     .map((e) => e.calificacion_final!.toNumber());
 
+  const promedioMateria = (
+    await calcularPromediosPorMateria(
+      notas.map((n) => ({ materia_id: materiaId, categoria_id: n.categoria_id ?? null, calificacion: n.calificacion.toNumber() }))
+    )
+  ).get(materiaId);
+  const promedioNotas = promedioMateria?.promedio ?? null;
+  const sinCategoria = promedioMateria?.sin_categoria ?? 0;
+
   return {
     alumno: { ...inscripcion.alumno, inscripto_en: inscripcion.inscripto_en },
     materia: inscripcion.materia.nombre,
     notas: {
-      promedio: promedio(notas.map((n) => n.calificacion.toNumber())),
+      promedio: promedioNotas,
+      sin_categoria: sinCategoria,
       detalle: notas.map((n) => ({
         periodo: n.periodo,
+        evaluacion: n.evaluacion,
         calificacion: n.calificacion.toNumber(),
         observaciones: n.observaciones,
       })),

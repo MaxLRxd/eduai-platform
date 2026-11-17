@@ -167,6 +167,7 @@ model Materia {
   sesionesIa          SesionIA[]
   preguntasFrecuentes PreguntaFrecuente[]
   notas               Nota[]
+  categorias_nota     CategoriaNota[]
   asistencias         Asistencia[]
   analyticsComprension AnalyticsComprensionTema[]
   alertasRiesgo       AlertaRiesgoAcademico[]
@@ -343,6 +344,7 @@ model Actividad {
   clase    PlanningClase? @relation(fields: [clase_id], references: [id], onDelete: SetNull)
   rubrica  Rubrica?  @relation(fields: [rubrica_id], references: [id])
   entregas Entrega[]
+  notas    Nota[]
 
   @@index([clase_id])
   @@map("actividades")
@@ -430,17 +432,42 @@ model Nota {
   materia_id    String   @db.Uuid
   profesor_id   String   @db.Uuid
   periodo       String   @db.VarChar(100)
+  // Nombre de la evaluacion ("Parcial 1", nombre del TP). Vacio en las notas por periodo anteriores.
+  evaluacion    String   @default("") @db.VarChar(200)
+  categoria_id  String?  @db.Uuid
+  // Si viene de una actividad, la nota queda ligada a ella (una por alumno y actividad).
+  actividad_id  String?  @db.Uuid
   calificacion  Decimal  @db.Decimal(5, 2)
   observaciones String?
   registrado_en DateTime @default(now())
   editado_en    DateTime?
 
-  alumno   Usuario  @relation(fields: [alumno_id], references: [id])
-  materia  Materia  @relation(fields: [materia_id], references: [id])
-  profesor Profesor @relation(fields: [profesor_id], references: [id])
+  alumno    Usuario         @relation(fields: [alumno_id], references: [id])
+  materia   Materia         @relation(fields: [materia_id], references: [id])
+  profesor  Profesor        @relation(fields: [profesor_id], references: [id])
+  categoria CategoriaNota?  @relation(fields: [categoria_id], references: [id], onDelete: SetNull)
+  actividad Actividad?      @relation(fields: [actividad_id], references: [id], onDelete: SetNull)
 
-  @@unique([alumno_id, materia_id, periodo])
+  @@unique([alumno_id, actividad_id])
+  @@index([alumno_id, materia_id, periodo])
+  @@index([categoria_id])
   @@map("notas")
+}
+
+// Categorias de calificacion de una materia (TP, Parcial, Final...) con su peso en la nota final.
+model CategoriaNota {
+  id         String   @id @default(uuid()) @db.Uuid
+  materia_id String   @db.Uuid
+  nombre     String   @db.VarChar(80)
+  peso       Decimal  @db.Decimal(5, 2)
+  orden      Int      @default(0)
+  created_at DateTime @default(now())
+
+  materia Materia @relation(fields: [materia_id], references: [id], onDelete: Cascade)
+  notas   Nota[]
+
+  @@unique([materia_id, nombre])
+  @@map("categorias_nota")
 }
 
 model Asistencia {

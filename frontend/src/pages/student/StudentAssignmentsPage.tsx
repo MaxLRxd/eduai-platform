@@ -13,6 +13,14 @@ const STATUS_COLOR: Record<AssignmentStatus, TagColor> = {
   "En revisión": "blue",
 };
 
+function formatoNota(n: number): string {
+  return n.toFixed(2).replace(".", ",");
+}
+
+function colorNota(n: number): string {
+  return n >= 8 ? "text-success" : n >= 6 ? "text-warning" : "text-danger";
+}
+
 export function StudentAssignmentsPage(): React.ReactElement {
   const { data: assignments, isLoading } = useAssignments();
   const [activa, setActiva] = useState<Assignment | null>(null);
@@ -45,26 +53,20 @@ export function StudentAssignmentsPage(): React.ReactElement {
               <Th>Vencimiento</Th>
               <Th>Estado</Th>
               <Th>Acciones</Th>
+              <Th>Nota</Th>
             </tr>
           </Thead>
           <tbody>
             {(assignments ?? []).map((a) => {
               const nota = a.submitted?.calificacion_final ?? null;
-              const tieneNota = a.submitted?.publicado && nota !== null;
+              const tieneNota = a.submitted?.publicado === true && nota !== null;
               return (
                 <tr key={a.id} className="hover:bg-surface-2">
                   <Td className="font-semibold text-text-1">{a.title}</Td>
                   <Td>{a.course}</Td>
                   <Td className="font-mono text-xs">{a.dueDate}</Td>
                   <Td>
-                    <div className="flex items-center gap-1.5">
-                      <Tag color={STATUS_COLOR[a.status]}>{a.status}</Tag>
-                      {tieneNota && (
-                        <span className="font-mono text-xs font-bold text-success">
-                          {String(nota).replace(".", ",")}
-                        </span>
-                      )}
-                    </div>
+                    <Tag color={STATUS_COLOR[a.status]}>{a.status}</Tag>
                   </Td>
                   <Td>
                     <Button
@@ -75,12 +77,24 @@ export function StudentAssignmentsPage(): React.ReactElement {
                       {a.status === "Pendiente" ? (a.submitted ? "Editar" : "Enviar") : "Ver"}
                     </Button>
                   </Td>
+                  <Td>
+                    {tieneNota ? (
+                      <span className={`font-mono text-sm font-extrabold ${colorNota(nota)}`}>{formatoNota(nota)}</span>
+                    ) : (
+                      <span
+                        className="text-xs text-text-3"
+                        title={a.submitted ? "Todavía no está corregida" : "Todavía no la entregaste"}
+                      >
+                        —
+                      </span>
+                    )}
+                  </Td>
                 </tr>
               );
             })}
             {!isLoading && (assignments ?? []).length === 0 && (
               <tr>
-                <Td colSpan={5} className="text-center text-[12px] text-text-3 py-4">
+                <Td colSpan={6} className="text-center text-[12px] text-text-3 py-4">
                   No hay actividades cargadas todavía.
                 </Td>
               </tr>

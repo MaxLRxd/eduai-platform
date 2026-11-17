@@ -11,6 +11,8 @@ interface ResumenProgresoApi {
   materia: string;
   promedio: number | null;
   asistencia: number;
+  categorias?: { id: string; nombre: string; peso: number; promedio: number | null }[];
+  sin_categoria?: number;
 }
 
 interface ProgresoApi {
@@ -23,6 +25,7 @@ interface ProgresoApi {
   asistencia_global: number;
   detalle: {
     evaluacion: string;
+    categoria?: string | null;
     materia: string;
     periodo: string;
     fecha: string;
@@ -79,9 +82,12 @@ export async function getProgressData(periodo?: string): Promise<ProgressData> {
       average: r.promedio ?? 0,
       attendance: r.asistencia,
       color: r.promedio !== null ? gradeColor(r.promedio) : "#94a3b8",
+      categories: (r.categorias ?? []).map((c) => ({ id: c.id, name: c.nombre, weight: c.peso, average: c.promedio })),
+      uncategorized: r.sin_categoria ?? 0,
     })),
     grades: data.detalle.map((g) => ({
       evaluation: g.evaluacion,
+      category: g.categoria ?? null,
       course: g.materia,
       type: g.periodo,
       date: g.fecha,

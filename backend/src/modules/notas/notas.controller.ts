@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import * as notasService from "./notas.service";
-import type { ActualizarNotaInput, CrearNotaInput } from "./notas.schemas";
+import type {
+  ActualizarNotaInput,
+  CategoriasNotaInput,
+  CrearNotaInput,
+  SincronizarActividadInput,
+} from "./notas.schemas";
 import { AppError } from "../../middlewares/error";
 
 export async function listarPorMateria(
@@ -56,4 +61,43 @@ export async function mías(
   }
   const notas = await notasService.listarMias(req.user.id, req.user.rol);
   res.json({ notas });
+}
+export async function listarCategorias(req: Request<{ materiaId: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const categorias = await notasService.listarCategorias(req.params.materiaId, req.user.id, req.user.rol);
+  res.json({ categorias });
+}
+
+export async function reemplazarCategorias(
+  req: Request<{ materiaId: string }, unknown, CategoriasNotaInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const categorias = await notasService.reemplazarCategorias(req.params.materiaId, req.body, req.user.id);
+  res.json({ categorias });
+}
+
+export async function resumenCalificaciones(
+  req: Request<{ materiaId: string }, unknown, unknown, { periodo?: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const periodo = typeof req.query.periodo === "string" && req.query.periodo ? req.query.periodo : undefined;
+  res.json(await notasService.resumenCalificaciones(req.params.materiaId, req.user.id, periodo));
+}
+
+export async function sincronizarDesdeActividad(
+  req: Request<{ actividadId: string }, unknown, SincronizarActividadInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await notasService.sincronizarDesdeActividad(req.params.actividadId, req.body, req.user.id));
 }

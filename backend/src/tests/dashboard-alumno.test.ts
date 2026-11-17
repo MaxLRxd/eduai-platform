@@ -7,6 +7,7 @@ jest.mock("../config/prisma", () => ({
   prisma: {
     inscripcion: { count: jest.fn(), findMany: jest.fn() },
     nota: { findMany: jest.fn() },
+    categoriaNota: { findMany: jest.fn() },
     asistencia: { findMany: jest.fn() },
     actividad: { findMany: jest.fn() },
     alertaRiesgoAcademico: { count: jest.fn() },
@@ -16,6 +17,7 @@ jest.mock("../config/prisma", () => ({
 const prismaMock = prisma as unknown as {
   inscripcion: { count: jest.Mock; findMany: jest.Mock };
   nota: { findMany: jest.Mock };
+  categoriaNota: { findMany: jest.Mock };
   asistencia: { findMany: jest.Mock };
   actividad: { findMany: jest.Mock };
   alertaRiesgoAcademico: { count: jest.Mock };
@@ -35,6 +37,7 @@ const actividad = (id: string, materiaId: string, entregada: boolean, dias: numb
 describe("dashboardAlumno", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.categoriaNota.findMany.mockResolvedValue([]);
     prismaMock.inscripcion.count.mockResolvedValue(2);
     prismaMock.inscripcion.findMany.mockResolvedValue([
       { materia_id: "m1", materia: materia("m1", "Bases de Datos") },

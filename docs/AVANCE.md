@@ -188,6 +188,20 @@ docente muestra sus últimas consultas al tutor (`ultimas_consultas`).
 ### ✅ Mensajería de alumno hacia el profesor
 **Resuelto:** el alumno tiene "Mensajes" en su menú y puede escribirle a sus docentes.
 
+### ✅ El alumno no ve cómo se arma su nota final
+*(Agregado el 2026-11-17, a partir del modelo de calificaciones con categorías y pesos.)* El alumno veía
+un promedio sin saber de dónde salía.
+**Resuelto:** en **Mis estadísticas**, cada materia muestra *Cómo se arma tu nota* (categorías, lo que vale
+cada una y su promedio, o "sin notas"), aclara que una categoría sin notas no resta y avisa de las notas sin
+categoría. El detalle de calificaciones tiene una columna **Categoría** (y el período en su propia columna).
+La API de progreso devuelve `categorias` y `sin_categoria` por materia y `categoria` por nota.
+
+### ✅ Entregas: columna "Nota"
+*(Pedido el 2026-11-17.)* En **Entregas** la nota se mostraba mezclada con el estado.
+**Resuelto:** columnas Actividad · Curso · Vencimiento · Estado · Acciones · **Nota**. Solo se muestra la nota
+de correcciones **publicadas** (si no, un guion). Además, el backend ya no envía al alumno la nota ni el
+feedback de una entrega sin publicar.
+
 ## Profesor
 
 ### ✅ Gestionar secciones envía a "Mis alumnos"
@@ -200,9 +214,24 @@ docente muestra sus últimas consultas al tutor (`ultimas_consultas`).
 **Resuelto:** se puede enviar a todos, por materia o a una selección de estudiantes. Antes, un envío
 no individual se mandaba a todos los usuarios del sistema.
 
-### 🟡 Simulación de TPs y exámenes para "Calificaciones"
-**Analizado.** Se mantiene la solución con "Insumos: TPs y simulacros" y columnas por período.
-Pendiente el modelo completo con categoría/peso y Nota ligada a Actividad.
+### ✅ Simulación de TPs y exámenes para "Calificaciones"
+**Resuelto (2026-11-17): modelo completo de calificaciones.**
+- **Categorías con peso por materia** (TP, Parcial, Final…): nueva tabla `categorias_nota`; los pesos deben
+  sumar 100. La **nota final es el promedio ponderado**: cada categoría se promedia y se pondera. Si un alumno
+  todavía no tiene notas en una categoría, esa no lo penaliza (el peso se reparte entre las demás). Sin
+  categorías, sigue siendo el promedio simple de siempre.
+- **Varias evaluaciones por período:** una nota ahora tiene `evaluacion` (nombre), `categoria_id` y
+  `actividad_id` (antes solo había una nota por alumno y período).
+- **Nota ligada a Actividad:** `POST /api/actividades/:id/notas/sincronizar` importa las correcciones
+  **publicadas** de una actividad como notas ligadas a ella (una por alumno; repetirlo actualiza, no duplica).
+  Nunca importa borradores de la IA.
+- **Un solo promedio en todo el sistema:** dashboard del alumno, "Mis estadísticas", perfil del alumno y
+  tabla del docente usan el mismo cálculo (`notas.promedio.ts`). Las notas sin categoría no cuentan cuando la
+  materia usa categorías y se avisa al docente.
+- **Pantalla del docente:** editor de categorías y pesos, importación desde actividades, columnas por categoría
+  con la nota final, y lista de notas por alumno (con edición). "Insumos: TPs y simulacros" queda como referencia.
+- Migración `20261117120000_categorias_y_notas_por_actividad` (comparada con el SQL que genera Prisma; no se
+  aplicó contra una base real porque Docker estaba cerrado).
 
 ### ✅ Reorganización de menús y jerarquías
 Se propone (e implementó) una redistribución para no tener tantas opciones en el menú:
@@ -264,9 +293,9 @@ palabrería innecesaria, y que no intente remarcar con negrita ni con `*palabra*
 
 ## Resumen de estado
 
-**Pendiente real:** modelo completo de Calificaciones (🟡), manejo de errores de licencias/tokens,
-decisión sobre las consultas visibles al docente y
-verificación en navegador. Todo lo demás de este reporte está resuelto.
+**Pendiente real:** decisión sobre las consultas del alumno al tutor que ve el docente, y verificación en
+navegador (incluida la aplicación de la migración de calificaciones contra una base real). Todo lo demás
+de este reporte está resuelto.
 
 Detalle del reporte de 2026-11-17:
 
@@ -556,6 +585,6 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-17):** backend **208** en **28** suites · frontend **56** en
-**11** archivos · ai-services: 21 archivos de tests (107 según `DOCUMENTACION_TECNICA.md`, sin
+**Conteo actual de tests (2026-11-17):** backend **240** en **30** suites · frontend **84** en
+**15** archivos · ai-services: 21 archivos de tests (107 según `DOCUMENTACION_TECNICA.md`, sin
 reverificar) · E2E **42**.

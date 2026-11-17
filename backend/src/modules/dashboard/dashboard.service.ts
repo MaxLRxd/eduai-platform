@@ -1,3 +1,4 @@
+import { calcularPromediosPorMateria } from "../notas/notas.service";
 import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
@@ -21,7 +22,7 @@ export async function dashboardAlumno(alumnoId: string, periodo?: string) {
     }),
     prisma.nota.findMany({
       where: { alumno_id: alumnoId },
-      select: { materia_id: true, calificacion: true, periodo: true },
+      select: { materia_id: true, calificacion: true, periodo: true, categoria_id: true },
     }),
     prisma.asistencia.findMany({
       where: { alumno_id: alumnoId },
@@ -50,12 +51,14 @@ export async function dashboardAlumno(alumnoId: string, periodo?: string) {
     ? asistencias.filter((a) => periodoDeFecha(a.fecha_clase) === periodo)
     : asistencias;
 
-  const notaPorMateria = new Map<string, number[]>();
-  for (const n of notasFiltradas) {
-    const arr = notaPorMateria.get(n.materia_id) ?? [];
-    arr.push(n.calificacion.toNumber());
-    notaPorMateria.set(n.materia_id, arr);
-  }
+  // Promedio ponderado por categorias de cada materia (o simple si la materia no definio categorias).
+  const promedioPorMateria = await calcularPromediosPorMateria(
+    notasFiltradas.map((n) => ({
+      materia_id: n.materia_id,
+      categoria_id: n.categoria_id,
+      calificacion: n.calificacion.toNumber(),
+    }))
+  );
 
   const totalPorMateria = new Map<string, number>();
   const entregadasPorMateria = new Map<string, number>();
@@ -90,9 +93,7 @@ export async function dashboardAlumno(alumnoId: string, periodo?: string) {
   let promPeriodoActual: number | null = null;
 
   const materiasResumen = materias.map((insc) => {
-    const valores = notaPorMateria.get(insc.materia_id) ?? [];
-    const promedio =
-      valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+    const promedio = promedioPorMateria.get(insc.materia_id)?.promedio ?? null;
     if (promedio !== null) {
       promedioGlobal += promedio;
     }

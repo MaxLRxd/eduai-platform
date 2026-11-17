@@ -1,3 +1,4 @@
+import { calcularDesglosePorMateria } from "../notas/notas.service";
 import type {
   EstadoAsistencia,
   NivelSeveridad,
@@ -287,12 +288,13 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
     ? todasLasAsistencias.filter((a) => periodoDeFecha(a.fecha_clase) === periodo)
     : todasLasAsistencias;
 
-  const notasPorMateria = new Map<string, number[]>();
-  for (const n of notas) {
-    const arr = notasPorMateria.get(n.materia_id) ?? [];
-    arr.push(n.calificacion.toNumber());
-    notasPorMateria.set(n.materia_id, arr);
-  }
+  const desglosePorMateria = await calcularDesglosePorMateria(
+    notas.map((n) => ({
+      materia_id: n.materia_id,
+      categoria_id: n.categoria_id,
+      calificacion: n.calificacion.toNumber(),
+    }))
+  );
 
   const asistenciasPorMateria = new Map<string, EstadoAsistencia[]>();
   for (const a of asistencias) {
@@ -301,13 +303,16 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
     asistenciasPorMateria.set(a.materia_id, arr);
   }
 
+  const nombreCategoria = new Map(
+    [...desglosePorMateria.values()].flatMap((d) => d.categorias.map((c) => [c.id, c.nombre] as const))
+  );
+
   const esAsistido = (estado: EstadoAsistencia) =>
     estado === "PRESENTE" || estado === "TARDANZA";
 
   const resumen = inscripciones.map((insc) => {
-    const valores = notasPorMateria.get(insc.materia_id) ?? [];
-    const promedio =
-      valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+    const desglose = desglosePorMateria.get(insc.materia_id);
+    const promedio = desglose?.promedio ?? null;
 
     const estados = asistenciasPorMateria.get(insc.materia_id) ?? [];
     const porcentajeAsistencia =
@@ -319,6 +324,9 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
       materia_id: insc.materia.id,
       materia: insc.materia.nombre,
       promedio: promedio !== null ? Math.round(promedio * 100) / 100 : null,
+      // Como se compone la nota: categorias con su peso y el promedio del alumno en cada una.
+      categorias: desglose?.categorias ?? [],
+      sin_categoria: desglose?.sin_categoria ?? 0,
       asistencia: Math.round(porcentajeAsistencia),
     };
   });
@@ -355,7 +363,8 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
     },
     asistencia_global: asistenciaGlobal,
     detalle: notas.map((n) => ({
-      evaluacion: n.observaciones ?? `Periodo ${n.periodo}`,
+      evaluacion: n.evaluacion || n.observaciones || `Periodo ${n.periodo}`,
+      categoria: n.categoria_id ? (nombreCategoria.get(n.categoria_id) ?? null) : null,
       materia: n.materia.nombre,
       periodo: n.periodo,
       fecha: n.registrado_en.toISOString().slice(0, 10),

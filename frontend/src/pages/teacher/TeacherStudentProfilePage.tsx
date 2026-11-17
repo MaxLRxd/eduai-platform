@@ -10,7 +10,11 @@ import { api, apiErrorMessage } from "../../services/api";
 interface PerfilAlumno {
   alumno: { id: string; nombre: string; email: string; inscripto_en: string };
   materia: string;
-  notas: { promedio: number | null; detalle: { periodo: string; calificacion: number; observaciones: string | null }[] };
+  notas: {
+    promedio: number | null;
+    sin_categoria?: number;
+    detalle: { periodo: string; evaluacion?: string; calificacion: number; observaciones: string | null }[];
+  };
   asistencia: { registros: number; porcentaje: number | null; por_estado: Record<string, number> };
   entregas: {
     actividades: number;
@@ -135,12 +139,18 @@ export function TeacherStudentProfilePage(): React.ReactElement {
                   {data.notas.detalle.map((n, i) => (
                     <div key={i} className="flex justify-between gap-3 py-1.5 text-[13px]">
                       <span className="text-text-1">
+                        {n.evaluacion ? `${n.evaluacion} · ` : ""}
                         {n.periodo}
                         {n.observaciones ? <span className="text-text-3"> · {n.observaciones}</span> : null}
                       </span>
                       <strong className="text-primary">{n.calificacion}</strong>
                     </div>
                   ))}
+                </div>
+              )}
+              {(data.notas.sin_categoria ?? 0) > 0 && (
+                <div className="text-[11px] text-warning mt-2">
+                  {data.notas.sin_categoria} nota(s) sin categoría no cuentan en la nota final.
                 </div>
               )}
               <div className="text-[11px] text-text-3 mt-2.5">

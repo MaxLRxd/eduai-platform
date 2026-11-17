@@ -15,6 +15,7 @@ jest.mock("../config/prisma", () => ({
     materiaProfesor: { findUnique: jest.fn() },
     inscripcion: { findUnique: jest.fn(), findMany: jest.fn() },
     nota: { findMany: jest.fn() },
+    categoriaNota: { findMany: jest.fn() },
     asistencia: { groupBy: jest.fn() },
     actividad: { findMany: jest.fn() },
     sesionIA: { count: jest.fn() },
@@ -40,6 +41,7 @@ describe("perfil del alumno para el docente", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    p.categoriaNota.findMany.mockResolvedValue([]);
     server = createServer(createApp() as unknown as import("http").RequestListener);
     p.profesor.findUnique.mockResolvedValue({ id: PROFESOR_ID, usuario_id: PROFESOR_ID });
     p.materiaProfesor.findUnique.mockResolvedValue({ activo: true });

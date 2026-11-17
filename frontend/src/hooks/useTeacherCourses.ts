@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   crearNota,
-  getTeacherCourseGrades,
   getTeacherCourseStudents,
   getTeacherCourses,
   getTeacherGradeSources,
@@ -19,14 +18,6 @@ export function useTeacherCourseStudents(courseId: string | null) {
   });
 }
 
-export function useTeacherCourseGrades(courseId: string | null) {
-  return useQuery({
-    queryKey: ["teacher-courses", courseId ?? "", "grades"],
-    queryFn: () => getTeacherCourseGrades(courseId as string),
-    enabled: Boolean(courseId),
-  });
-}
-
 export function useTeacherGradeSources(courseId: string | null) {
   return useQuery({
     queryKey: ["teacher-courses", courseId ?? "", "grade-sources"],
@@ -40,7 +31,7 @@ export function useCreateNota(courseId: string) {
   return useMutation({
     mutationFn: (input: Parameters<typeof crearNota>[1]) => crearNota(courseId, input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["teacher-courses", courseId, "grades"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-courses", courseId, "calificaciones"] });
       void queryClient.invalidateQueries({ queryKey: ["teacher-courses", courseId, "students"] });
       void queryClient.invalidateQueries({ queryKey: ["teacher-courses", courseId, "grade-sources"] });
       void queryClient.invalidateQueries({ queryKey: ["progress"] });
