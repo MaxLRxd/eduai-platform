@@ -1,0 +1,156 @@
+PLAN DE ACCIÓN — BUGS Y FALTANTES DEL MÓDULO PROFESOR
+=====================================================
+
+Fecha: 2026-11-17
+Repo: C:\Users\masi\Desktop\eduai-platform
+Rama: develop
+Base analizada: bugs_y_faltantes.txt + docs/GUIA_BUGS_Y_FALTANTES.md
+Commits de referencia: cae44ca, 44636ef
+Alcance elegido: SOLO LO PENDIENTE DE PROFESOR
+(no incluye el rediseño completo de Calificaciones con categoría/peso/nota por actividad)
+
+Estado del working tree al iniciar: limpio (sin cambios locales).
+Typecheck frontend y backend: OK.
+
+-----------------------------------------------------
+1. QUÉ YA ESTÁ RESUELTO EN GIT
+-----------------------------------------------------
+
+- "Gestionar secciones" lleva a Contenidos (/teacher/content?course=...).
+- Menú del docente reorganizado: Inicio, Mis materias, Mis estudiantes,
+  Evaluaciones, Analytics, Asistente IA, Mensajes.
+- Pestañas de área:
+  * Estudiantes: Estudiantes / Calificaciones / Asistencia.
+  * Evaluaciones: Actividades / Correcciones / Calificaciones.
+- Mensajería con filtros: todos mis estudiantes, por materia o selección puntual.
+- El docente ya puede abrir el archivo de una entrega en Correcciones
+  (fileUrl / fileName mapeados con apiUrl).
+- Calificaciones muestra "Insumos: TPs y simulacros" y columnas por período.
+- Contenidos: árbol unidad → clases → archivos; botón a Planificación;
+  subida de material por unidad o clase; evaluaciones vinculadas a sección/clase.
+- Planificación: creación de clases y material con dos opciones:
+  elegir un material existente de Contenidos o subir un archivo nuevo.
+- Actividades/Evaluaciones muestran la sección y la clase a la que pertenecen.
+
+-----------------------------------------------------
+2. BRECHAS REALES DETECTADAS (PENDIENTES)
+-----------------------------------------------------
+
+A. Contenidos — no se puede crear una clase desde el árbol de unidades.
+   - Falta un botón "+ Clase" dentro de cada unidad.
+   - Falta la opción "Crear una clase ahora" al crear una sección.
+   - Hoy las clases solo se crean desde Planificación.
+
+B. Contenidos — no se puede vincular material existente a una clase.
+   - En cada clase solo existe "Subir aquí" (archivo nuevo).
+   - Falta la opción "Elegir de Contenidos" (material ya subido).
+   - En Planificación ya existe esa lógica; hay que reutilizarla.
+
+C. Verificación de entrega con archivo.
+   - El código ya mapea archivo_url y archivo_nombre, pero falta un test de
+     regresión que confirme el flujo completo hacia la cola del docente.
+
+D. Punto 13 (Calificaciones) — analizado, se deja fuera del alcance elegido.
+   - Se resuelve hoy con "Insumos: TPs y simulacros" y columnas por período.
+   - El modelo propuesto Actividad.categoria/peso + Nota.actividad_id no se
+     implementa en esta iteración.
+
+-----------------------------------------------------
+3. PLAN DE IMPLEMENTACIÓN
+-----------------------------------------------------
+
+PASO 1 — Modal reutilizable "Crear clase"
+- Crear frontend/src/components/teacher/ClassFormModal.tsx.
+- Campos:
+  * Unidad (select; preseleccionada según desde dónde se abra).
+  * Título de la clase.
+  * Fecha.
+  * Visible para estudiantes (sí/no).
+  * Material (opcional): ninguna / elegir de Contenidos / subir archivo.
+- Reutilizar hooks y endpoints existentes:
+  * useSavePlanning → PUT /api/materias/:materiaId/planning/:fecha
+  * useAssignPlanningMaterial → POST .../material/desde-contenido
+  * useUploadPlanningMaterial → POST .../material
+- Validaciones:
+  * Título mínimo 2 caracteres.
+  * Fecha obligatoria y normalizada a YYYY-MM-DD.
+  * No permitir una fecha ya usada por otra clase de la materia
+    (aviso claro antes de pisar la clase existente).
+- Al crear: invalidar planning y content (ya lo hacen los hooks).
+
+PASO 2 — Integrar el modal en Contenidos
+- Agregar botón "+ Clase" en el encabezado de cada unidad.
+- Abrir ClassFormModal con la unidad preseleccionada.
+- Agregar en el formulario "Nueva unidad" una opción
+  "Crear una clase en esta unidad ahora".
+- Si está marcada: al crear la sección, abrir el modal de clase con esa
+  sección preseleccionada (la sección queda creada aunque se cancele).
+- Mantener el material inicial de la unidad como está.
+
+PASO 3 — "Elegir de Contenidos" por clase
+- Agregar botón "Elegir de Contenidos" junto a "Subir aquí" en cada clase.
+- Modal simple con select de materiales ya subidos de la materia
+  (archivos con URL; excluir materiales internos de planificación).
+- Al confirmar: assignPlanningMaterial con la fecha de esa clase.
+- Resultado: el material aparece en la clase y queda disponible para el Tutor IA.
+- Sin cambios de backend: se reutiliza el endpoint existente.
+
+PASO 4 — Test de regresión de entrega con archivo
+- Extender frontend/src/tests/fase1-enlaces-y-materia.test.ts o agregar uno nuevo.
+- Cubrir:
+  * Entrega con archivo → fileUrl absoluto y fileName presentes.
+  * Entrega de texto → sin fileUrl.
+  * Entrega vacía → "Sin contenido".
+- Si el test revela una brecha, corregir el mapeo/servicio correspondiente.
+
+PASO 5 — Verificación final
+- npm run typecheck --workspace frontend
+- npm run typecheck --workspace backend
+- Ejecutar tests del frontend (vitest).
+- Ejecutar lint si el repo lo tiene configurado.
+- Actualizar docs/GUIA_BUGS_Y_FALTANTES.md marcando lo completado.
+
+-----------------------------------------------------
+4. ARCHIVOS INVOLUCRADOS
+-----------------------------------------------------
+
+Frontend (editar):
+- frontend/src/pages/teacher/TeacherContentPage.tsx
+- frontend/src/components/teacher/ClassFormModal.tsx (nuevo)
+- frontend/src/components/teacher/ClassMaterialModal.tsx (nuevo, si aplica)
+- frontend/src/tests/fase1-enlaces-y-materia.test.ts (test de regresión)
+- docs/GUIA_BUGS_Y_FALTANTES.md (marcar avances)
+
+Frontend (reutilizar, sin cambios previstos):
+- frontend/src/hooks/usePlanning.ts
+- frontend/src/services/planning.service.ts
+- frontend/src/hooks/useContent.ts
+- frontend/src/components/ui/Modal.tsx
+- frontend/src/components/ui/Button.tsx
+
+Backend:
+- Sin cambios previstos. Se reutilizan:
+  * backend/src/modules/planning/planning.routes.ts
+  * backend/src/modules/planning/planning.service.ts
+
+-----------------------------------------------------
+5. FUERA DE ALCANCE (para otra iteración)
+-----------------------------------------------------
+
+- Rediseño completo de Calificaciones con categoría/peso y relación
+  Nota–Actividad.
+- Reutilización real de un mismo contenido en varias secciones/clases
+  (hoy el esquema tiene un único clase_id por contenido; se resuelve
+  copiando material vía Planificación).
+- Cambios en bugs de otros roles (alumno, admin).
+
+-----------------------------------------------------
+6. CRITERIOS DE ACEPTACIÓN
+-----------------------------------------------------
+
+- Desde Contenidos puedo crear una clase en una unidad sin ir a Planificación.
+- Al crear una sección puedo optar por crear una clase inmediatamente.
+- En una clase puedo subir un archivo nuevo o elegir uno ya subido en Contenidos.
+- La clase creada aparece en el árbol, en Planificación y en Evaluaciones.
+- El docente ve el archivo de una entrega en Correcciones.
+- Typecheck de frontend y backend sin errores; tests de regresión en verde.
