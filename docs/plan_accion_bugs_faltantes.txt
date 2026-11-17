@@ -1,156 +1,336 @@
-PLAN DE ACCIÓN — BUGS Y FALTANTES DEL MÓDULO PROFESOR
-=====================================================
+PLAN DE ACCIÓN — BUGS Y FALTANTES (ADMINISTRADOR + GENERAL)
+============================================================
 
-Fecha: 2026-11-17
+Fecha: 2026-11-17 (iteración 2)
 Repo: C:\Users\masi\Desktop\eduai-platform
 Rama: develop
-Base analizada: bugs_y_faltantes.txt (el .md de la guía está desactualizado)
-Commits de referencia: cae44ca, 44636ef
-Alcance elegido: SOLO LO PENDIENTE DE PROFESOR
-(no incluye el rediseño completo de Calificaciones con categoría/peso/nota por actividad)
+Base analizada: docs/AVANCE.md (reporte de usuarios 2026-11-17)
+Estado del working tree al iniciar: limpio.
+Typecheck backend/frontend: OK al momento del análisis.
 
-Estado del working tree al iniciar: limpio (sin cambios locales).
-Typecheck frontend y backend: OK.
+ALCANCE DE ESTA ITERACIÓN
+-------------------------
+- Administrador (bug de "Editar" materia).
+- General (Moodle, encoding, buscador, prompting, licencias).
+- Alumno y Docente: YA RESUELTOS. No se reabren ni se reimplementan.
+- Fuera de alcance: rediseño de Calificaciones con categoría/peso y Nota ligada
+  a Actividad.
 
------------------------------------------------------
-1. QUÉ YA ESTÁ RESUELTO EN GIT
------------------------------------------------------
-
-- "Gestionar secciones" lleva a Contenidos (/teacher/content?course=...).
-- Menú del docente reorganizado: Inicio, Mis materias, Mis estudiantes,
-  Evaluaciones, Analytics, Asistente IA, Mensajes.
-- Pestañas de área:
-  * Estudiantes: Estudiantes / Calificaciones / Asistencia.
-  * Evaluaciones: Actividades / Correcciones / Calificaciones.
-- Mensajería con filtros: todos mis estudiantes, por materia o selección puntual.
-- El docente ya puede abrir el archivo de una entrega en Correcciones
-  (fileUrl / fileName mapeados con apiUrl).
-- Calificaciones muestra "Insumos: TPs y simulacros" y columnas por período.
-- Contenidos: árbol unidad → clases → archivos; botón a Planificación;
-  subida de material por unidad o clase; evaluaciones vinculadas a sección/clase.
-- Planificación: creación de clases y material con dos opciones:
-  elegir un material existente de Contenidos o subir un archivo nuevo.
-- Actividades/Evaluaciones muestran la sección y la clase a la que pertenecen.
+Estado del plan: PROPUESTO — esperando OK para implementar.
 
 -----------------------------------------------------
-2. BRECHAS REALES DETECTADAS (PENDIENTES)
+1. ITERACIONES ANTERIORES — YA RESUELTAS (HECHO ✅)
 -----------------------------------------------------
 
-A. Contenidos — no se puede crear una clase desde el árbol de unidades.
-   - Falta un botón "+ Clase" dentro de cada unidad.
-   - Falta la opción "Crear una clase ahora" al crear una sección.
-   - Hoy las clases solo se crean desde Planificación.
+### 1.1 Docente / Profesor (plan anterior) — HECHO ✅
 
-B. Contenidos — no se puede vincular material existente a una clase.
-   - En cada clase solo existe "Subir aquí" (archivo nuevo).
-   - Falta la opción "Elegir de Contenidos" (material ya subido).
-   - En Planificación ya existe esa lógica; hay que reutilizarla.
+Brechas A–D del plan anterior:
+- ✅ A. Crear clase desde el árbol de Contenidos:
+  - botón "+ Clase" por unidad.
+  - opción "Crear una clase ahora" al crear una sección.
+  - implementado en 9c34a8c (`ClassFormModal`, integración en
+    `TeacherContentPage.tsx`).
+- ✅ B. Vincular material existente a una clase:
+  - "Elegir de Contenidos" junto a "Subir aquí".
+  - implementado en 277dd31 reutilizando
+    `POST .../planning/:fecha/material/desde-contenido`.
+- ✅ C. Test de regresión de entrega con archivo:
+  - cubierto en 1b0b8aa y en `frontend/src/tests/fase1-enlaces-y-materia.test.ts`
+    / `nombre-de-material.test.tsx`.
+- ✅ D. Simulación de TPs/exámenes para Calificaciones:
+  - se mantiene "Insumos: TPs y simulacros" + columnas por período.
+  - el modelo completo (categoría/peso + Nota ligada a Actividad) sigue fuera de
+    alcance por decisión de producto.
 
-C. Verificación de entrega con archivo.
-   - El código ya mapea archivo_url y archivo_nombre, pero falta un test de
-     regresión que confirme el flujo completo hacia la cola del docente.
+Pasos 1–5 del plan anterior:
+- ✅ Paso 1: `ClassFormModal` reutilizable.
+- ✅ Paso 2: integración en Contenidos ("+ Clase" y alta desde nueva sección).
+- ✅ Paso 3: "Elegir de Contenidos" por clase.
+- ✅ Paso 4: test de regresión de entrega con archivo.
+- ✅ Paso 5: verificación final y tests.
 
-D. Punto 13 (Calificaciones) — analizado, se deja fuera del alcance elegido.
-   - Se resuelve hoy con "Insumos: TPs y simulacros" y columnas por período.
-   - El modelo propuesto Actividad.categoria/peso + Nota.actividad_id no se
-     implementa en esta iteración.
+Otros puntos de Docente ya cerrados:
+- ✅ "Gestionar secciones" navega a Contenidos.
+- ✅ El docente ve el documento de una entrega (URL + nombre).
+- ✅ Filtros de mensajería (todos / por materia / selección de estudiantes).
+- ✅ Menú del docente reorganizado (Inicio, Mis materias, Mis estudiantes,
+  Evaluaciones, Analytics, Asistente IA, Mensajes).
+- ✅ Contenidos: clases por unidad, material por unidad/clase y evaluaciones
+  vinculadas a sección/clase.
+
+### 1.2 Alumno — HECHO ✅ (según indicación del usuario y commits)
+
+No se reaudita en esta iteración. Queda registrado como cerrado:
+- ✅ Material/PDF abre y descarga:
+  - `MaterialItem.tsx` / `MaterialRow.tsx` con enlaces reales y `apiUrl`.
+  - commit c44096f; tests `nombre-de-material.test.tsx`.
+- ✅ "Mis estadísticas" con datos reales:
+  - eliminación de caché permanente y filtros por período.
+  - commit 2aa8b76; fix previo en fa89182.
+- ✅ Organización jerárquica de "Mis cursos" (unidad → clases → materiales):
+  - modelo de clases/secciones/contenidos en cae44ca y siguientes.
+- ✅ Persistencia del chat del tutor IA:
+  - `useTutorChat.ts` retoma sesiones y mensajes del backend.
+  - commit 4bfb413.
+- ✅ Chat ampliable:
+  - botón "Ampliar/Cerrar" y contenedor expandido en
+    `StudentCourseDetailPage.tsx`.
+- ✅ Mensajería alumno → docente:
+  - `StudentMessagesPage.tsx`, contactos validados por vínculo de materia,
+    conversaciones 1:1 y no leídos.
+  - commit 2aa8b76.
+
+### 1.3 Administrador — bug ya corregido en código (falta blindarlo) 🟡
+
+El bug "Editar materia no trae descripción ni nivel educativo" fue corregido en
+el commit 44636ef:
+- `frontend/src/services/adminSubjects.service.ts` (`toAdminSubject`) ahora mapea
+  `descripcion` y `nivel_educativo`.
+- `AdminMateriasPage.tsx` (`loadForEdit`) ya los carga desde el listado.
+- El backend (`admin.service.ts`) ya guardaba y devolvía ambos campos.
+
+Riesgo residual: que una regresión vuelva a descartar esos campos y el PUT
+mande `descripcion: null`, borrando la descripción guardada.
+Acción en esta iteración: test de regresión + verificación en base.
 
 -----------------------------------------------------
-3. PLAN DE IMPLEMENTACIÓN
+2. BRECHAS Y ANÁLISIS DEL ALCANCE ACTUAL
 -----------------------------------------------------
 
-PASO 1 — Modal reutilizable "Crear clase"
-- Crear frontend/src/components/teacher/ClassFormModal.tsx.
-- Campos:
-  * Unidad (select; preseleccionada según desde dónde se abra).
-  * Título de la clase.
-  * Fecha.
-  * Visible para estudiantes (sí/no).
-  * Material (opcional): ninguna / elegir de Contenidos / subir archivo.
-- Reutilizar hooks y endpoints existentes:
-  * useSavePlanning → PUT /api/materias/:materiaId/planning/:fecha
-  * useAssignPlanningMaterial → POST .../material/desde-contenido
-  * useUploadPlanningMaterial → POST .../material
-- Validaciones:
-  * Título mínimo 2 caracteres.
-  * Fecha obligatoria y normalizada a YYYY-MM-DD.
-  * No permitir una fecha ya usada por otra clase de la materia
-    (aviso claro antes de pisar la clase existente).
-- Al crear: invalidar planning y content (ya lo hacen los hooks).
+### 2.1 Administrador — "Editar" materia (descripción / nivel educativo)
 
-PASO 2 — Integrar el modal en Contenidos
-- Agregar botón "+ Clase" en el encabezado de cada unidad.
-- Abrir ClassFormModal con la unidad preseleccionada.
-- Agregar en el formulario "Nueva unidad" una opción
-  "Crear una clase en esta unidad ahora".
-- Si está marcada: al crear la sección, abrir el modal de clase con esa
-  sección preseleccionada (la sección queda creada aunque se cancele).
-- Mantener el material inicial de la unidad como está.
+Estado actual: funcionalmente corregido en 44636ef.
+Qué falta para darlo por cerrado:
+- Test backend que confirme que `PUT /api/admin/materias/:id` persiste
+  `descripcion` y `nivel_educativo` (no solo `nombre`/`activa`).
+- Test frontend que confirme que al pulsar "Editar" los inputs
+  `materia-descripcion` y `materia-nivel` se cargan con los valores del listado.
+- Verificación manual en Postgres.
 
-PASO 3 — "Elegir de Contenidos" por clase
-- Agregar botón "Elegir de Contenidos" junto a "Subir aquí" en cada clase.
-- Modal simple con select de materiales ya subidos de la materia
-  (archivos con URL; excluir materiales internos de planificación).
-- Al confirmar: assignPlanningMaterial con la fecha de esa clase.
-- Resultado: el material aparece en la clase y queda disponible para el Tutor IA.
-- Sin cambios de backend: se reutiliza el endpoint existente.
+Archivos:
+- backend/src/modules/admin/admin.service.ts
+- backend/src/modules/admin/admin.schemas.ts
+- backend/src/tests/materia-baja.test.ts (o nuevo test de admin-materias)
+- frontend/src/services/adminSubjects.service.ts
+- frontend/src/pages/admin/AdminMateriasPage.tsx
+- frontend/src/tests/ (nuevo test de AdminMateriasPage)
 
-PASO 4 — Test de regresión de entrega con archivo
-- Extender frontend/src/tests/fase1-enlaces-y-materia.test.ts o agregar uno nuevo.
-- Cubrir:
-  * Entrega con archivo → fileUrl absoluto y fileName presentes.
-  * Entrega de texto → sin fileUrl.
-  * Entrega vacía → "Sin contenido".
-- Si el test revela una brecha, corregir el mapeo/servicio correspondiente.
+Nota: preseleccionar el docente actual en el formulario de edición no forma
+parte del bug reportado; se deja fuera para no ampliar el alcance.
 
-PASO 5 — Verificación final
-- npm run typecheck --workspace frontend
-- npm run typecheck --workspace backend
-- Ejecutar tests del frontend (vitest).
-- Ejecutar lint si el repo lo tiene configurado.
-- Actualizar bugs_y_faltantes.txt marcando lo completado.
+### 2.2 General — Eliminar "SIMILAR A MOODLE"
+
+Única ocurrencia vigente en UI:
+- frontend/src/pages/student/StudentCoursesPage.tsx, línea ~17:
+  "Aulas virtuales estilo Moodle · ...".
+
+Acción:
+- Reemplazar el texto por una descripción neutra sin marca Moodle.
+- Verificar que no queden ocurrencias en `frontend/src` (hoy solo existe esa).
+- No tocar documentos históricos (`AVANCE.md`, `IMPLEMENTATION.md`,
+  `graphify-out/`).
+
+### 2.3 General — Problemas de encoding
+
+Causa confirmada A — nombres de archivo:
+- multer/busboy decodifica `originalname` como latin1.
+- Ejemplo: "Presentación Año Ñandú.pdf" llega como
+  "PresentaciÃ³n AÃ±o ÃandÃº.pdf".
+- Lugares afectados:
+  - contenidos (`contenidos.controller.ts` + `contenidos.service.ts`),
+  - entregas (`actividades.controller.ts` + `actividades.service.ts`),
+  - planificación (`planning.controller.ts` + `planning.service.ts`),
+  - logo institucional (`config.service.ts`).
+- Solución:
+  - helper `nombreArchivoUtf8()` que convierta latin1 → utf8 solo cuando el
+    nombre tenga señales de mojibake (por ejemplo "Ã", "Â", "â"), para no
+    romper clientes que ya manden UTF-8.
+  - aplicarlo antes de calcular `titulo`, `formato`, `archivo_nombre` y antes de
+    `guardarArchivo()`.
+  - tests con un nombre que incluya "Presentación Año Ñandú.pdf".
+- Datos ya guardados: incluir SQL/script opcional para reparar
+  `contenidos.archivo_nombre`, `entregas.archivo_nombre` y
+  `planning_clases.material_nombre`. Se ejecuta solo con backup previo.
+
+Causa confirmada B — CSV de reportes:
+- `csvFromReporte()` genera el contenido sin BOM y separado por comas.
+- Excel en es-AR interpreta ANSI y espera ";" como separador.
+- Solución:
+  - backend: anteponer BOM `\uFEFF` y usar ";" como separador.
+  - frontend: mantener `Blob` con `text/csv;charset=utf-8`.
+  - test: verificar BOM, separador y que un acento llegue intacto.
+
+Archivos:
+- backend/src/modules/admin/admin.service.ts (`csvFromReporte`)
+- backend/src/tests/reports-pdf.test.ts o nuevo test de export CSV
+- frontend/src/services/adminReports.service.ts (`downloadCsv`)
+
+### 2.4 General — Sacar el buscador de la plataforma
+
+- Eliminar el `<input type="search">` de
+  `frontend/src/components/layout/Header.tsx` (líneas ~22–27).
+- No hay lógica asociada: es un input decorativo sin handler.
+- Ajustar el layout del header si queda espacio sobrante.
+
+### 2.5 General — Ajustes de prompting
+
+Objetivo: respuestas más cortas, sin saludos/relleno y sin marcas de énfasis
+(`**`, `*texto*`, `__`, backticks, encabezados innecesarios).
+
+Prompt:
+- Crear `ai-services/src/prompts/estilo.py` con una constante `ESTILO`:
+  "Respondé directo, sin saludos, despedidas ni frases de relleno. Texto plano:
+  sin negritas, sin asteriscos, sin encabezados, sin emojis. Para listas usá
+  guion o numeración."
+- Aplicarla a:
+  - tutor.py, socratic.py, hints.py (chat del alumno),
+  - summary.py (resumen),
+  - correccion.py / correccion_examen.py (solo dentro de los campos de texto,
+    sin romper el JSON),
+  - material.py (variante que permita `#` para los títulos del PDF, pero sin
+    `**` ni `*`).
+- No aplicar la prohibición de encabezados al generador de material: el PDF los
+  usa para jerarquía (`materialPdf.ts` ya limpia marcas inline).
+
+Red de seguridad:
+- Backend/IA: `limpiar_markdown()` que quite `**`, `__`, `*texto*`, backticks y
+  `#` iniciales. Aplicarla al texto final (no streaming token por token).
+- Frontend: helper `limpiarMarkdown()` en `frontend/src/utils/` y usarlo al
+  renderizar mensajes del tutor en `StudentCourseDetailPage.tsx`, para cubrir el
+  streaming y el historial.
+- No aplicar limpieza al JSON de exam/corrección antes de parsearlo.
+
+Tests:
+- unit test del limpiador en IA y frontend.
+- verificar que los prompts de corrección sigan incluyendo "Esperado: ...".
+
+### 2.6 General — Licencias
+
+Decisión ya tomada: se descarta implementar licencias por IA en esta iteración
+(queda bajo supervisión del equipo). No se modifica `obtenerEstadoLicencia()`.
+Se registra como decisión cerrada, sin acción de código.
+
+-----------------------------------------------------
+3. PLAN DE IMPLEMENTACIÓN (ORDEN PROPUESTO)
+-----------------------------------------------------
+
+PASO 1 — Administrador: blindar el fix de edición
+- Agregar test backend que envíe `descripcion` + `nivel_educativo` por PUT y
+  verifique el body de `prisma.materia.update` y la respuesta.
+- Agregar test frontend de `AdminMateriasPage`: mockear hooks, pulsar "Editar" y
+  comprobar que los inputs se llenan con los valores existentes.
+- Si algún test falla, corregir el mapper/servicio (no se espera cambio).
+- Verificar en base con:
+  SELECT nombre, descripcion, nivel_educativo FROM materias;
+
+PASO 2 — General: quitar Moodle y buscador (bajo riesgo)
+- Editar StudentCoursesPage.tsx.
+- Eliminar input de Header.tsx.
+- Correr typecheck del frontend.
+
+PASO 3 — Encoding de nombres de archivo
+- Crear helper `nombreArchivoUtf8()` (backend/src/utils/ o config/storage.ts).
+- Aplicarlo en contenidos, entregas, planificación y logo.
+- Tests de subida con acentos/Ñ.
+- Documentar (no ejecutar automáticamente) el SQL de reparación de datos.
+
+PASO 4 — Encoding de CSV
+- Modificar `csvFromReporte()` (BOM + ";").
+- Ajustar `downloadCsv()` si hace falta para no duplicar BOM.
+- Test de exportación CSV con acentos.
+
+PASO 5 — Prompting
+- Crear `estilo.py` y anexar `ESTILO` a los prompts correspondientes.
+- Implementar `limpiar_markdown()` en IA y frontend.
+- Renderizar mensajes del tutor con el limpiador.
+- Agregar/actualizar tests.
+
+PASO 6 — Verificación final
+- Typecheck backend y frontend.
+- Tests backend, IA y frontend.
+- Lint.
+- Búsqueda de "Moodle" y `type="search"` para confirmar que no quedan.
 
 -----------------------------------------------------
 4. ARCHIVOS INVOLUCRADOS
 -----------------------------------------------------
 
-Frontend (editar):
-- frontend/src/pages/teacher/TeacherContentPage.tsx
-- frontend/src/components/teacher/ClassFormModal.tsx (nuevo)
-- frontend/src/components/teacher/ClassMaterialModal.tsx (nuevo, si aplica)
-- frontend/src/tests/fase1-enlaces-y-materia.test.ts (test de regresión)
-- bugs_y_faltantes.txt (marcar avances)
-
-Frontend (reutilizar, sin cambios previstos):
-- frontend/src/hooks/usePlanning.ts
-- frontend/src/services/planning.service.ts
-- frontend/src/hooks/useContent.ts
-- frontend/src/components/ui/Modal.tsx
-- frontend/src/components/ui/Button.tsx
-
 Backend:
-- Sin cambios previstos. Se reutilizan:
-  * backend/src/modules/planning/planning.routes.ts
-  * backend/src/modules/planning/planning.service.ts
+- src/utils/nombreArchivo.ts (nuevo) o src/config/storage.ts
+- src/modules/contenidos/contenidos.controller.ts
+- src/modules/contenidos/contenidos.service.ts
+- src/modules/actividades/actividades.controller.ts
+- src/modules/actividades/actividades.service.ts
+- src/modules/planning/planning.controller.ts
+- src/modules/planning/planning.service.ts
+- src/modules/config/config.service.ts
+- src/modules/admin/admin.service.ts (CSV)
+- src/tests/ (tests de admin, encoding, CSV)
+
+Frontend:
+- src/pages/student/StudentCoursesPage.tsx (Moodle)
+- src/components/layout/Header.tsx (buscador)
+- src/services/adminSubjects.service.ts
+- src/pages/admin/AdminMateriasPage.tsx
+- src/services/adminReports.service.ts (CSV)
+- src/utils/ (nuevo helper de markdown)
+- src/pages/student/StudentCourseDetailPage.tsx (render del tutor)
+- src/tests/ (tests de regresión)
+
+IA:
+- src/prompts/estilo.py (nuevo)
+- src/prompts/tutor.py
+- src/prompts/socratic.py
+- src/prompts/hints.py
+- src/prompts/summary.py
+- src/prompts/material.py
+- src/prompts/correccion.py
+- src/prompts/correccion_examen.py
+- src/services/texto.py o similar (limpiar_markdown)
+- src/use_cases/ask_tutor.py (aplicar limpieza al texto final)
+- src/tests/
+
+No se toca:
+- docs/AVANCE.md (snapshot histórico; se actualiza al final si el equipo lo pide).
+- graphify-out/, IMPLEMENTATION.md, documentación histórica.
 
 -----------------------------------------------------
-5. FUERA DE ALCANCE (para otra iteración)
+5. CRITERIOS DE ACEPTACIÓN
 -----------------------------------------------------
 
-- Rediseño completo de Calificaciones con categoría/peso y relación
-  Nota–Actividad.
-- Reutilización real de un mismo contenido en varias secciones/clases
-  (hoy el esquema tiene un único clase_id por contenido; se resuelve
-  copiando material vía Planificación).
-- Cambios en bugs de otros roles (alumno, admin).
+- Al editar una materia, descripción y nivel educativo aparecen cargados y se
+  guardan sin borrar la descripción existente.
+- No queda ninguna mención de "Moodle" en la UI.
+- El buscador del header ya no existe.
+- Subir "Presentación Año Ñandú.pdf" guarda y devuelve el nombre correcto.
+- El CSV exportado abre en Excel con acentos correctos y separado en columnas.
+- Las respuestas del tutor no incluyen saludos de relleno ni `**`/`*texto*`,
+  tanto en streaming como en historial.
+- El generador de material conserva títulos jerárquicos en el PDF.
+- `npm run typecheck --workspace backend` y `--workspace frontend` sin errores.
+- Suites de backend, IA y frontend en verde; lint sin errores.
 
 -----------------------------------------------------
-6. CRITERIOS DE ACEPTACIÓN
+6. COMANDOS DE VERIFICACIÓN
 -----------------------------------------------------
 
-- Desde Contenidos puedo crear una clase en una unidad sin ir a Planificación.
-- Al crear una sección puedo optar por crear una clase inmediatamente.
-- En una clase puedo subir un archivo nuevo o elegir uno ya subido en Contenidos.
-- La clase creada aparece en el árbol, en Planificación y en Evaluaciones.
-- El docente ve el archivo de una entrega en Correcciones.
-- Typecheck de frontend y backend sin errores; tests de regresión en verde.
+npm run typecheck --workspace backend
+npm run typecheck --workspace frontend
+npm run test --workspace backend
+npm run ai:test
+npm run test --workspace frontend
+npm run lint
+
+-----------------------------------------------------
+7. RIESGOS Y DECISIONES
+-----------------------------------------------------
+
+- El fix del admin ya está aplicado en 44636ef; se agrega test para evitar
+  regresiones, no se reescribe la lógica.
+- La reparación de datos ya guardados con mojibake NO se ejecuta como migración
+  automática: requiere backup y validación previa.
+- No se prohíben los encabezados `#` en el material docente porque el PDF los
+  usa; sí se prohíben negritas/asteriscos y saludos.
+- La limpieza de markdown en streaming se hace al renderizar el texto acumulado,
+  no token por token, para no cortar palabras ni marcadores incompletos.
+- Todo cambio queda pendiente de OK del usuario antes de implementar.
