@@ -4,7 +4,7 @@ PLAN DE ACCIÓN — BUGS Y FALTANTES DEL MÓDULO PROFESOR
 Fecha: 2026-11-17
 Repo: C:\Users\masi\Desktop\eduai-platform
 Rama: develop
-Base analizada: bugs_y_faltantes.txt + docs/GUIA_BUGS_Y_FALTANTES.md
+Base analizada: bugs_y_faltantes.txt (el .md de la guía está desactualizado)
 Commits de referencia: cae44ca, 44636ef
 Alcance elegido: SOLO LO PENDIENTE DE PROFESOR
 (no incluye el rediseño completo de Calificaciones con categoría/peso/nota por actividad)
@@ -108,7 +108,7 @@ PASO 5 — Verificación final
 - npm run typecheck --workspace backend
 - Ejecutar tests del frontend (vitest).
 - Ejecutar lint si el repo lo tiene configurado.
-- Actualizar docs/GUIA_BUGS_Y_FALTANTES.md marcando lo completado.
+- Actualizar bugs_y_faltantes.txt marcando lo completado.
 
 -----------------------------------------------------
 4. ARCHIVOS INVOLUCRADOS
@@ -119,7 +119,7 @@ Frontend (editar):
 - frontend/src/components/teacher/ClassFormModal.tsx (nuevo)
 - frontend/src/components/teacher/ClassMaterialModal.tsx (nuevo, si aplica)
 - frontend/src/tests/fase1-enlaces-y-materia.test.ts (test de regresión)
-- docs/GUIA_BUGS_Y_FALTANTES.md (marcar avances)
+- bugs_y_faltantes.txt (marcar avances)
 
 Frontend (reutilizar, sin cambios previstos):
 - frontend/src/hooks/usePlanning.ts

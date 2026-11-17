@@ -17,6 +17,7 @@ import { ContentAccessCard } from "../../components/teacher/ContentAccessCard";
 import { MaterialRow } from "../../components/teacher/MaterialRow";
 import { ActivityFormModal } from "../../components/teacher/ActivityFormModal";
 import { ClassFormModal } from "../../components/teacher/ClassFormModal";
+import { ClassMaterialModal } from "../../components/teacher/ClassMaterialModal";
 import { useTeacherActivities } from "../../hooks/useActivities";
 import { useRubrics } from "../../hooks/useCorrections";
 import { TIPO_ACTIVIDAD_LABEL } from "../../services/activities.service";
@@ -68,6 +69,12 @@ export function TeacherContentPage(): React.ReactElement {
   const [activityOpen, setActivityOpen] = useState(false);
   const [classModalOpen, setClassModalOpen] = useState(false);
   const [classModalSectionId, setClassModalSectionId] = useState<string | null>(null);
+  const [materialTarget, setMaterialTarget] = useState<{
+    sectionId: string;
+    classId: string;
+    className: string;
+    classDate: string;
+  } | null>(null);
 
   const handleCreateSection = (): void => {
     if (!activeCourse || !sectionName.trim()) return;
@@ -142,6 +149,19 @@ export function TeacherContentPage(): React.ReactElement {
     setSectionError(null);
     setClassModalSectionId(sectionId);
     setClassModalOpen(true);
+  };
+
+  const openClassMaterial = (
+    sectionId: string,
+    classId: string,
+    className: string,
+    classDate: string
+  ): void => {
+    setSavedMsg("");
+    setSectionError(null);
+    setSectionId(sectionId);
+    setClassId(classId);
+    setMaterialTarget({ sectionId, classId, className, classDate });
   };
 
   const handleUpload = (file: File): void => {
@@ -319,6 +339,13 @@ export function TeacherContentPage(): React.ReactElement {
                                       onClick={() => beginUpload(s.id, c.id, c.title)}
                                     >
                                       Subir aquí
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openClassMaterial(s.id, c.id, c.title, c.date)}
+                                    >
+                                      Elegir de Contenidos
                                     </Button>
                                     <Button variant="ghost" size="sm" onClick={() => openEvaluation(s.id, c.id)}>
                                       + Evaluación
@@ -509,6 +536,18 @@ export function TeacherContentPage(): React.ReactElement {
           const unidad = (sections ?? []).find((s) => s.id === info.sectionId)?.nombre ?? "la unidad";
           setSectionMsg(`Clase "${info.title}" creada en ${unidad}.`);
         }}
+      />
+
+      <ClassMaterialModal
+        open={Boolean(materialTarget)}
+        onClose={() => setMaterialTarget(null)}
+        courseId={activeCourse}
+        classDate={materialTarget?.classDate ?? ""}
+        className={materialTarget?.className ?? ""}
+        contentOptions={contentOptions}
+        onAssigned={(label) =>
+          setSavedMsg(`Material "${label}" asignado a ${materialTarget?.className ?? "la clase"}.`)
+        }
       />
     </div>
   );

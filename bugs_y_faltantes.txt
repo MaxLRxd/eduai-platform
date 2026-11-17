@@ -39,3 +39,11 @@ General:
 -Corregir problemas de encoding: en algunas secciones, los acentos/tildes, carcateres especiales y/o "Ñ" se muestran con caracteres extraños. También, en la parte de generacion de documentos, los csv se generan con estos caracteres extraños.
 -sacar buscador de la plataforma.
 -Se pueden hacer modificaciones a la seccion de prompting para que la respuesta de la IA no gaste tokens en saludos y palabrería innecesaria. Asi tambien, como que no intente remarcar con negrita o distintas cosas que suele hacer como con "*palabra*"
+
+Estado de implementación (2026-11-17):
+- Profesor / "Mis materias" -> gestionar secciones: resuelto, envía a Contenidos.
+- Docente no veía el documento de una entrega: resuelto (URL y nombre del archivo).
+- Filtros de mensajería: resuelto (todos, por materia o selección de estudiantes).
+- Simulación de TPs y exámenes para Calificaciones: analizado. Se mantiene la solución con "Insumos: TPs y simulacros" y columnas por período. Pendiente el modelo completo con categoría/peso y Nota ligada a Actividad.
+- Menú del docente: resuelto (Inicio, Mis materias, Mis estudiantes, Evaluaciones, Analytics, Asistente IA, Mensajes).
+- Contenidos: resuelto "+ Clase" por unidad, opción de crear clase al crear una sección, material opcional de la unidad, evaluaciones vinculadas a unidad/clase y, por clase, "Elegir de Contenidos" o "Subir archivo".

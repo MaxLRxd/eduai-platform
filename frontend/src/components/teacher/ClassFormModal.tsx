@@ -8,6 +8,7 @@ import {
   useUploadPlanningMaterial,
 } from "../../hooks/usePlanning";
 import { apiErrorMessage } from "../../services/api";
+import { toDateOnly } from "../../utils/format";
 import type { ContentClass, ContentSection } from "../../services/content.service";
 
 const inputClass =
@@ -26,11 +27,6 @@ export interface CreatedClassInfo {
   date: string;
   title: string;
   materialMode: "none" | "existing" | "upload";
-}
-
-function toDateOnly(value: string): string {
-  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
-  return match ? match[1] : "";
 }
 
 export function ClassFormModal({

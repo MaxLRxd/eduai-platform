@@ -1,3 +1,8 @@
+export function toDateOnly(value: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+  return match ? match[1] : "";
+}
+
 export function formatFecha(iso: string): string {
   try {
     const d = new Date(iso);
