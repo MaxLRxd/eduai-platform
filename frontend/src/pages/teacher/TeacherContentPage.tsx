@@ -16,6 +16,7 @@ import { resolverMateriaActiva } from "../../utils/materiaActiva";
 import { ContentAccessCard } from "../../components/teacher/ContentAccessCard";
 import { MaterialRow } from "../../components/teacher/MaterialRow";
 import { ActivityFormModal } from "../../components/teacher/ActivityFormModal";
+import { ClassFormModal } from "../../components/teacher/ClassFormModal";
 import { useTeacherActivities } from "../../hooks/useActivities";
 import { useRubrics } from "../../hooks/useCorrections";
 import { TIPO_ACTIVIDAD_LABEL } from "../../services/activities.service";
@@ -59,10 +60,14 @@ export function TeacherContentPage(): React.ReactElement {
   const [sectionName, setSectionName] = useState("");
   const [sectionTipo, setSectionTipo] = useState<"TEORIA" | "PRACTICA">("TEORIA");
   const [sectionFile, setSectionFile] = useState<File | null>(null);
+  const sectionFileInputRef = useRef<HTMLInputElement>(null);
+  const [crearClaseAlCrear, setCrearClaseAlCrear] = useState(false);
   const [sectionMsg, setSectionMsg] = useState("");
   const [sectionError, setSectionError] = useState<string | null>(null);
   const [evalTarget, setEvalTarget] = useState<{ sectionId: string; classId: string | null } | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [classModalOpen, setClassModalOpen] = useState(false);
+  const [classModalSectionId, setClassModalSectionId] = useState<string | null>(null);
 
   const handleCreateSection = (): void => {
     if (!activeCourse || !sectionName.trim()) return;
@@ -93,6 +98,12 @@ export function TeacherContentPage(): React.ReactElement {
               }
             );
             setSectionFile(null);
+            if (sectionFileInputRef.current) sectionFileInputRef.current.value = "";
+          }
+          if (crearClaseAlCrear) {
+            setCrearClaseAlCrear(false);
+            setClassModalSectionId(created.id);
+            setClassModalOpen(true);
           }
         },
         onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo crear la sección")),
@@ -126,6 +137,13 @@ export function TeacherContentPage(): React.ReactElement {
     setActivityOpen(true);
   };
 
+  const openClassModal = (sectionId: string): void => {
+    setSavedMsg("");
+    setSectionError(null);
+    setClassModalSectionId(sectionId);
+    setClassModalOpen(true);
+  };
+
   const handleUpload = (file: File): void => {
     if (!uploadTarget) return;
     setSavedMsg("");
@@ -142,6 +160,17 @@ export function TeacherContentPage(): React.ReactElement {
   };
 
   const materialesDestino = activeClass ? activeClass.materials : (activeTreeSection?.materials ?? []);
+
+  const contentOptions = (tree ?? []).flatMap((s) => [
+    ...s.materials
+      .filter((m) => Boolean(m.url))
+      .map((m) => ({ id: m.id, label: `${m.name} · ${s.nombre}` })),
+    ...s.classes.flatMap((c) =>
+      c.materials
+        .filter((m) => Boolean(m.url) && !m.id.startsWith("clase-"))
+        .map((m) => ({ id: m.id, label: `${m.name} · ${c.title}` }))
+    ),
+  ]);
 
   return (
     <div>
@@ -192,7 +221,7 @@ export function TeacherContentPage(): React.ReactElement {
           <Card>
             <CardHeader title="Estructura de unidades y clases" />
             <p className="text-xs text-text-2 mb-3">
-              Elegí si el archivo pertenece a la unidad o a una clase. Las clases se crean desde Planificación.
+              Elegí si el archivo pertenece a la unidad o a una clase. Podés crear clases acá o desde Planificación.
             </p>
             <div className="flex flex-col gap-2.5 mb-3">
               {(tree ?? []).map((s) => {
@@ -217,6 +246,9 @@ export function TeacherContentPage(): React.ReactElement {
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => openEvaluation(s.id, null)}>
                           + Evaluación
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openClassModal(s.id)}>
+                          + Clase
                         </Button>
                         <Button
                           variant="ghost"
@@ -390,6 +422,7 @@ export function TeacherContentPage(): React.ReactElement {
               </label>
               <input
                 id="section-file"
+                ref={sectionFileInputRef}
                 type="file"
                 accept=".pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp,.svg,.txt,.md,.mp4,.mov,.webm"
                 onChange={(e) => setSectionFile(e.target.files?.[0] ?? null)}
@@ -399,6 +432,18 @@ export function TeacherContentPage(): React.ReactElement {
                 Se sube y se indexa junto con la creación de la unidad.
               </p>
             </div>
+            <label className="flex items-center gap-2 mt-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={crearClaseAlCrear}
+                onChange={(e) => setCrearClaseAlCrear(e.target.checked)}
+                className="accent-primary"
+              />
+              <span className="text-xs text-text-1">Crear una clase en esta unidad ahora</span>
+            </label>
+            <p className="text-[11px] text-text-3 mt-1">
+              Al crear la unidad se abre el formulario para cargar la clase.
+            </p>
             {sectionMsg && <p className="text-xs text-success mt-2">{sectionMsg}</p>}
             {sectionError && <p className="text-xs text-danger mt-2">{sectionError}</p>}
           </Card>
@@ -445,6 +490,25 @@ export function TeacherContentPage(): React.ReactElement {
         editing={null}
         initialSectionId={evalTarget?.sectionId}
         initialClassId={evalTarget?.classId}
+      />
+
+      <ClassFormModal
+        open={classModalOpen}
+        onClose={() => {
+          setClassModalOpen(false);
+          setClassModalSectionId(null);
+        }}
+        courseId={activeCourse}
+        sections={sections ?? []}
+        initialSectionId={classModalSectionId}
+        existingClasses={allClasses}
+        contentOptions={contentOptions}
+        onCreated={(info) => {
+          setSectionId(info.sectionId);
+          setClassId(null);
+          const unidad = (sections ?? []).find((s) => s.id === info.sectionId)?.nombre ?? "la unidad";
+          setSectionMsg(`Clase "${info.title}" creada en ${unidad}.`);
+        }}
       />
     </div>
   );

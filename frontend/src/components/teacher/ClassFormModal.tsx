@@ -64,10 +64,11 @@ export function ClassFormModal({
   const guardarClase = useSavePlanning();
   const asignarMaterial = useAssignPlanningMaterial();
   const subirMaterial = useUploadPlanningMaterial();
+  const firstSectionId = sections[0]?.id ?? "";
 
   useEffect(() => {
     if (!open) return;
-    setSeccionId(initialSectionId ?? sections[0]?.id ?? "");
+    setSeccionId(initialSectionId ?? firstSectionId);
     setTitulo("");
     setFecha("");
     setVisible(false);
@@ -75,7 +76,7 @@ export function ClassFormModal({
     setContentId("");
     setFile(null);
     setError(null);
-  }, [open, initialSectionId, sections]);
+  }, [open, initialSectionId, firstSectionId]);
 
   if (!open) return null;
 
