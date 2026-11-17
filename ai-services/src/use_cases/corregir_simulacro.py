@@ -12,6 +12,7 @@ from src.schemas.tutor import (
 )
 from src.services.llm_service import LLMService
 from src.services.prompt_sanitizer import sanitize_prompt
+from src.services.texto import limpiar_markdown
 
 MAX_CARACTERES_RESPUESTA = 4000
 VEREDICTOS_VALIDOS = {"correcta", "parcial", "incorrecta"}
@@ -130,6 +131,6 @@ class CorregirSimulacroUseCase:
                 indice=indice,
                 veredicto=veredicto,
                 puntaje=round(puntaje, 2),
-                feedback=str(fila.get("feedback", "")).strip() or "Sin comentarios.",
+                feedback=limpiar_markdown(str(fila.get("feedback", ""))) or "Sin comentarios.",
             )
         return resultados

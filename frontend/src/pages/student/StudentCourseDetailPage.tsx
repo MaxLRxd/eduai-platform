@@ -4,6 +4,7 @@ import { useCourse } from "../../hooks/useCourses";
 import { useTutorChat } from "../../hooks/useTutorChat";
 import type { ModoTutor } from "../../services/tutor.service";
 import type { CourseUnit } from "../../types/domain";
+import { limpiarMarkdown } from "../../utils/markdown";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
@@ -306,7 +307,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                     m.role === "user" ? "bg-primary-light text-primary self-end" : "bg-surface-2 text-text-2"
                   }`}
                 >
-                  {m.content}
+                  {limpiarMarkdown(m.content)}
                 </div>
               ))}
               {cargandoHistorial && messages.length === 0 && (

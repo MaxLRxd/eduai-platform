@@ -600,7 +600,7 @@ function escapeCsvCell(cell: string): string {
   return `"${cell.replace(/"/g, '""')}"`;
 }
 
-function csvFromReporte(r: Reporte): string {
+export function csvFromReporte(r: Reporte): string {
   const lines: string[][] = [
     [r.title],
     [r.description],
@@ -610,7 +610,8 @@ function csvFromReporte(r: Reporte): string {
     [],
     [r.footnote],
   ];
-  return lines.map((line) => line.map(escapeCsvCell).join(",")).join("\n");
+  // BOM para que Excel lo abra como UTF-8 y ";" para la configuración regional es-AR.
+  return "\uFEFF" + lines.map((line) => line.map(escapeCsvCell).join(";")).join("\r\n");
 }
 
 export async function exportarReporteCsv(type: string) {

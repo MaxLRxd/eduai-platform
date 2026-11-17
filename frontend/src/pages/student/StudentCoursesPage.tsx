@@ -14,7 +14,7 @@ export function StudentCoursesPage(): React.ReactElement {
       <div className="mb-6">
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Mis materias</h2>
         <p className="text-[13px] text-text-2">
-          Aulas virtuales estilo Moodle · el Tutor IA está dentro de cada materia y responde con el material cargado por el profesor
+          Aulas virtuales con unidades, clases y materiales · el Tutor IA está dentro de cada materia y responde con el material cargado por el profesor
         </p>
       </div>
 

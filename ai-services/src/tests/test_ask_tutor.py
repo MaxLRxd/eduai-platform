@@ -37,6 +37,24 @@ async def test_ask_tutor_second_call_is_cached(use_case):
 
 
 @pytest.mark.asyncio
+async def test_ask_tutor_limpia_markdown_de_la_respuesta():
+    class MarkdownLLM(FakeLLM):
+        async def generate(self, system_instruction, messages, temperature=None, max_tokens=None):
+            return "**Hola** *mundo*"
+
+    use_case = AskTutorUseCase(
+        llm=MarkdownLLM(),
+        embeddings=FakeEmbeddings(),
+        retrieval=FakeRetrieval(),
+        cache=FakeCache(),
+    )
+    result = await use_case.execute(
+        TutorRequest(subject_id="sub-1", question="Pregunta con formato")
+    )
+    assert result["answer"] == "Hola mundo"
+
+
+@pytest.mark.asyncio
 async def test_ask_tutor_stream_yields_tokens_and_done(use_case):
     request = TutorRequest(subject_id="sub-1", question="Pregunta de streaming")
     events = [event async for event in use_case.stream(request)]

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as planningService from "./planning.service";
 import type { MaterialDesdeContenidoInput, UpsertPlanningInput } from "./planning.schemas";
 import { AppError } from "../../middlewares/error";
+import { nombreArchivoUtf8 } from "../../utils/nombreArchivo";
 
 function requireUser(req: Request) {
   if (!req.user) {
@@ -46,7 +47,7 @@ export async function subirMaterial(
     req.params.materiaId,
     req.params.fecha,
     user.id,
-    { buffer: archivo.buffer, nombreOriginal: archivo.originalname }
+    { buffer: archivo.buffer, nombreOriginal: nombreArchivoUtf8(archivo.originalname) }
   );
   res.status(201).json({ item });
 }

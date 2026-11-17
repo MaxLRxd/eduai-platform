@@ -88,4 +88,29 @@ describe("admin: baja de materia (CU-AD01 A3.1)", () => {
     expect(res.status).toBe(200);
     expect(prismaMock.inscripcion.count).not.toHaveBeenCalled();
   });
+
+  it("persiste descripcion y nivel educativo al editar", async () => {
+    prismaMock.materia.update.mockResolvedValue({
+      ...materia(true),
+      descripcion: "Materia introductoria",
+      nivel_educativo: "Universitario",
+    });
+
+    const res = await actualizar({
+      descripcion: "Materia introductoria",
+      nivel_educativo: "Universitario",
+    });
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.materia.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          descripcion: "Materia introductoria",
+          nivel_educativo: "Universitario",
+        }),
+      })
+    );
+    expect(res.body.materia.descripcion).toBe("Materia introductoria");
+    expect(res.body.materia.nivel_educativo).toBe("Universitario");
+  });
 });

@@ -9,6 +9,7 @@ from src.schemas.tutor import CorrectSubmissionRequest, CriterioRubrica
 from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
 from src.services.retrieval_service import RetrievalService
+from src.services.texto import limpiar_markdown
 from src.use_cases._helpers import format_context
 
 DEFAULT_RUBRICA = [
@@ -93,7 +94,7 @@ class CorreccionEntregaUseCase:
             raise ValueError("El modelo no devolvió un JSON válido para la corrección.")
         payload = json.loads(cleaned[start : end + 1])
 
-        feedback = str(payload.get("feedback", "")).strip()
+        feedback = limpiar_markdown(str(payload.get("feedback", "")))
         if not feedback:
             raise ValueError("El modelo no devolvió feedback para la corrección.")
 

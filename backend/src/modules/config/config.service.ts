@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { logger } from "../../config/logger";
 import { eliminarArchivo, guardarArchivo } from "../../config/storage";
 import { AppError } from "../../middlewares/error";
+import { nombreArchivoUtf8 } from "../../utils/nombreArchivo";
 import type { BrandingInput } from "./config.schemas";
 
 type InstitutionRow = {
@@ -79,7 +80,7 @@ export async function subirLogo(file: {
     throw new AppError(400, "El logo debe ser una imagen (PNG, JPG, SVG o similar)");
   }
 
-  const guardado = await guardarArchivo(file.buffer, file.originalname);
+  const guardado = await guardarArchivo(file.buffer, nombreArchivoUtf8(file.originalname));
 
   return { logo_url: guardado.url };
 }

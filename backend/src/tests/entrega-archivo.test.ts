@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { createApp } from "../app";
 import { signAccessToken } from "../middlewares/auth";
 import { prisma } from "../config/prisma";
+import { nombreArchivoUtf8 } from "../utils/nombreArchivo";
 
 const MATERIA_ID = "11111111-1111-4111-8111-111111111111";
 const SECCION_ID = "22222222-2222-4222-8222-222222222222";
@@ -145,5 +146,32 @@ describe("entregas: subida de archivo del alumno", () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toContain("archivada");
     expect(guardarArchivoMock).not.toHaveBeenCalled();
+  });
+
+  it("guarda el nombre con acentos y tilde que multer entrega en latin1", async () => {
+    const esperado = "Presentación Año Andú.txt";
+    const comoLlegaDeMulter = Buffer.from(esperado, "utf8").toString("latin1");
+
+    const res = await request(server)
+      .post(`/api/actividades/${ACTIVIDAD_ID}/entrega/archivo`)
+      .set("Authorization", `Bearer ${tokenAlumno()}`)
+      .attach("archivo", Buffer.from("x"), comoLlegaDeMulter);
+
+    expect(res.status).toBe(201);
+    expect(res.body.archivo.archivo_nombre).toBe(esperado);
+  });
+});
+
+describe("nombreArchivoUtf8", () => {
+  it("decodifica el mojibake de multer", () => {
+    const esperado = "Presentación Año Ñandú.pdf";
+    const comoLlegaDeMulter = Buffer.from(esperado, "utf8").toString("latin1");
+
+    expect(nombreArchivoUtf8(comoLlegaDeMulter)).toBe(esperado);
+  });
+
+  it("no altera nombres ASCII ni nombres ya correctos", () => {
+    expect(nombreArchivoUtf8("tp1.pdf")).toBe("tp1.pdf");
+    expect(nombreArchivoUtf8("Presentación Año Ñandú.pdf")).toBe("Presentación Año Ñandú.pdf");
   });
 });

@@ -16,7 +16,7 @@ ALCANCE DE ESTA ITERACIÓN
 - Fuera de alcance: rediseño de Calificaciones con categoría/peso y Nota ligada
   a Actividad.
 
-Estado del plan: PROPUESTO — esperando OK para implementar.
+Estado del plan: IMPLEMENTADO — esperando OK para implementar.
 
 -----------------------------------------------------
 1. ITERACIONES ANTERIORES — YA RESUELTAS (HECHO ✅)
@@ -334,3 +334,19 @@ npm run lint
 - La limpieza de markdown en streaming se hace al renderizar el texto acumulado,
   no token por token, para no cortar palabras ni marcadores incompletos.
 - Todo cambio queda pendiente de OK del usuario antes de implementar.
+
+-----------------------------------------------------
+8. ESTADO DE IMPLEMENTACIÓN (2026-11-17)
+-----------------------------------------------------
+
+- Admin: tests de regresión backend y frontend agregados y en verde.
+- Moodle: texto eliminado de StudentCoursesPage.tsx; sin ocurrencias en frontend/src.
+- Buscador: input type="search" eliminado de Header.tsx; sin ocurrencias en frontend/src.
+- Encoding de nombres: helper nombreArchivoUtf8() aplicado en contenidos, entregas,
+  planificación y logo. Tests unitarios y de endpoint en verde.
+- Encoding de CSV: csvFromReporte() con BOM y separador ";"; test en verde.
+- Prompting: estilo.py, ESTILO/ESTILO_MATERIAL, limpiar_markdown() en IA y frontend.
+  Tests de IA y frontend en verde.
+- SQL de reparación manual de datos: backend/prisma/reparar_nombres_mojibake.sql.
+- Verificación final: typecheck backend/frontend OK; backend 208 tests, IA 112 tests
+  (1 skip), frontend 56 tests; lint backend/frontend y ruff OK.

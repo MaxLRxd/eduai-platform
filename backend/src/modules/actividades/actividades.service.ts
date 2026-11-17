@@ -5,6 +5,7 @@ import { corregirEntregaIA } from "../../config/aiClient";
 import { logger } from "../../config/logger";
 import { guardarArchivo } from "../../config/storage";
 import { AppError } from "../../middlewares/error";
+import { nombreArchivoUtf8 } from "../../utils/nombreArchivo";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
 import {
   obtenerInscripcion,
@@ -416,7 +417,8 @@ export async function subirArchivoEntrega(
     throw new AppError(403, "No estas inscripto a esta materia");
   }
 
-  const formato = path.extname(archivo.originalname).replace(".", "").toLowerCase();
+  const nombreOriginal = nombreArchivoUtf8(archivo.originalname);
+  const formato = path.extname(nombreOriginal).replace(".", "").toLowerCase();
 
   if (actividad.formatos_permitidos) {
     const permitidos = actividad.formatos_permitidos
@@ -429,7 +431,7 @@ export async function subirArchivoEntrega(
     }
   }
 
-  const guardado = await guardarArchivo(archivo.buffer, archivo.originalname);
+  const guardado = await guardarArchivo(archivo.buffer, nombreOriginal);
 
   return {
     archivo_url: guardado.url,

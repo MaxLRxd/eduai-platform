@@ -5,6 +5,7 @@ import type {
   CrearContenidoInput,
 } from "./contenidos.schemas";
 import { AppError } from "../../middlewares/error";
+import { nombreArchivoUtf8 } from "../../utils/nombreArchivo";
 
 export async function listarPorSeccion(
   req: Request<{ seccionId: string }>,
@@ -63,12 +64,13 @@ export async function crearArchivo(
   if (!archivo) {
     throw new AppError(400, "Archivo requerido (campo 'archivo')");
   }
-  const titulo = (req.body?.titulo as string | undefined)?.trim() || archivo.originalname;
+  const nombreOriginal = nombreArchivoUtf8(archivo.originalname);
+  const titulo = (req.body?.titulo as string | undefined)?.trim() || nombreOriginal;
   const claseId = (req.body?.clase_id as string | undefined)?.trim() || undefined;
   const contenido = await contenidosService.crearArchivo(
     req.params.seccionId,
     req.user.id,
-    { buffer: archivo.buffer, nombreOriginal: archivo.originalname, titulo, claseId }
+    { buffer: archivo.buffer, nombreOriginal, titulo, claseId }
   );
   res.status(201).json({ contenido });
 }

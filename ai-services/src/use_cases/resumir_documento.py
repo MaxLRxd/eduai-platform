@@ -3,6 +3,7 @@
 from src.prompts.summary import build_summary_prompt
 from src.services.chunking_service import ChunkingService
 from src.services.llm_service import LLMService
+from src.services.texto import limpiar_markdown
 
 
 class ResumirDocumentoUseCase:
@@ -16,14 +17,14 @@ class ResumirDocumentoUseCase:
             raise ValueError("El documento no contiene texto legible para resumir.")
 
         if len(chunks) == 1:
-            return await self._summarize(chunks[0], language, max_words)
+            return limpiar_markdown(await self._summarize(chunks[0], language, max_words))
 
         part_summaries: list[str] = []
         for chunk in chunks:
-            part_summaries.append(await self._part_summary(chunk, language))
+            part_summaries.append(limpiar_markdown(await self._part_summary(chunk, language)))
 
         combined = "\n".join(part_summaries)
-        return await self._summarize(combined, language, max_words)
+        return limpiar_markdown(await self._summarize(combined, language, max_words))
 
     async def _part_summary(self, text: str, language: str) -> str:
         system = (

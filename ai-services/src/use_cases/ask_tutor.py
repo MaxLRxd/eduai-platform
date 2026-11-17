@@ -12,6 +12,7 @@ from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
 from src.services.prompt_sanitizer import PromptDepurado, depurar
 from src.services.retrieval_service import RetrievalService
+from src.services.texto import limpiar_markdown
 from src.use_cases._helpers import (
     build_sources,
     cache_key,
@@ -108,11 +109,13 @@ class AskTutorUseCase:
             await self.cache.set(key, json.dumps(response, ensure_ascii=False))
             return response
 
-        answer = await self.llm.generate(
-            system,
-            messages,
-            temperature=req.temperature,
-            max_tokens=req.max_tokens,
+        answer = limpiar_markdown(
+            await self.llm.generate(
+                system,
+                messages,
+                temperature=req.temperature,
+                max_tokens=req.max_tokens,
+            )
         )
 
         response = {
@@ -172,7 +175,7 @@ class AskTutorUseCase:
             collected.append(token)
             yield {"type": "token", "text": token}
 
-        answer = "".join(collected)
+        answer = limpiar_markdown("".join(collected))
         response = {
             "answer": answer,
             "mode": req.mode.value,

@@ -6,6 +6,7 @@ from src.services.embeddings_service import EmbeddingsService
 from src.services.llm_service import LLMService
 from src.services.prompt_sanitizer import depurar
 from src.services.retrieval_service import RetrievalService
+from src.services.texto import limpiar_markdown
 from src.use_cases._helpers import build_sources, format_context
 
 
@@ -44,4 +45,7 @@ class GenerarMaterialUseCase:
             temperature=0.6,
             max_tokens=4096,
         )
-        return {"material": material, "sources": sources}
+        return {
+            "material": limpiar_markdown(material, permitir_encabezados=True),
+            "sources": sources,
+        }

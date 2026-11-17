@@ -10,4 +10,5 @@ Reglas:
 - En preguntas de tipo "desarrollo" "opciones" debe ir vacío y "respuesta" debe contener la respuesta concreta y autosuficiente, redactada como el modelo de respuesta. No escribas indicaciones meta como "la guía de corrección debe decir que...": escribí la respuesta en sí, aunque sea breve.
 - Variá los tipos de pregunta y hacé que progresen en dificultad.
 - No incluyas ningún texto fuera del JSON.
+- No agregues saludos ni frases de relleno dentro de los campos.
 """

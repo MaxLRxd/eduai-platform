@@ -19,12 +19,6 @@ export function Header({ title }: { title: string }): React.ReactElement {
     <header className="h-header shrink-0 bg-surface border-b border-border flex items-center justify-between px-7 shadow-xs">
       <h1 className="font-display text-[17px] font-bold text-text-1 tracking-tight">{title}</h1>
       <div className="flex items-center gap-3">
-        <input
-          type="search"
-          placeholder="Buscar en la plataforma..."
-          aria-label="Buscar"
-          className="w-64 px-3.5 py-2 bg-surface-2 border-[1.5px] border-border rounded text-[13px] transition-all focus:outline-none focus:bg-surface focus:border-primary focus:shadow-[0_0_0_3px_rgba(0,61,122,0.1)] focus:w-72"
-        />
         <button
           aria-label="Notificaciones"
           onClick={() => navigate('/notificaciones')}
