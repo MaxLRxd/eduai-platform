@@ -51,7 +51,7 @@ Si el administrador te creó la cuenta con una contraseña temporal, cambiala la
 
 ## 2. Manual del alumno
 
-Menú: **Inicio · Mis cursos · Entregas · Mis estadísticas · Inscribirse a materia · Mi perfil**.
+Menú: **Inicio · Mis cursos · Entregas · Mis estadísticas · Mensajes · Inscribirse a materia · Mi perfil**.
 
 ### 2.1 Inscribirte a una materia
 
@@ -69,10 +69,10 @@ Resume tu situación real: promedio general, asistencia, entregas pendientes, al
 
 ### 2.3 Mis cursos: material de estudio
 
-Al abrir una materia ves sus unidades y los **Materiales**:
+Al abrir una materia ves sus **unidades y clases**: cada unidad tiene sus propios materiales y sus clases (con la fecha de cada una), y cada clase tiene los suyos.
 
-- Los **archivos** (PDF, Word, PowerPoint, imágenes) se abren con **Ver / descargar**.
-- Los **textos** (apuntes escritos por el docente o generados con IA) se leen ahí mismo con **Leer**.
+- Los **archivos** (PDF, Word, PowerPoint, imágenes) se abren tocando el **nombre del material** o con **Ver / descargar**.
+- Los **textos** (apuntes escritos por el docente o generados con IA) se leen ahí mismo tocando el nombre o **Leer**.
 - Debajo de cada material dice si está **disponible para el Tutor IA**.
 
 El sistema registra qué materiales abrís para que tu docente sepa qué se está usando. Solo cuenta quién abrió qué, no lo que hacés adentro.
@@ -88,6 +88,8 @@ Elegí cómo querés que te ayude:
 | **Normal** | Responde tu consulta de forma directa. |
 | **Socrático** | No te da la respuesta: te hace preguntas para que llegues vos. Sirve para repasar. |
 | **Pistas** | Te da orientaciones paso a paso sin resolverte el ejercicio. |
+
+Tus conversaciones **se guardan** (son privadas, solo vos las ves) y las encontrás en **Conversaciones guardadas**. Con **Ampliar** el chat ocupa casi toda la pantalla para leer mejor; **Cerrar** lo vuelve a su tamaño.
 
 Consejos: escribí la consulta completa y concreta, y podés seguir la conversación con preguntas de seguimiento. Si solo saludás ("hola"), el tutor te saluda y espera tu consulta.
 
@@ -132,26 +134,39 @@ Cuando el docente revisa y **publica** la corrección, recibís un aviso y en la
 
 Muestra tu **detalle de calificaciones** y tu **registro de asistencia** por materia. Si todavía no hay datos cargados por el docente, el panel aparece vacío con un mensaje.
 
+### 2.10 Mensajes
+
+En **Mensajes** podés escribirle a los docentes de tus materias y responder a los avisos y mensajes que te envían.
+
 ---
 
 ## 3. Manual del docente
 
-Menú: **Inicio · Mis materias · Mis estudiantes · Calificaciones · Asistencia · Planificación · Actividades · Correcciones · Analytics · Asistente IA · Contenidos · Mensajes · Mi perfil**.
+Menú: **Inicio · Mis materias · Mis estudiantes · Evaluaciones · Analytics · Asistente IA · Mensajes · Mi perfil**.
+
+Las demás pantallas están dentro de esas:
+
+| Pantalla | Dónde está |
+| --- | --- |
+| **Contenidos** | En **Mis materias**, con **Gestionar contenidos** |
+| **Planificación** | En **Contenidos**, botón **Ir a Planificación** |
+| **Calificaciones** y **Asistencia** | Pestañas dentro de **Mis estudiantes** (y Calificaciones también en **Evaluaciones**) |
+| **Actividades** y **Correcciones** | Pestañas dentro de **Evaluaciones** |
 
 Solo ves las materias que el administrador te asignó. Cuando te asignan una, te llega un aviso.
 
 ### 3.1 Armar el contenido (Contenidos)
 
-1. Elegí la **materia**.
-2. Creá las **secciones** (unidades o clases) con **Nueva sección**. El nombre no puede repetirse dentro de la materia. Hacé clic en una para elegirla como destino.
-3. Cargá material en la sección elegida:
-   - **Subir archivo**: PDF, PPTX, DOCX, imágenes o texto (hasta 50 MB).
-   - **Texto**: escribí un título y el contenido y tocá **Guardar y publicar**.
-4. Todo lo que cargues se **indexa automáticamente** para el tutor IA (etiqueta *RAG*). El tutor responderá con ese material.
+1. Entrá desde **Mis materias** con **Gestionar contenidos**, o elegí la **materia** en la pantalla.
+2. Creá las **unidades** con **Nueva sección**. El nombre no puede repetirse dentro de la materia. Al crearla podés, opcionalmente, subir material de la unidad y crear su primera clase.
+3. Dentro de cada unidad agregá **clases** con **+ Clase** (o desde **Planificación**). Elegí si un archivo pertenece a la unidad o a una clase.
+4. Para el material de una clase tenés dos opciones: **Elegir de Contenidos** (un material ya subido) o **subir un archivo** nuevo.
+5. Las evaluaciones se vinculan con **+ Evaluación**, en la unidad o en la clase; en cada una se ve a qué clase pertenece.
+6. Todo lo que cargues se **indexa automáticamente** para el tutor IA (etiqueta *RAG*). El tutor responderá con ese material.
 
 En la columna derecha, **Material visto por los alumnos** muestra, por cada material, cuántos alumnos distintos lo abrieron, cuántas veces y cuándo fue el último acceso.
 
-### 3.2 Crear actividades (Actividades)
+### 3.2 Crear actividades (Evaluaciones → Actividades)
 
 1. Tocá **Nueva actividad**.
 2. Completá nombre, consigna, **tipo** (opción múltiple, desarrollo, archivo o código) y **fecha límite**. La fecha límite no puede estar en el pasado; si más adelante querés cerrar la entrega antes de tiempo, editá la actividad y movela.
@@ -160,7 +175,7 @@ En la columna derecha, **Material visto por los alumnos** muestra, por cada mate
 
 Podés **Archivar** una actividad (los alumnos dejan de verla pero se conservan las entregas) y **Restaurarla** después.
 
-### 3.3 Rúbricas y correcciones (Correcciones)
+### 3.3 Rúbricas y correcciones (Evaluaciones → Correcciones)
 
 **Rúbricas**: en **Gestionar rúbricas** tocá **Nueva rúbrica**, definí criterios con su peso y qué esperás encontrar en cada uno. **Los pesos deben sumar 100%.** Si la rúbrica está en uso, el sistema te avisa antes de modificarla o borrarla.
 
@@ -173,7 +188,7 @@ Podés **Archivar** una actividad (los alumnos dejan de verla pero se conservan 
 
 La IA **solo sugiere**: nada llega al alumno hasta que vos publiques. Si la IA no puede corregir, te avisa y corregís vos a mano.
 
-### 3.4 Calificaciones y asistencia
+### 3.4 Calificaciones y asistencia (dentro de Mis estudiantes)
 
 - **Calificaciones**: cargá o editá la nota de cada alumno por período. Cada cambio queda registrado. Podés exportar a Excel.
 - **Asistencia**: elegí la clase, marcá *presente*, *ausente* o *tardanza* para cada alumno y tocá **Confirmar asistencia del día**. Si ya cargaste esa clase, el sistema te ofrece editar el registro existente en vez de duplicarlo.
@@ -208,8 +223,11 @@ A la derecha, **Tiempo de respuesta del tutor** muestra qué porcentaje de las r
 
 ### 3.8 Planificación y mensajes
 
+En la entrega de un alumno, si adjuntó un archivo, lo abrís desde **Correcciones** con el enlace al archivo.
+
+
 - **Planificación**: cargá el plan de cada clase con **Nueva clase** y **Guardar planificación**. La IA lo usa como contexto.
-- **Mensajes**: escribí a un alumno (**Enviar mensaje**) o a todo un curso (**Enviar difusión**).
+- **Mensajes**: escribí a un alumno (**Enviar mensaje**) o enviá una difusión a **todos tus alumnos**, a **una materia** o a **una selección de estudiantes**. Los alumnos pueden responderte.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Generado automáticamente desde `backend/src/**/*.routes.ts` con `npm run docs:api`. No editar a mano.
 
-Total: **110 endpoints** en 18 módulos.
+Total: **114 endpoints** en 18 módulos.
 
 **Acceso:** *Público* no pide sesión; *Autenticado* cualquier rol con sesión; los demás exigen ese rol.
 **Validación:** esquema Zod que valida el cuerpo antes de llegar al controlador. **Límite:** limitador de intentos.
@@ -35,6 +35,7 @@ Total: **110 endpoints** en 18 módulos.
 | Método | Ruta | Acceso | Validación | Límite |
 | --- | --- | --- | --- | --- |
 | GET | `/api/materias/:materiaId/notas` | Autenticado |  |  |
+| GET | `/api/materias/:materiaId/calificaciones/fuentes` | PROFESOR · ADMIN |  |  |
 | POST | `/api/materias/:materiaId/notas` | PROFESOR | `crearNotaSchema` |  |
 | GET | `/api/notas/mias` | Autenticado |  |  |
 | PUT | `/api/notas/:notaId` | PROFESOR | `actualizarNotaSchema` |  |
@@ -85,6 +86,7 @@ Total: **110 endpoints** en 18 módulos.
 | --- | --- | --- | --- | --- |
 | POST | `/api/contenidos/:contenidoId/acceso` | ALUMNO |  |  |
 | GET | `/api/materias/:materiaId/accesos` | PROFESOR |  |  |
+| GET | `/api/materias/:materiaId/contenidos` | Autenticado |  |  |
 | GET | `/api/secciones/:seccionId/contenidos` | Autenticado |  |  |
 | POST | `/api/secciones/:seccionId/contenidos` | PROFESOR | `crearContenidoSchema` |  |
 | POST | `/api/secciones/:seccionId/contenidos/archivo` | PROFESOR |  |  |
@@ -179,6 +181,7 @@ Total: **110 endpoints** en 18 módulos.
 | --- | --- | --- | --- | --- |
 | GET | `/api/materias/:materiaId/planning` | Autenticado |  |  |
 | PUT | `/api/materias/:materiaId/planning/:fecha` | PROFESOR | `upsertPlanningSchema` |  |
+| POST | `/api/materias/:materiaId/planning/:fecha/material/desde-contenido` | PROFESOR | `materialDesdeContenidoSchema` |  |
 | POST | `/api/materias/:materiaId/planning/:fecha/material` | PROFESOR |  |  |
 | DELETE | `/api/materias/:materiaId/planning/:fecha/material` | PROFESOR |  |  |
 
@@ -187,6 +190,7 @@ Total: **110 endpoints** en 18 módulos.
 | Método | Ruta | Acceso | Validación | Límite |
 | --- | --- | --- | --- | --- |
 | GET | `/api/messages` | Autenticado |  |  |
+| GET | `/api/messages/contactos` | Autenticado |  |  |
 | GET | `/api/messages/historial` | Autenticado |  |  |
 | POST | `/api/messages` | Autenticado | `enviarMensajeSchema` |  |
 | POST | `/api/messages/broadcast` | PROFESOR | `broadcastSchema` |  |

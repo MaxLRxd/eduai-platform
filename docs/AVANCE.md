@@ -1,6 +1,6 @@
 # EduAI Platform — Avance del Proyecto
 
-> Snapshot: **2026-09-30** · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+> Snapshot original: **2026-09-30** (estado de los bugs actualizado el 2026-11-17) · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
 >
 > **Este documento es un traspaso.** Lo que importa para seguir trabajando está en
 > [QUÉ FALTA](#qué-falta). Abajo queda el detalle técnico de lo ya hecho y por qué.
@@ -19,10 +19,12 @@ Todo lo que está ticked (✅) en este documento **ya está implementado y verif
 es la lista real de trabajo abierto, ordenada por prioridad. Nada de acá está empezado salvo lo
 indicado.
 
-## 🔴 BLOQUEA LA ENTREGA
+## 🟢 DEPLOY — NO BLOQUEA LA ENTREGA
 
-### 1. Deploy a cloud — decisión pendiente de reunión
-Es **lo único que bloquea la entrega**. No es un bug, es una decisión de equipo.
+### 1. Deploy a cloud — opcional
+La cátedra aceptó que alcanza con **correr el proyecto en local con Docker Compose** (ver
+`DOCUMENTACION_TECNICA.md` §14), así que el deploy ya no bloquea la entrega. Queda como
+mejora si se quiere una demo pública (por ejemplo, para que otras personas lo prueben).
 Todo está analizado y escrito en **`DEPLOY.md`**:
 - Comparativa de proveedores (Fly.io / Railway / Render+Vercel / VM propia).
 - La trampa de los **3 cold starts** (3 servicios arrancando en cadena; el molesto es el del
@@ -89,10 +91,10 @@ La pantalla ya existía; se resolvieron los dos detalles que faltaban y se hizo 
 
 ## 🟡 DEUDA TÉCNICA Y RIESGOS CONOCIDOS
 
-### 7. Cobertura de tests del frontend — casi nula
-`frontend` tiene **1 solo archivo de tests**: `src/tests/login.test.tsx` con **3 tests**. No hay
-ningún test de páginas, hooks ni servicios. Es la deuda de cobertura más grande del proyecto,
-por encima de la del backend (que pasó de 2 archivos/18 tests a 5 archivos/56 tests).
+### 7. Cobertura de tests del frontend — mejoró, sigue siendo la más baja
+`frontend` pasó de 1 archivo/3 tests a **11 archivos/56 tests** (login, branding, chat del tutor,
+servicios, enlaces de materiales). Siguen sin pruebas la mayoría de las páginas por rol. Backend:
+**28 suites/208 tests**.
 
 ### 8. ✅ `mensajeIA` persiste el modo (2026-10-17)
 El `modo` ya viajaba en cada request y `sincronizarModo()` persiste el cambio a mitad de sesión.
@@ -146,7 +148,7 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 
 ## PRÓXIMOS PASOS SUGERIDOS (resumen accionable)
 
-1. 🔴 Reunión de **deploy cloud** → llenar `DEPLOY.md` y definir Postgres+pgvector.
+1. 🟢 **Deploy cloud**: opcional (la entrega se hace en local). Ver `DEPLOY.md`.
 2. ✅ **Branding** (entrada 6): presets en backend, logo a storage y theming en runtime — hecho 2026-10-17.
 3. ✅ Cablear **email** a notificaciones (entrada 3) — hecho 2026-10-17.
 4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. 5. ✅ Rebajar `EMBEDDING_DIMENSIONS` a ≤1536 y reindexar HNSW (entrada 9) — hecho 2026-10-17.
@@ -161,26 +163,30 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 
 ## Alumno
 
-### ⬜ Material/PDF no abre ni descarga
-El botón para acceder al PDF/material **anda mal**: no abre ni descarga el material subido.
+### ✅ Material/PDF no abre ni descarga
+**Resuelto:** la URL del archivo se convierte en absoluta hacia el backend (`apiUrl()`), nginx proxea
+`/uploads/`, y **el nombre del material es un enlace** que abre el archivo (alumno y docente); los
+materiales de texto se despliegan al tocar el nombre. Sin verificar aún en navegador.
 
-### ⬜ "Mis estadísticas" completamente mockeada
-No trae estadísticas reales: ni el Registro de asistencia, ni el Detalle de calificaciones, ni los
-dashboards de arriba. Lo mismo ocurre con las estadísticas del **Inicio**. Se supone que a los demás
-roles (docente y admin) les pasa lo mismo.
+### ✅ "Mis estadísticas" completamente mockeada
+**Resuelto:** el Inicio y "Mis estadísticas" del alumno usan datos reales (`dashboard.service`,
+`progress.service`); ya no quedan archivos de mocks en `frontend/src`. Los dashboards de docente y
+admin también consumen el backend.
 
-### ⬜ Organización jerárquica de "Mis cursos" → página individual de materia
-Reorganizar jerárquicamente: **una sección/unidad contiene clases**; la unidad puede contener
-archivos y las clases también. Actualmente solo muestra unidades y sus archivos subidos.
+### ✅ Organización jerárquica de "Mis cursos" → página individual de materia
+**Resuelto:** la página de la materia muestra *Unidades y clases*: cada unidad contiene sus clases
+(con fecha) y archivos, y cada clase tiene sus propios archivos.
 
-### ⬜ El chat con el tutor de IA no persiste
-Debe quedar un historial del chat, privado por usuario.
+### ✅ El chat con el tutor de IA no persiste
+**Resuelto:** el historial se guarda por alumno y se recarga al volver (`useTutorChat`), con lista de
+conversaciones. Es privado para el alumno. **Pendiente de decidir:** el perfil del alumno que ve el
+docente muestra sus últimas consultas al tutor (`ultimas_consultas`).
 
-### ⬜ El chat con el tutor debe poder ampliarse
-Para una mejor lectura.
+### ✅ El chat con el tutor debe poder ampliarse
+**Resuelto:** botón para ampliar el chat a pantalla casi completa.
 
-### ⬜ Mensajería de alumno hacia el profesor
-Actualmente no existe.
+### ✅ Mensajería de alumno hacia el profesor
+**Resuelto:** el alumno tiene "Mensajes" en su menú y puede escribirle a sus docentes.
 
 ## Profesor
 
@@ -228,29 +234,42 @@ opciones: **seleccionar un material ya subido en "Contenidos"** o **subir un arc
 
 ## Administrador
 
-### ⬜ "Editar" materia no trae descripción ni nivel educativo
-Corroborar primero que `descripción` y `nivel educativo` realmente se guarden en la base de datos.
+### ✅ "Editar" materia no trae descripción ni nivel educativo
+**Resuelto:** el servicio mapea `descripcion` y `nivel_educativo` en ambos sentidos y el formulario de
+edición los precarga.
 
 ## General
 
-### ⬜ Eliminar "SIMILAR A MOODLE"
+### ✅ Eliminar "SIMILAR A MOODLE"
 
 ### 🟡 Licencias
 Decidir el tema de licencias. **Descartado para la IA** (tarea bajo supervisión de integrantes del
-equipo).
+equipo). **Pendiente:** asegurar que un error de IA no descuente del uso de tokens/licencia.
+Además, `adminLicensing.service.ts` guarda una caché de módulo y `QueryClient` no se limpia al cerrar
+sesión: puede mostrar datos del usuario anterior en el mismo navegador.
 
-### ⬜ Problemas de encoding
-En algunas secciones los acentos/tildes, caracteres especiales y/o "Ñ" se muestran con caracteres
+### ✅ Problemas de encoding
+**Resuelto:** nombres de archivo subidos corregidos (multer los entrega como latin1,
+`utils/nombreArchivo.ts`) y CSV con BOM UTF-8. Hay tests de ambos.
+Reporte original: en algunas secciones los acentos/tildes, caracteres especiales y/o "Ñ" se muestran con caracteres
 extraños. También los CSV generados en la parte de generación de documentos salen con estos
 caracteres.
 
-### ⬜ Sacar el buscador de la plataforma
+### ✅ Sacar el buscador de la plataforma
 
-### ⬜ Ajustes de prompting
-Modificar la sección de prompting para que la respuesta de la IA no gaste tokens en saludos y
+### ✅ Ajustes de prompting
+**Resuelto:** reglas comunes en `ai-services/src/prompts/estilo.py` (sin saludos, sin negritas ni
+asteriscos), aplicadas a los prompts del tutor, resumen, simulacros y material.
+Reporte original: modificar la sección de prompting para que la respuesta de la IA no gaste tokens en saludos y
 palabrería innecesaria, y que no intente remarcar con negrita ni con `*palabra*`.
 
-## Resumen de estado (2026-11-17)
+## Resumen de estado
+
+**Pendiente real:** modelo completo de Calificaciones (🟡), manejo de errores de licencias/tokens,
+fuga de caché al cambiar de usuario, decisión sobre las consultas visibles al docente y
+verificación en navegador. Todo lo demás de este reporte está resuelto.
+
+Detalle del reporte de 2026-11-17:
 
 - ✅ Profesor / "Mis materias" → gestionar secciones: envía a Contenidos.
 - ✅ Docente ve el documento de una entrega (URL y nombre del archivo).
@@ -538,6 +557,6 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests:** backend **56** en **5** archivos (`health` 3, `tutor-tools` 15,
-`entrega-archivo` 7, `actividades-ciclo` 13, `rubricas` 18) · ai-services **68 pasan, 1 skip** ·
-frontend **3** (solo login). Lint del backend: 0 errores.
+**Conteo actual de tests (2026-11-17):** backend **208** en **28** suites · frontend **56** en
+**11** archivos · ai-services: 21 archivos de tests (107 según `DOCUMENTACION_TECNICA.md`, sin
+reverificar) · E2E **42**.

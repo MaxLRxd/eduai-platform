@@ -1,9 +1,12 @@
 # Deploy cloud — documento de decisión
 
-> **Estado: ABIERTO.** No implementado. Requiere reunión de equipo.
-> **Fecha:** 2026-09-28 · **Bloquea:** la entrega académica (`README.md:108`, tarea 0 del cronograma)
+> **Estado: OPCIONAL, no implementado.** La cátedra aceptó que la entrega se haga **ejecutando el
+> proyecto en local** con Docker Compose (ver `DOCUMENTACION_TECNICA.md` §14), por lo que este deploy
+> **ya no bloquea la entrega**. Sirve si el equipo quiere una demo pública (por ejemplo, para que otras
+> personas lo prueben y den feedback).
+> **Fecha original:** 2026-09-28 · actualizado 2026-11-17.
 
-Este documento existe para discutirlo, no para dar por decidedo nada. Las secciones
+Este documento existe para discutirlo, no para dar por decidido nada. Las secciones
 **"Pendiente de decidir"** y **"Preguntas abiertas"** son las que hay que completar en la reunión.
 
 ---
@@ -55,7 +58,7 @@ Y el que domina es el `ai-service`, porque ya de por sí es lento: con el modelo
 `POST /tutor/resumen` tarda **26,7 s** medidos. Sumale el arranque del contenedor Python
 (imports de `google-genai`, `fastapi`, `pinecone`...) y el primer request del día puede caer
 fácilmente en el minuto.
-si 
+
 **Consecuencia práctica:** el cold start del `ai-service` es el que hay que evitar, no el del frontend.
 
 ### Qué proveedores lo resuelven bien
@@ -71,9 +74,10 @@ si
 
 Esto no es una preferencia, es una condición del diseño actual.
 
-El RAG consulta Postgres en **cada** examen/resumen, y como el índice HNSW no se está usando
-(ver `AVANCE.md`, sección "Gemini en producción"), cada búsqueda es un **escaneo secuencial**
-de los vectores de la materia. Medido: 27 ms con 2.000 chunks, 140-390 ms con 10.000.
+El RAG consulta Postgres en **cada** examen/resumen. El índice HNSW ya se crea (ver la aclaración
+de la sección 5), pero las mediciones de más abajo se tomaron cuando todavía hacía escaneo
+secuencial: 27 ms con 2.000 chunks, 140-390 ms con 10.000. Con HNSW debería ser menor; no se volvió
+a medir.
 
 Si el `ai-service` despertara en una región distinta a la de Postgres, cada búsqueda cruza la red.
 A volumen chico se tolera; a volumen real, no.

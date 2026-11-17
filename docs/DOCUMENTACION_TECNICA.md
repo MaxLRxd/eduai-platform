@@ -167,7 +167,7 @@ Reglas relevantes:
 
 ## 7. Backend: módulos y API
 
-La API completa (110 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
+La API completa (114 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -215,6 +215,8 @@ Casos de uso (`ai-services/src/use_cases`):
 ## 9. Frontend
 
 - **Enrutamiento por rol:** un alumno no puede abrir pantallas de docente ni de administrador, ni el backend se lo permitiría aunque lo intentara.
+- **Navegación del docente agrupada por áreas:** *Mis materias* → Contenidos (y Planificación); *Mis estudiantes* con pestañas Calificaciones y Asistencia; *Evaluaciones* con Actividades, Correcciones y Calificaciones.
+- **Contenidos jerárquicos:** unidad → clases → archivos y evaluaciones; el alumno ve la misma jerarquía.
 - **Estado del servidor** con React Query: caché, reintentos e invalidación tras cada cambio.
 - **Sesión:** token de acceso de 15 minutos en memoria; renovación automática con una cookie `httpOnly` de 7 días.
 - **Tema institucional** (nombre, logo y colores) configurable desde *Apariencia*.
@@ -241,9 +243,9 @@ Casos de uso (`ai-services/src/use_cases`):
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 201 pruebas en 27 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Backend | Jest + Supertest | 208 pruebas en 28 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
 | Servicio de IA | pytest | 107 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 25 pruebas | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios |
+| Frontend | Vitest + Testing Library | 56 pruebas en 11 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales |
 | **E2E** | `node:test` | **42 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.

@@ -5,6 +5,8 @@ Las especificaciones están en la carpeta *Casos de Uso* de la documentación de
 
 **Resumen:** 22 casos completos y 4 parciales. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
 
+> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso; P01 sigue sin pantalla para editar y reordenar secciones (verificado en `TeacherContentPage`).
+
 Referencias de la columna *Prueba*: `E2E` = `e2e/flujo-completo.e2e.mjs`; el resto son archivos de `backend/src/tests/`, `ai-services/src/tests/` o `frontend/src/tests/`.
 
 Leyenda: ✅ completo · 🟡 parcial
