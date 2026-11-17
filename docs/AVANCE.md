@@ -244,9 +244,8 @@ edición los precarga.
 
 ### 🟡 Licencias
 Decidir el tema de licencias. **Descartado para la IA** (tarea bajo supervisión de integrantes del
-equipo). **Pendiente:** asegurar que un error de IA no descuente del uso de tokens/licencia.
-Además, `adminLicensing.service.ts` guarda una caché de módulo y `QueryClient` no se limpia al cerrar
-sesión: puede mostrar datos del usuario anterior en el mismo navegador.
+equipo). **Revisado:** hoy no existe un contador de tokens que se pueda descontar; la licencia es por MAU (alumnos activos, calculado contando usuarios), así que un error de IA no puede alterarla. Se corrigió la pantalla de licencias (plan y rango estaban fijos en "Growth", y no manejaba errores de carga). Si en el futuro se factura por tokens, habrá que registrar el consumo solo tras una respuesta exitosa del modelo.
+**Caché entre usuarios — resuelto:** al cambiar la persona logueada (entra otra, sale o vence la sesión) se vacía el `QueryClient`, la caché de licencias y la última conversación del tutor guardada en el navegador (`utils/limpiarSesion.ts`); y `adminLicensing.service.ts` ya no guarda el resultado entre pedidos.
 
 ### ✅ Problemas de encoding
 **Resuelto:** nombres de archivo subidos corregidos (multer los entrega como latin1,
@@ -266,7 +265,7 @@ palabrería innecesaria, y que no intente remarcar con negrita ni con `*palabra*
 ## Resumen de estado
 
 **Pendiente real:** modelo completo de Calificaciones (🟡), manejo de errores de licencias/tokens,
-fuga de caché al cambiar de usuario, decisión sobre las consultas visibles al docente y
+decisión sobre las consultas visibles al docente y
 verificación en navegador. Todo lo demás de este reporte está resuelto.
 
 Detalle del reporte de 2026-11-17:

@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { loginRequest, logoutRequest, meRequest } from "../services/auth.service";
 import { setAccessToken } from "../services/authToken";
+import { limpiarEstadoDeSesion } from "../utils/limpiarSesion";
 
 export type Role = "ALUMNO" | "PROFESOR" | "ADMIN";
 
@@ -35,6 +36,16 @@ function readStoredUser(): User | null {
 export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [user, setUser] = useState<User | null>(() => readStoredUser());
   const [isAuthenticating, setIsAuthenticating] = useState(true);
+
+  // Cada vez que la persona logueada cambia (entra otra, sale o se vence la sesión) se vacían las cachés.
+  const usuarioAnterior = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const actual = user?.id ?? null;
+    if (usuarioAnterior.current !== undefined && usuarioAnterior.current !== actual) {
+      limpiarEstadoDeSesion();
+    }
+    usuarioAnterior.current = actual;
+  }, [user?.id]);
 
   useEffect(() => {
     if (user) {

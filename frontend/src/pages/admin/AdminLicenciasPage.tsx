@@ -3,12 +3,17 @@ import { useAdminLicensing } from "../../hooks/useAdminLicensing";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { Tag } from "../../components/ui/Tag";
+import { InfoBox } from "../../components/ui/InfoBox";
+import { apiErrorMessage } from "../../services/api";
 
 export function AdminLicenciasPage(): React.ReactElement {
   const { usage, plans } = useAdminLicensing();
   const current = usage.data?.current ?? 0;
-  const limit = usage.data?.limit ?? 1;
-  const pct = (current / limit) * 100;
+  const limit = usage.data?.limit ?? 0;
+  const pct = limit > 0 ? Math.min(100, (current / limit) * 100) : 0;
+  const disponibles = Math.max(0, limit - current);
+  const planActual = (plans.data ?? []).find((p) => p.current);
+  const error = usage.error ?? plans.error;
 
   return (
     <div>
@@ -17,15 +22,31 @@ export function AdminLicenciasPage(): React.ReactElement {
         <p className="text-[13px] text-text-2">Modelo de licenciamiento por alumnos activos mensuales</p>
       </div>
 
+      {error && (
+        <InfoBox variant="error">
+          {apiErrorMessage(error, "No se pudo cargar el estado de la licencia.")}{" "}
+          <button
+            type="button"
+            className="underline font-semibold"
+            onClick={() => {
+              void usage.refetch();
+              void plans.refetch();
+            }}
+          >
+            Reintentar
+          </button>
+        </InfoBox>
+      )}
+
       <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
         <Card>
           <CardHeader
             title={
               <>
-                Plan actual: <span className="text-primary">Growth</span>
+                Plan actual: <span className="text-primary">{planActual?.name ?? "—"}</span>
               </>
             }
-            action={<Tag color="blue">101 – 500 MAU</Tag>}
+            action={planActual ? <Tag color="blue">{planActual.range}</Tag> : undefined}
           />
           <div className="flex items-end gap-2.5 mb-3.5">
             <div className="font-display text-5xl font-extrabold text-text-1 leading-none">{current}</div>
@@ -35,7 +56,11 @@ export function AdminLicenciasPage(): React.ReactElement {
             <ProgressBar value={pct} />
           </div>
           <div className="text-xs text-text-2">
-            {pct.toFixed(1)}% de capacidad · <strong>{limit - current} disponibles</strong>
+            {!usage.data ? (usage.isPending ? "Cargando…" : "Sin datos") : (
+              <>
+                {pct.toFixed(1)}% de capacidad · <strong>{disponibles} disponibles</strong>
+              </>
+            )}
           </div>
         </Card>
 
