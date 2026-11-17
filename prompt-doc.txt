@@ -1,1 +1,0 @@
-Analiza el proyecto y genera con lujo de detalle como funciona el microservicio de frontend, como si fuera destinado a un trainee que no conoce el lenguaje ni el proyecto. Genera la explicacion en un .md en el escritorio.

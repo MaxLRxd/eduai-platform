@@ -7,6 +7,9 @@
 >
 > **Mapa de arquitectura para el equipo:** `graphify-out/README.md` (arquitectura real, god nodes,
 > puntos de extensión e inventario de pendientes verificado contra el código).
+>
+> **Reporte de bugs y faltantes:** 2026-11-17 — fusionado abajo en
+> [BUGS Y FALTANTES](#bugs-y-faltantes-reporte-de-usuarios--2026-11-17).
 
 ---
 
@@ -149,6 +152,116 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. 5. ✅ Rebajar `EMBEDDING_DIMENSIONS` a ≤1536 y reindexar HNSW (entrada 9) — hecho 2026-10-17.
 6. ✅ Limpiar `CHROMA_URL` (entrada 13) y presets de branding (entrada 6) — hechos 2026-10-17.
 7. ✅ Parte F — tests de frontend agregados: `config.service`, `BrandingContext`, `notificaciones.service`, `adminSettings.service` (3 existentes + 15 nuevos, 18 totales) — hechos 2026-10-17.
+
+---
+
+# BUGS Y FALTANTES (reporte de usuarios — 2026-11-17)
+
+> Fusionado desde `bugs_y_faltantes.txt`. Estados: ✅ resuelto · 🟡 analizado/parcial · ⬜ pendiente.
+
+## Alumno
+
+### ⬜ Material/PDF no abre ni descarga
+El botón para acceder al PDF/material **anda mal**: no abre ni descarga el material subido.
+
+### ⬜ "Mis estadísticas" completamente mockeada
+No trae estadísticas reales: ni el Registro de asistencia, ni el Detalle de calificaciones, ni los
+dashboards de arriba. Lo mismo ocurre con las estadísticas del **Inicio**. Se supone que a los demás
+roles (docente y admin) les pasa lo mismo.
+
+### ⬜ Organización jerárquica de "Mis cursos" → página individual de materia
+Reorganizar jerárquicamente: **una sección/unidad contiene clases**; la unidad puede contener
+archivos y las clases también. Actualmente solo muestra unidades y sus archivos subidos.
+
+### ⬜ El chat con el tutor de IA no persiste
+Debe quedar un historial del chat, privado por usuario.
+
+### ⬜ El chat con el tutor debe poder ampliarse
+Para una mejor lectura.
+
+### ⬜ Mensajería de alumno hacia el profesor
+Actualmente no existe.
+
+## Profesor
+
+### ✅ Gestionar secciones envía a "Mis alumnos"
+**Resuelto:** ahora envía a **Contenidos**, donde están las secciones.
+
+### ✅ El docente no puede ver el documento de una entrega
+**Resuelto:** se corrigieron la URL y el nombre del archivo de la entrega.
+
+### ✅ Filtros de mensajería
+**Resuelto:** se puede enviar a todos, por materia o a una selección de estudiantes. Antes, un envío
+no individual se mandaba a todos los usuarios del sistema.
+
+### 🟡 Simulación de TPs y exámenes para "Calificaciones"
+**Analizado.** Se mantiene la solución con "Insumos: TPs y simulacros" y columnas por período.
+Pendiente el modelo completo con categoría/peso y Nota ligada a Actividad.
+
+### ✅ Reorganización de menús y jerarquías
+Se propone (e implementó) una redistribución para no tener tantas opciones en el menú:
+
+1. **Contenidos** es la mayor jerarquía y contiene las clases. Además incluye un botón
+   **"Planificación"** que ahora sí envía al profesor a esa página.
+2. **Mis estudiantes** pasa a ser el manejo general de alumnos y contiene **Calificaciones** y
+   **Asistencia**.
+3. Nueva opción **Evaluaciones**, que contiene los actuales **Actividades** y **Correcciones**, y
+   además un botón a **Calificaciones**.
+4. **Analytics** queda igual.
+5. **Asistente de IA** queda igual.
+
+Menú lateral resultante: **"Inicio", "Mis materias", "Mis estudiantes", "Evaluaciones",
+"Analytics", "Asistente IA", "Mensajes"**. ✅
+
+### ✅ Correcciones de "Contenidos"
+
+1. ✅ **Planificación** para crear clases y asociarlas a una sección/unidad (o viceversa: al crear
+   una sección, asignarle una clase, con opción de crearla después).
+2. ✅ Se reemplazó el "Subir archivo" redundante por un botón opcional en el formulario de creación
+   de sección para subir contenido a la unidad/sección.
+3. ✅ "Agregar texto o consigna" ahora llama a las opciones de evaluaciones ya desarrolladas y las
+   vincula con la clase o unidad/sección, mostrando en estas la clase a la que pertenecen.
+
+### ✅ Material para estudiantes
+"Subí un archivo (PDF, PPTX, DOCX, etc.) que los alumnos podrán ver con esta clase" ahora ofrece dos
+opciones: **seleccionar un material ya subido en "Contenidos"** o **subir un archivo**.
+
+## Administrador
+
+### ⬜ "Editar" materia no trae descripción ni nivel educativo
+Corroborar primero que `descripción` y `nivel educativo` realmente se guarden en la base de datos.
+
+## General
+
+### ⬜ Eliminar "SIMILAR A MOODLE"
+
+### 🟡 Licencias
+Decidir el tema de licencias. **Descartado para la IA** (tarea bajo supervisión de integrantes del
+equipo).
+
+### ⬜ Problemas de encoding
+En algunas secciones los acentos/tildes, caracteres especiales y/o "Ñ" se muestran con caracteres
+extraños. También los CSV generados en la parte de generación de documentos salen con estos
+caracteres.
+
+### ⬜ Sacar el buscador de la plataforma
+
+### ⬜ Ajustes de prompting
+Modificar la sección de prompting para que la respuesta de la IA no gaste tokens en saludos y
+palabrería innecesaria, y que no intente remarcar con negrita ni con `*palabra*`.
+
+## Resumen de estado (2026-11-17)
+
+- ✅ Profesor / "Mis materias" → gestionar secciones: envía a Contenidos.
+- ✅ Docente ve el documento de una entrega (URL y nombre del archivo).
+- ✅ Filtros de mensajería (todos / por materia / selección de estudiantes).
+- 🟡 Simulación de TPs y exámenes: analizado; falta el modelo completo (categoría/peso y Nota
+  ligada a Actividad).
+- ✅ Menú del docente (Inicio, Mis materias, Mis estudiantes, Evaluaciones, Analytics, Asistente IA,
+  Mensajes).
+- ✅ Contenidos: "+ Clase" por unidad, crear clase al crear una sección, material opcional de la
+  unidad, evaluaciones vinculadas a unidad/clase y, por clase, "Elegir de Contenidos" o
+  "Subir archivo".
 
 ---
 
