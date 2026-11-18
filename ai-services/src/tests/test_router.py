@@ -143,6 +143,48 @@ def test_index_material_file_empty_raises():
     assert response.status_code == 400
 
 
+def test_extraer_texto_devuelve_el_texto_sin_indexar():
+    app = _build_app()
+
+    async def _no_deberia_indexar(*args, **kwargs):
+        raise AssertionError("extraer-texto no debe indexar nada")
+
+    app.state.retrieval_service.upsert_chunks = _no_deberia_indexar
+    client = TestClient(app)
+    response = client.post(
+        "/tutor/extraer-texto",
+        files={"archivo": ("apuntes.txt", "Redes: el modelo OSI tiene siete capas.".encode(), "text/plain")},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["texto"] == "Redes: el modelo OSI tiene siete capas."
+    assert body["caracteres"] == len(body["texto"])
+
+
+def test_extraer_texto_archivo_vacio_es_400():
+    client = TestClient(_build_app())
+    response = client.post("/tutor/extraer-texto", files={"archivo": ("vacio.txt", b"", "text/plain")})
+    assert response.status_code == 400
+
+
+def test_extraer_texto_binario_sin_texto_es_422():
+    client = TestClient(_build_app())
+    response = client.post(
+        "/tutor/extraer-texto",
+        files={"archivo": ("raro.bin", bytes(range(0, 32)) * 20, "application/octet-stream")},
+    )
+    assert response.status_code == 422
+
+
+def test_extraer_texto_rechaza_archivos_enormes(monkeypatch):
+    monkeypatch.setattr(tutor_router, "LIMITE_BYTES_EXTRACCION", 10)
+    client = TestClient(_build_app())
+    response = client.post(
+        "/tutor/extraer-texto", files={"archivo": ("grande.txt", b"x" * 50, "text/plain")}
+    )
+    assert response.status_code == 413
+
+
 def test_corregir_examen_endpoint():
     client = TestClient(_build_app())
     response = client.post(

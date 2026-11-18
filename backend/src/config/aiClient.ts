@@ -106,6 +106,44 @@ async function postIndexado(
   }
 }
 
+export type ResultadoExtraccion =
+  | { ok: true; texto: string }
+  | { ok: false; motivo: "ia_no_disponible" | "vacio" | "demasiado_grande" | "sin_texto" | "error" };
+
+/**
+ * Pide al ai-service el texto de un archivo SIN guardarlo ni indexarlo (CU-A05 A1: resumir un archivo propio).
+ * Distingue los motivos de fallo para que el alumno sepa que hacer: un archivo escaneado no es lo mismo
+ * que un servicio caido.
+ */
+export async function extraerTextoArchivo(buffer: Buffer, filename: string): Promise<ResultadoExtraccion> {
+  if (!aiDisponible()) {
+    logger.warn("AI_SERVICE_URL no configurado; no se pudo extraer el texto del archivo");
+    return { ok: false, motivo: "ia_no_disponible" };
+  }
+
+  const form = new FormData();
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+  form.append("archivo", new Blob([arrayBuffer]), filename);
+  const serializado = new Response(form);
+  const body = Buffer.from(await serializado.arrayBuffer());
+  const contentType = serializado.headers.get("content-type") ?? "multipart/form-data";
+
+  try {
+    const { status, texto } = await postLargo("/tutor/extraer-texto", body, contentType);
+    if (status === 400) return { ok: false, motivo: "vacio" };
+    if (status === 413) return { ok: false, motivo: "demasiado_grande" };
+    if (status === 422) return { ok: false, motivo: "sin_texto" };
+    if (status < 200 || status >= 300) {
+      logger.error({ status, detalle: texto.slice(0, 300) }, "Fallo al extraer texto en ai-service");
+      return { ok: false, motivo: "error" };
+    }
+    return { ok: true, texto: (JSON.parse(texto) as { texto: string }).texto };
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para extraer texto");
+    return { ok: false, motivo: "error" };
+  }
+}
+
 export async function indexArchivo(
   subjectId: string,
   materialId: string,

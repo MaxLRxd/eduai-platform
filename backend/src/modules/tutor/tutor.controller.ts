@@ -11,6 +11,7 @@ import type {
   ResumenInput,
   ResumenPdfInput,
 } from "./tutor.schemas";
+import { resumenArchivoSchema } from "./tutor.schemas";
 import { AppError } from "../../middlewares/error";
 
 export async function crearSesion(
@@ -51,6 +52,26 @@ export async function enviarMensaje(
     throw new AppError(401, "No autenticado");
   }
   const resultado = await tutorService.enviarMensaje(req.params.sesionId, req.body, req.user.id);
+  res.json(resultado);
+}
+
+export async function resumenArchivo(req: Request<{ materiaId: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  if (!req.file) {
+    throw new AppError(400, "No se recibio ningun archivo");
+  }
+  const opciones = resumenArchivoSchema.safeParse(req.body);
+  if (!opciones.success) {
+    throw new AppError(400, opciones.error.issues[0]?.message ?? "Datos invalidos");
+  }
+  const resultado = await tutorService.resumirArchivo(
+    req.params.materiaId,
+    { originalname: req.file.originalname, buffer: req.file.buffer },
+    opciones.data,
+    req.user.id
+  );
   res.json(resultado);
 }
 

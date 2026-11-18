@@ -124,6 +124,38 @@ export interface ResumenResult {
   resumen: string;
   origen: string | null;
   max_palabras: number;
+  /** true si el archivo era tan largo que solo se resumió el comienzo. */
+  truncado?: boolean;
+}
+
+export const FORMATOS_ARCHIVO_RESUMEN = ["pdf", "docx", "pptx", "txt", "md", "png", "jpg", "jpeg"];
+export const MAX_ARCHIVO_RESUMEN_MB = 10;
+
+/** Revisa el archivo antes de subirlo (el servidor lo vuelve a revisar). Devuelve el motivo o null si sirve. */
+export function validarArchivoResumen(archivo: { name: string; size: number }): string | null {
+  const formato = archivo.name.includes(".") ? archivo.name.split(".").pop()!.toLowerCase() : "";
+  if (!FORMATOS_ARCHIVO_RESUMEN.includes(formato)) {
+    return `Formato no permitido. Se aceptan: ${FORMATOS_ARCHIVO_RESUMEN.join(", ")}.`;
+  }
+  if (archivo.size === 0) return "El archivo está vacío.";
+  if (archivo.size > MAX_ARCHIVO_RESUMEN_MB * 1024 * 1024) {
+    return `El archivo supera los ${MAX_ARCHIVO_RESUMEN_MB} MB.`;
+  }
+  return null;
+}
+
+// POST /api/materias/:materiaId/tutor/resumen/archivo — CU-A05 (A1): resume un archivo propio.
+// El archivo se lee en el servidor y se descarta: no queda guardado ni se suma al material de la materia.
+export async function resumirArchivo(
+  materiaId: string,
+  archivo: File,
+  opciones: { idioma?: string; max_palabras?: number } = {}
+): Promise<ResumenResult> {
+  const form = new FormData();
+  form.append("archivo", archivo);
+  if (opciones.idioma) form.append("idioma", opciones.idioma);
+  if (opciones.max_palabras) form.append("max_palabras", String(opciones.max_palabras));
+  return api<ResumenResult>(`/api/materias/${materiaId}/tutor/resumen/archivo`, { method: "POST", body: form });
 }
 
 // POST /api/materias/:materiaId/tutor/resumen — CU-A05.

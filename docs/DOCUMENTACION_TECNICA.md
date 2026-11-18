@@ -169,7 +169,7 @@ Reglas relevantes:
 
 ## 7. Backend: módulos y API
 
-La API completa (119 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
+La API completa (120 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -210,6 +210,8 @@ Casos de uso (`ai-services/src/use_cases`):
 
 **Depuración de prompts (CU-SYS01).** Antes de llamar al modelo se quitan saludos, cortesías, muletillas, repeticiones y puntuación redundante. Si el mensaje queda vacío o era solo un saludo, se responde **sin consumir tokens**. Si el depurador falla, se usa el prompt original. Se aplica al tutor (todos los modos), al asistente docente y a las respuestas de desarrollo de un simulacro. No se aplica a las entregas de actividades ni a los documentos a resumir, porque alteraría el trabajo que se evalúa.
 
+**Resumen de un archivo propio (CU-A05 A1).** El backend recibe el archivo del alumno (hasta 10 MB; PDF, DOCX, PPTX, TXT, MD, PNG, JPG) en `POST /api/materias/:id/tutor/resumen/archivo`, le pide el texto al ai-service (`POST /tutor/extraer-texto`, que no guarda ni indexa nada) y lo resume. El archivo vive solo en memoria durante la petición. Hasta 60.000 caracteres; si hay más, se resume el comienzo y se avisa.
+
 **Protección.** Todas las rutas exigen el encabezado `X-Internal-Token` cuando `AI_SERVICE_TOKEN` está configurado.
 
 **Resiliencia.** Reintentos con espera creciente ante 429/503 del proveedor, límite de llamadas de *embedding* por minuto y caché en Redis de las respuestas repetidas.
@@ -245,9 +247,9 @@ Casos de uso (`ai-services/src/use_cases`):
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 268 pruebas en 32 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
-| Servicio de IA | pytest | 107 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 100 pruebas en 17 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
+| Backend | Jest + Supertest | 283 pruebas en 33 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Servicio de IA | pytest | 116 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
+| Frontend | Vitest + Testing Library | 112 pruebas en 18 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
 | **E2E** | `node:test` | **42 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
@@ -270,7 +272,26 @@ Calidad estática: TypeScript estricto en backend y frontend, ESLint sin adverte
 
 **Verificación de la cadena de medición.** Con un servicio de IA simulado que demora 600 ms en emitir la primera palabra, el benchmark midió una mediana de 0,64 s y la métrica guardada por el backend marcó 637 ms: la medición es consistente de punta a punta.
 
-> **Pendiente de medir con el LLM real:** en el entorno de desarrollo no hay `GEMINI_API_KEY` configurada, por lo que el tiempo real del modelo no pudo medirse. Ejecutar `npm run benchmark:tutor` con las claves y material cargado y registrar el resultado antes de la presentación. La métrica incluye las respuestas inmediatas (saludos) y las servidas desde caché, que son más rápidas que una consulta nueva.
+**Medición con el LLM real (2026-11-18).** `npm run benchmark:tutor`, 10 preguntas de Redes por streaming, `gemini-3.5-flash-lite`, clave gratuita, con un apunte de Redes cargado e indexado:
+
+| | Resultado |
+| --- | --- |
+| Primera respuesta visible, mediana | **6,84 s** |
+| Primera respuesta, p95 / máximo | 14,97 s |
+| Respuestas en menos de 3 s | 1 de 9 (la única fue una respuesta de 46 caracteres en 0,01 s, demasiado rápida para haber pasado por el modelo; no se investigó su origen) |
+| Respuesta completa, mediana | 6,96 s |
+| Fallos | 1 de 10: error 503 "high demand" de Gemini, sin respuesta |
+| **Veredicto** | **No cumple** el objetivo (90 % en menos de 3 s) |
+
+**De dónde sale la demora.** Se midió cada etapa por separado:
+
+- El *embedding* de la pregunta tarda **0,4–0,6 s**. La búsqueda vectorial y la depuración no se midieron por separado, pero el camino completo dentro del ai-service (6,4–8,1 s hasta el primer fragmento) es prácticamente el del modelo solo: el resto de la aplicación no es el cuello de botella.
+- El modelo, llamado **directamente** (sin nada de la plataforma de por medio), tarda entre **0,7 s y 22 s** hasta el primer fragmento para el mismo pedido corto. Con `gemini-3.5-flash-lite` la mediana fue 5,9 s (1 de 6 en menos de 3 s) y con `gemini-3.1-flash-lite`, 4,9 s (3 de 6). Ninguno es estable.
+- Conclusión: con una clave gratuita, la latencia depende de la capacidad que Gemini tenga disponible en ese momento (demanda compartida), no del código. Un cambio de modelo no alcanza.
+
+**Qué se puede hacer** (no implementado): usar una clave con plan pago o una cuenta con cuota dedicada; reintentar a mitad del *stream* ante un 503 (hoy solo se reintenta al abrirlo); y mostrar un indicador de espera. Las preguntas frecuentes que carga el docente responden al instante y sin IA, y el alumno ya recibe un aviso con botón *Reintentar* si pasan 10 s sin respuesta.
+
+> **Aviso sobre los datos del seed:** los materiales de prueba del seed tienen una sola frase cada uno y figuran como indexados sin estarlo, así que con ellos el tutor responde "no tengo información" sin llamar al modelo. Para medir hay que cargar un material real (se indexa solo).
 
 ## 13. Variables de entorno
 

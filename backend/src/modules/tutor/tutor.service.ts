@@ -1,7 +1,9 @@
+import path from "node:path";
 import type { ModoSesionIA } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { chatTutor, corregirExamenIA, generarExamen, resumirDocumento } from "../../config/aiClient";
+import { chatTutor, corregirExamenIA, extraerTextoArchivo, generarExamen, resumirDocumento } from "../../config/aiClient";
+import { nombreArchivoUtf8 } from "../../utils/nombreArchivo";
 import { registrarConsultaTutor, seccionDeFuentes } from "../analytics/analytics.service";
 import { renderMaterialPdf } from "../asistente/materialPdf";
 import { obtenerInscripcion, obtenerProfesorAsignado } from "../materias/materias.service";
@@ -10,6 +12,7 @@ import type {
   CrearSesionInput,
   EnviarMensajeInput,
   ExamenInput,
+  ResumenArchivoInput,
   ResumenInput,
   ResumenPdfInput,
 } from "./tutor.schemas";
@@ -391,6 +394,72 @@ async function textoDelContenido(contenidoId: string, materiaId: string) {
   }
 
   return { texto, titulo: contenido.titulo };
+}
+
+/** Archivos que el alumno puede adjuntar para resumir (los de texto o con OCR). */
+export const FORMATOS_RESUMEN_ARCHIVO = ["pdf", "docx", "pptx", "txt", "md", "png", "jpg", "jpeg"];
+export const MAX_ARCHIVO_RESUMEN_MB = 10;
+const MAX_CARACTERES_RESUMEN = 60000;
+
+/**
+ * CU-A05 (A1): resume un archivo propio del alumno. El archivo se lee y se descarta: no se guarda en el
+ * disco ni en la base, y NO se indexa en el material de la materia (no lo ven el docente ni otros alumnos).
+ */
+export async function resumirArchivo(
+  materiaId: string,
+  archivo: { originalname: string; buffer: Buffer },
+  opciones: ResumenArchivoInput,
+  alumnoId: string
+) {
+  await exigirInscripcion(materiaId, alumnoId);
+
+  const nombre = nombreArchivoUtf8(archivo.originalname);
+  const formato = path.extname(nombre).replace(".", "").toLowerCase();
+
+  if (!FORMATOS_RESUMEN_ARCHIVO.includes(formato)) {
+    throw new AppError(400, `Formato no permitido. Se aceptan: ${FORMATOS_RESUMEN_ARCHIVO.join(", ")}`);
+  }
+  if (archivo.buffer.length === 0) {
+    throw new AppError(400, "El archivo esta vacio");
+  }
+
+  const extraccion = await extraerTextoArchivo(archivo.buffer, nombre);
+  if (!extraccion.ok) {
+    switch (extraccion.motivo) {
+      case "vacio":
+        throw new AppError(400, "El archivo esta vacio");
+      case "demasiado_grande":
+        throw new AppError(413, "El archivo es demasiado grande");
+      case "sin_texto":
+        throw new AppError(
+          422,
+          "No se pudo leer texto de este archivo. Si es un escaneo o una imagen borrosa, proba con otro archivo o pega el texto."
+        );
+      default:
+        throw new AppError(502, "No se pudo leer el archivo en este momento");
+    }
+  }
+
+  const truncado = extraccion.texto.length > MAX_CARACTERES_RESUMEN;
+  const texto = truncado ? extraccion.texto.slice(0, MAX_CARACTERES_RESUMEN) : extraccion.texto;
+
+  if (texto.trim().length < 200) {
+    throw new AppError(400, "El texto del archivo es muy corto para generar un resumen util");
+  }
+
+  const resultado = await resumirDocumento(texto, opciones.idioma, opciones.max_palabras);
+
+  if (!resultado) {
+    throw new AppError(502, "No se pudo generar el resumen en este momento");
+  }
+
+  try {
+    await registrarConsultaTutor(materiaId, "resumen de archivo propio", false, null);
+  } catch {
+    // los analytics no deben interrumpir el flujo
+  }
+
+  return { resumen: resultado.summary, origen: nombre, max_palabras: opciones.max_palabras, truncado };
 }
 
 export async function resumir(materiaId: string, input: ResumenInput, alumnoId: string) {

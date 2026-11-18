@@ -296,6 +296,12 @@ palabrería innecesaria, y que no intente remarcar con negrita ni con `*palabra*
 
 **Pendiente real:** nada del reporte de usuarios. Todo está resuelto y verificado (ver abajo).
 
+**Latencia del tutor con la IA real (2026-11-18):** `npm run benchmark:tutor` dio una mediana de **6,84 s** hasta
+la primera respuesta (objetivo: 90 % en menos de 3 s) → **no cumple**. El embedding tarda 0,4–0,6 s; el modelo,
+llamado directo, tarda entre 0,7 s y 22 s para el mismo pedido (probados `gemini-3.5-flash-lite` y
+`gemini-3.1-flash-lite`): la demora es de Gemini con clave gratuita, no de la plataforma. Detalle, hallazgos y
+opciones en `DOCUMENTACION_TECNICA.md` §12.
+
 **Verificado en el entorno real (2026-11-18, Docker Compose):**
 - La migración `20261117120000_categorias_y_notas_por_actividad` se aplicó sobre la base con datos (90 notas
   intactas) sin errores.
@@ -598,6 +604,5 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-17):** backend **268** en **32** suites · frontend **100** en
-**17** archivos · ai-services: 21 archivos de tests (107 según `DOCUMENTACION_TECNICA.md`, sin
-reverificar) · E2E **42**.
+**Conteo actual de tests (2026-11-17):** backend **283** en **33** suites · frontend **112** en
+**18** archivos · ai-services **116** (+1 omitido) · E2E **42**.

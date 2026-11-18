@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { validateBody } from "../../middlewares/validate";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import {
@@ -10,8 +11,15 @@ import {
   resumenSchema,
 } from "./tutor.schemas";
 import * as tutorController from "./tutor.controller";
+import { MAX_ARCHIVO_RESUMEN_MB } from "./tutor.service";
 
 const router = Router();
+
+// El archivo para resumir se procesa en memoria y se descarta: nunca toca el disco.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_ARCHIVO_RESUMEN_MB * 1024 * 1024, files: 1 },
+});
 
 router.post(
   "/materias/:materiaId/tutor/sesiones",
@@ -26,6 +34,13 @@ router.post(
   requireRole("ALUMNO"),
   validateBody(resumenSchema),
   tutorController.resumen
+);
+router.post(
+  "/materias/:materiaId/tutor/resumen/archivo",
+  requireAuth,
+  requireRole("ALUMNO"),
+  upload.single("archivo"),
+  tutorController.resumenArchivo
 );
 router.post(
   "/materias/:materiaId/tutor/resumen/pdf",

@@ -98,7 +98,15 @@ Consejos: escribí la consulta completa y concreta, y podés seguir la conversac
 
 ### 2.5 Resumir un documento
 
-En el panel **Resumen** elegí un material de texto de la materia o pegá el texto (mínimo 200 caracteres), indicá la extensión aproximada y pedí el resumen. Con **Descargar PDF** te llevás el resumen en un archivo. Después podés hacerle preguntas al tutor sobre cualquier parte.
+En el panel **Resumen** elegí de dónde sale lo que querés resumir:
+
+- **Del material:** un material de texto de la materia.
+- **De un texto:** pegá el texto (mínimo 200 caracteres).
+- **De un archivo:** adjuntá tu propio archivo (PDF, Word, PowerPoint, texto o imagen, hasta 10 MB), por ejemplo tus apuntes. El archivo se lee para resumirlo y **se descarta**: no se guarda, y ni tu docente ni otros alumnos lo ven.
+
+Pedí el resumen y, con **Descargar PDF**, te lo llevás en un archivo. Después podés hacerle preguntas al tutor sobre cualquier parte.
+
+Si el archivo es un **escaneo o una foto sin texto legible**, el sistema te lo avisa: probá con otro archivo o pegá el texto. Si el archivo es muy largo, se resume solo el comienzo y se indica.
 
 ### 2.6 Simulacro de examen
 

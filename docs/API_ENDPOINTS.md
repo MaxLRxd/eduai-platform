@@ -2,7 +2,7 @@
 
 > Generado automáticamente desde `backend/src/**/*.routes.ts` con `npm run docs:api`. No editar a mano.
 
-Total: **119 endpoints** en 18 módulos.
+Total: **120 endpoints** en 18 módulos.
 
 **Acceso:** *Público* no pide sesión; *Autenticado* cualquier rol con sesión; los demás exigen ese rol.
 **Validación:** esquema Zod que valida el cuerpo antes de llegar al controlador. **Límite:** limitador de intentos.
@@ -113,6 +113,7 @@ Total: **119 endpoints** en 18 módulos.
 | --- | --- | --- | --- | --- |
 | POST | `/api/materias/:materiaId/tutor/sesiones` | ALUMNO | `crearSesionSchema` |  |
 | POST | `/api/materias/:materiaId/tutor/resumen` | ALUMNO | `resumenSchema` |  |
+| POST | `/api/materias/:materiaId/tutor/resumen/archivo` | ALUMNO |  |  |
 | POST | `/api/materias/:materiaId/tutor/resumen/pdf` | ALUMNO | `resumenPdfSchema` |  |
 | POST | `/api/materias/:materiaId/tutor/examen` | ALUMNO | `examenSchema` |  |
 | POST | `/api/materias/:materiaId/tutor/examen/corregir` | ALUMNO | `corregirExamenSchema` |  |

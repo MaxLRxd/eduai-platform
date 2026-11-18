@@ -24,6 +24,12 @@ export const resumenSchema = z
     message: "Envia exactamente uno: contenido_id o texto",
   });
 
+/** Campos de texto que acompanan al archivo en el multipart (llegan como strings). */
+export const resumenArchivoSchema = z.object({
+  idioma: z.string().min(2).max(8).default("es"),
+  max_palabras: z.coerce.number().int().min(30).max(1000).default(150),
+});
+
 export const examenSchema = z.object({
   n_preguntas: z.number().int().min(1).max(20).default(5),
   dificultad: z.enum(["facil", "media", "dificil"]).default("media"),
@@ -53,6 +59,7 @@ export const resumenPdfSchema = z.object({
 export type CrearSesionInput = z.infer<typeof crearSesionSchema>;
 export type EnviarMensajeInput = z.infer<typeof enviarMensajeSchema>;
 export type ResumenInput = z.infer<typeof resumenSchema>;
+export type ResumenArchivoInput = z.infer<typeof resumenArchivoSchema>;
 export type ExamenInput = z.infer<typeof examenSchema>;
 export type ResumenPdfInput = z.infer<typeof resumenPdfSchema>;
 export type CorregirExamenInput = z.infer<typeof corregirExamenSchema>;

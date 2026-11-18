@@ -3,9 +3,9 @@
 Estado de los **26 casos de uso** especificados en el Anexo B, contrastados con el código y las pruebas.
 Las especificaciones están en la carpeta *Casos de Uso* de la documentación del proyecto.
 
-**Resumen:** 25 casos completos y 1 parcial. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
+**Resumen:** los 26 casos están completos. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
 
-> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01, P08 y P09 se completaron el 2026-11-18 (editar y reordenar unidades; filtros y detalle por tema en el dashboard del docente).
+> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01, P08, P09 y A05 se completaron el 2026-11-18 (editar y reordenar unidades; filtros y detalle por tema en el dashboard del docente; resumen de un archivo propio).
 
 Referencias de la columna *Prueba*: `E2E` = `e2e/flujo-completo.e2e.mjs`; el resto son archivos de `backend/src/tests/`, `ai-services/src/tests/` o `frontend/src/tests/`.
 
@@ -21,7 +21,7 @@ Leyenda: ✅ completo · 🟡 parcial
 | A02 | Navegar contenido | ✅ | `contenidos.service` (`registrarAcceso`, `estadisticasDeAcceso`) · `MaterialItem` | `contenido-accesos`, E2E | Los textos se leen en la plataforma y los archivos se abren aparte; cada apertura se registra (sin duplicar recargas en 5 min) y el docente ve cuántos alumnos abrieron cada material. **No hay botón para reportar un archivo dañado** (A5A). |
 | A03 | Entregar actividad | ✅ | `actividades.service.enviar` · `AssignmentSubmitModal` | `entrega-plazo`, `entrega-archivo`, `actividades-ciclo`, E2E | Cuatro tipos de entrega, validación de formatos, bloqueo pasada la fecha límite (A4), reemplazo mientras no se publique, aviso al docente y marca de tiempo. Sin rúbrica no hay corrección automática (A6). |
 | A04 | Consultar Tutor IA | ✅ | `ask_tutor` (ai-service) · `tutor.service` · `useTutorChat` | `test_ask_tutor`, `test_depuracion_prompts`, `preguntas-frecuentes`, `tutor-chat` | RAG por materia, depuración, aviso si no hay información, historial, streaming. Pregunta frecuente reconocida (A5.1): responde con la respuesta que cargó el docente, sin llamar a la IA (solo en modo normal). Demora (A7): indicador de carga y, pasados 10 s, aviso con reintento. |
-| A05 | Resumir documento | 🟡 | `resumir_documento` · `ResumenPanel` | `test_router`, `resumen-pdf` | Resume un material de texto de la materia o un texto pegado, y se descarga en **PDF**. **Pendiente (A1):** adjuntar un archivo propio al chat; la alternativa disponible es pegar su texto. |
+| A05 | Resumir documento | ✅ | `resumir_documento` · `tutor.service.resumirArchivo` · `ResumenPanel` | `test_router`, `resumen-pdf`, `resumen-archivo` | Resume un material de la materia, un texto pegado o **un archivo propio** (PDF, Word, PowerPoint, texto o imagen con OCR, hasta 10 MB; **A1**), y se descarga en **PDF**. El archivo se lee y se descarta: no se guarda ni se suma al material de la materia. Si es muy largo se resume el comienzo y se avisa; si es un escaneo ilegible se sugiere pegar el texto. |
 | A06 | Pedir pistas | ✅ | modo *Pistas* de `ask_tutor` | `test_ask_tutor` | El tutor orienta sin dar la solución y se niega con amabilidad a resolver. |
 | A07 | Explicación del error | ✅ | `AssignmentSubmitModal` · `actividades.service.marcarFeedbackRevisado` | `adopcion-metricas`, E2E | Muestra el feedback publicado (incluido el editado por el docente), "en revisión" si no está publicado, y registra que el alumno lo abrió. |
 | A08 | Generar simulacro | ✅ | `examen` · `SimulacroPanel` | `test_router`, E2E | Preguntas variadas por dificultad, interactivo. Las respuestas no se guardan como borrador entre sesiones: se descarta o se corrige. |
@@ -78,7 +78,6 @@ Además, el requisito de rendimiento del tutor (*primera respuesta visible en me
 
 Lo que queda fuera, en orden de importancia para la defensa:
 
-1. **Medir el tiempo real del LLM** con las claves de Gemini configuradas (`npm run benchmark:tutor`); en el entorno de desarrollo no hay clave.
-2. A05 (A1): adjuntar un archivo propio al resumen.
-3. P04: niveles de desempeño configurables en la rúbrica.
-4. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.
+1. **Latencia del tutor (CU-A04, < 3 s):** medida el 2026-11-18 con la IA real y **no cumple**: mediana de 6,84 s hasta la primera respuesta. La plataforma agrega unos 0,6 s; el resto es la latencia de Gemini con clave gratuita, que varía entre 0,7 s y 22 s para el mismo pedido. Detalle y opciones en la [documentación técnica](./DOCUMENTACION_TECNICA.md#12-rendimiento-del-tutor).
+2. P04: niveles de desempeño configurables en la rúbrica.
+3. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.

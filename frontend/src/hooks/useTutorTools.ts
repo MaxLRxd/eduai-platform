@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError } from "../services/api";
 import {
   generarSimulacro,
+  resumirArchivo,
   resumirMaterial,
   type DificultadExamen,
   type ExamenResult,
@@ -27,12 +28,17 @@ export function useResumen() {
 
   async function resumir(
     materiaId: string,
-    input: { contenido_id?: string; texto?: string; max_palabras?: number }
+    input: { contenido_id?: string; texto?: string; max_palabras?: number; archivo?: File }
   ): Promise<void> {
     setPending(true);
     setError(null);
     try {
-      setResultado(await resumirMaterial(materiaId, input));
+      const { archivo, ...resto } = input;
+      setResultado(
+        archivo
+          ? await resumirArchivo(materiaId, archivo, { max_palabras: resto.max_palabras })
+          : await resumirMaterial(materiaId, resto)
+      );
     } catch (e) {
       setResultado(null);
       setError(messageFromError(e, "No se pudo generar el resumen."));
