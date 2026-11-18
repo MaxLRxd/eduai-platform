@@ -314,4 +314,6 @@ El plan de proyecto (Anexo, sección 3.5) planteaba algunas tecnologías que, al
 
 ## Verificación realizada
 
+**2026-11-18:** con el stack de desarrollo levantado se aplicó la migración de calificaciones sobre una base con datos, se recorrieron en el navegador las pantallas de Entregas, Mis estadísticas y Calificaciones, y la suite E2E pasó 39 de 39 (sin el tramo del tutor).
+
 La última verificación se hizo construyendo las **tres imágenes de producción** (backend, frontend con nginx y servicio de IA) y ejecutando la suite E2E completa, con el tramo del tutor, contra esos contenedores: **42 de 42 pruebas correctas**. Esa verificación detectó y permitió corregir defectos que no se ven en desarrollo (generación del cliente de Prisma, configuración de migraciones, ejecutable de `uvicorn`, y un acceso directo al servicio de IA expuesto por nginx).

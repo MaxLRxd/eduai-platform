@@ -179,8 +179,9 @@ admin también consumen el backend.
 
 ### ✅ El chat con el tutor de IA no persiste
 **Resuelto:** el historial se guarda por alumno y se recarga al volver (`useTutorChat`), con lista de
-conversaciones. Es privado para el alumno. **Pendiente de decidir:** el perfil del alumno que ve el
-docente muestra sus últimas consultas al tutor (`ultimas_consultas`).
+conversaciones. Es privado para el alumno. **Decidido (2026-11-18):** el docente sigue viendo las
+últimas consultas del alumno al tutor en su perfil (`ultimas_consultas`), para detectar dudas; el resto del
+historial es privado del alumno.
 
 ### ✅ El chat con el tutor debe poder ampliarse
 **Resuelto:** botón para ampliar el chat a pantalla casi completa.
@@ -293,17 +294,29 @@ palabrería innecesaria, y que no intente remarcar con negrita ni con `*palabra*
 
 ## Resumen de estado
 
-**Pendiente real:** decisión sobre las consultas del alumno al tutor que ve el docente, y verificación en
-navegador (incluida la aplicación de la migración de calificaciones contra una base real). Todo lo demás
-de este reporte está resuelto.
+**Pendiente real:** nada del reporte de usuarios. Todo está resuelto y verificado (ver abajo).
+
+**Verificado en el entorno real (2026-11-18, Docker Compose):**
+- La migración `20261117120000_categorias_y_notas_por_actividad` se aplicó sobre la base con datos (90 notas
+  intactas) sin errores.
+- En el navegador: **Entregas** muestra la columna *Nota* al final (`9,00` en la publicada, guion en las que
+  están en revisión); **Mis estadísticas** muestra *Cómo se arma tu nota* y el promedio cuadra con las
+  categorías (6,80·30 % + 6,50·40 % + 6,30·30 % = 6,53); **Calificaciones** del docente muestra categorías,
+  columnas por categoría y nota final.
+- **Importar notas de una actividad** probado de punta a punta: trae la corrección publicada, recalcula la
+  nota final (TP 7,90 → final 6,86) y repetirlo informa "0 nuevas, 1 actualizada" (no duplica).
+- Suite E2E (`npm run e2e`): **39 de 39** correctas (sin el tramo del tutor, que requiere `E2E_AI=1`).
+- Dato de configuración (no es un bug de código): la institución tiene cargado como logo
+  `https://example.com/logo.png`, por eso el login muestra la imagen rota; se cambia o se quita desde
+  *Apariencia*.
 
 Detalle del reporte de 2026-11-17:
 
 - ✅ Profesor / "Mis materias" → gestionar secciones: envía a Contenidos.
 - ✅ Docente ve el documento de una entrega (URL y nombre del archivo).
 - ✅ Filtros de mensajería (todos / por materia / selección de estudiantes).
-- 🟡 Simulación de TPs y exámenes: analizado; falta el modelo completo (categoría/peso y Nota
-  ligada a Actividad).
+- ✅ Simulación de TPs y exámenes para Calificaciones: categorías con peso, nota final ponderada y notas
+  ligadas a actividades (ver el detalle arriba).
 - ✅ Menú del docente (Inicio, Mis materias, Mis estudiantes, Evaluaciones, Analytics, Asistente IA,
   Mensajes).
 - ✅ Contenidos: "+ Clase" por unidad, crear clase al crear una sección, material opcional de la

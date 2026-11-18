@@ -89,7 +89,7 @@ Elegí cómo querés que te ayude:
 | **Socrático** | No te da la respuesta: te hace preguntas para que llegues vos. Sirve para repasar. |
 | **Pistas** | Te da orientaciones paso a paso sin resolverte el ejercicio. |
 
-Tus conversaciones **se guardan** (son privadas, solo vos las ves) y las encontrás en **Conversaciones guardadas**. Con **Ampliar** el chat ocupa casi toda la pantalla para leer mejor; **Cerrar** lo vuelve a su tamaño.
+Tus conversaciones **se guardan** y las encontrás en **Conversaciones guardadas**; ningún otro alumno puede verlas. Tu docente solo ve la cantidad de consultas que hiciste y las últimas preguntas, para detectar dudas del grupo. Con **Ampliar** el chat ocupa casi toda la pantalla para leer mejor; **Cerrar** lo vuelve a su tamaño.
 
 Consejos: escribí la consulta completa y concreta, y podés seguir la conversación con preguntas de seguimiento. Si solo saludás ("hola"), el tutor te saluda y espera tu consulta.
 
