@@ -73,6 +73,8 @@ Al abrir una materia ves sus **unidades y clases**: cada unidad tiene sus propio
 
 - Los **archivos** (PDF, Word, PowerPoint, imágenes) se abren tocando el **nombre del material** o con **Ver / descargar**.
 - Los **textos** (apuntes escritos por el docente o generados con IA) se leen ahí mismo tocando el nombre o **Leer**.
+- Si un archivo **no está disponible** (ya no está guardado), aparece un aviso rojo en lugar del enlace. Tocá **Reportar el problema**, contá qué pasa si querés y enviá el reporte: tu docente recibe una notificación.
+- Si un archivo existe pero **no abre o está dañado**, usá **¿No abre? Reportalo** debajo del material. Cuando el docente lo revisa y lo marca como resuelto, te llega un aviso.
 - Debajo de cada material dice si está **disponible para el Tutor IA**.
 
 El sistema registra qué materiales abrís para que tu docente sepa qué se está usando. Solo cuenta quién abrió qué, no lo que hacés adentro.
@@ -120,6 +122,15 @@ Sirve para practicar antes de una evaluación.
 4. Mirás tu **resultado sobre 10**, cuántas respuestas fueron correctas, parciales o incorrectas, y para cada pregunta una explicación de por qué y cuál era la respuesta modelo.
 
 Si la corrección falla (por ejemplo, el servicio de IA no responde), **tus respuestas no se pierden**: podés reintentar. Tus simulacros anteriores quedan listados en **Mis simulacros**.
+
+**Corregir mis respuestas.** Debajo del simulacro está el panel **Corregir mis respuestas**, para practicar con preguntas propias (de una guía o de un parcial anterior):
+
+1. Escribí cada pregunta y tu respuesta (hasta 10 preguntas con **+ Pregunta**).
+2. Si querés, elegí un **material de referencia** de la materia; si no, se usa todo el material indexado.
+3. Tocá **Solicitar corrección**. Como no hay una respuesta modelo, el tutor corrige contra el material de la materia.
+4. **Material insuficiente:** si la materia tiene muy poco material indexado, el sistema te avisa que **la corrección puede ser limitada**. Podés **continuar con la corrección limitada** o **cancelar** (tus respuestas se conservan). Si elegís un material de referencia, no hace falta este aviso.
+
+El resultado muestra el puntaje y la explicación de cada respuesta, igual que el simulacro, y avisa si la corrección fue limitada por falta de material.
 
 ### 2.7 Entregar una actividad
 
@@ -181,6 +192,8 @@ Solo ves las materias que el administrador te asignó. Cuando te asignan una, te
 6. Todo lo que cargues se **indexa automáticamente** para el tutor IA (etiqueta *RAG*). El tutor responderá con ese material.
 
 En la columna derecha, **Material visto por los alumnos** muestra, por cada material, cuántos alumnos distintos lo abrieron, cuántas veces y cuándo fue el último acceso.
+
+**Archivos reportados.** Cuando un alumno avisa que un archivo no abre o está dañado, recibís una notificación y el material aparece en **Archivos reportados**, con la cantidad de alumnos, sus comentarios y la etiqueta **Archivo faltante** si el archivo ya no está guardado. En ese caso, volvé a subirlo; después tocá **Marcar como resuelto** y los alumnos que reportaron reciben un aviso.
 
 ### 3.2 Crear actividades (Evaluaciones → Actividades)
 

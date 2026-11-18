@@ -126,6 +126,15 @@ class PineconeRetrievalService:
             return rows
         return [r for r in rows if float(r.get("score", 0.0)) >= float(min_score)]
 
+    async def count_chunks(self, subject_id: str) -> int:
+        """Cuantos fragmentos hay indexados para la materia (cada materia es un namespace)."""
+        stats = self._ensure_index().describe_index_stats()
+        namespaces = getattr(stats, "namespaces", None) or stats.get("namespaces", {})
+        info = namespaces.get(subject_id)
+        if info is None:
+            return 0
+        return int(getattr(info, "vector_count", None) or info.get("vector_count", 0))
+
     async def close(self) -> None:
         if self._pc is not None:
             close = getattr(self._pc, "close", None)

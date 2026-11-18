@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
     app.state.examen_use_case = GenerarExamenUseCase(llm, embeddings, retrieval)
     app.state.generar_material_use_case = GenerarMaterialUseCase(llm, embeddings, retrieval)
     app.state.correccion_use_case = CorreccionEntregaUseCase(llm, embeddings, retrieval)
-    app.state.corregir_simulacro_use_case = CorregirSimulacroUseCase(llm)
+    app.state.corregir_simulacro_use_case = CorregirSimulacroUseCase(llm, embeddings, retrieval)
     app.state.depurar_prompt_use_case = DepurarPromptUseCase()
 
     yield

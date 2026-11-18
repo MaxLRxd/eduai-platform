@@ -71,7 +71,7 @@ describe("simulacro: correccion y historial (CU-A11)", () => {
     server = createServer(createApp() as unknown as import("http").RequestListener);
     prismaMock.inscripcion.findUnique.mockResolvedValue({ alumno_id: ALUMNO_ID });
     prismaMock.intentoSimulacro.create.mockResolvedValue({ id: "intento-1" });
-    aiMock.mockResolvedValue(resultadosIA);
+    aiMock.mockResolvedValue({ resultados: resultadosIA, material_limitado: false });
   });
 
   afterEach(() => {
@@ -110,7 +110,8 @@ describe("simulacro: correccion y historial (CU-A11)", () => {
       "Simulacro de Biologia",
       expect.arrayContaining([
         expect.objectContaining({ enunciado: "Explique la fotosintesis", respuesta_alumno: "Usan luz." }),
-      ])
+      ]),
+      ""
     );
   });
 
@@ -133,7 +134,7 @@ describe("simulacro: correccion y historial (CU-A11)", () => {
   });
 
   it("502 tambien si la IA devuelve menos resultados que preguntas", async () => {
-    aiMock.mockResolvedValue(resultadosIA.slice(0, 2));
+    aiMock.mockResolvedValue({ resultados: resultadosIA.slice(0, 2), material_limitado: false });
 
     expect((await corregir()).status).toBe(502);
   });

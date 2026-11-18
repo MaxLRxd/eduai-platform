@@ -90,9 +90,15 @@ function PreguntaRespondible({
   );
 }
 
-function ResultadoCorreccion({ resultado }: { resultado: SimulacroCorregido }): React.ReactElement {
+export function ResultadoCorreccion({ resultado }: { resultado: SimulacroCorregido }): React.ReactElement {
   return (
     <div className="flex flex-col gap-2.5">
+      {resultado.material_limitado && (
+        <InfoBox variant="warning">
+          Corrección limitada: no se encontró material de la materia para fundamentar alguna de tus respuestas, así
+          que se corrigió con criterio general.
+        </InfoBox>
+      )}
       <div className="bg-surface-2 border border-border rounded p-3.5 text-center">
         <div className="text-[11px] text-text-3 mb-1">Tu resultado</div>
         <div className="font-display text-3xl font-extrabold text-primary">{resultado.puntaje}</div>

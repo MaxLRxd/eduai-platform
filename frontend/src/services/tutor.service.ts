@@ -234,17 +234,39 @@ export interface SimulacroCorregido {
   incorrectas: number;
   sin_responder: number;
   resultados: SimulacroResultadoPregunta[];
+  /** true si alguna pregunta propia se corrigió sin encontrar material de la materia (corrección limitada). */
+  material_limitado?: boolean;
 }
 
 // POST /api/materias/:materiaId/tutor/examen/corregir — CU-A11.
 export async function corregirSimulacro(
   materiaId: string,
-  input: { titulo: string; dificultad: string; preguntas: SimulacroRespuesta[]; registrar: boolean }
+  input: {
+    titulo: string;
+    dificultad: string;
+    preguntas: SimulacroRespuesta[];
+    registrar: boolean;
+    /** Material de la materia con el que se relacionan las respuestas propias (opcional). */
+    contenido_id?: string;
+  }
 ): Promise<SimulacroCorregido> {
   return api<SimulacroCorregido>(`/api/materias/${materiaId}/tutor/examen/corregir`, {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export interface MaterialDisponible {
+  /** Fragmentos de material indexados para la materia; null si no se pudo consultar. */
+  fragmentos: number | null;
+  minimo: number;
+  /** false = poco material: la corrección puede ser limitada. null = no se sabe (no se bloquea). */
+  suficiente: boolean | null;
+}
+
+// GET /api/materias/:materiaId/tutor/material-disponible — CU-A11 (A4).
+export async function getMaterialDisponible(materiaId: string): Promise<MaterialDisponible> {
+  return api<MaterialDisponible>(`/api/materias/${materiaId}/tutor/material-disponible`);
 }
 
 export interface SimulacroHistorialItem {

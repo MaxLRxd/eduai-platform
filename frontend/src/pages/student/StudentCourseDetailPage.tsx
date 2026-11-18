@@ -10,6 +10,7 @@ import { Tag } from "../../components/ui/Tag";
 import { Button } from "../../components/ui/Button";
 import { ResumenPanel } from "../../components/student/ResumenPanel";
 import { SimulacroPanel } from "../../components/student/SimulacroPanel";
+import { CorreccionPropiaPanel } from "../../components/student/CorreccionPropiaPanel";
 import { MaterialItem } from "../../components/student/MaterialItem";
 
 const UNIT_TAG_COLOR = {
@@ -357,6 +358,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
 
           <ResumenPanel course={course} />
           <SimulacroPanel course={course} />
+          <CorreccionPropiaPanel course={course} />
         </aside>
       </div>
     </div>

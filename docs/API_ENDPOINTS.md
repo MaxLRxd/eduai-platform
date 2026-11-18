@@ -2,7 +2,7 @@
 
 > Generado automáticamente desde `backend/src/**/*.routes.ts` con `npm run docs:api`. No editar a mano.
 
-Total: **120 endpoints** en 18 módulos.
+Total: **124 endpoints** en 18 módulos.
 
 **Acceso:** *Público* no pide sesión; *Autenticado* cualquier rol con sesión; los demás exigen ese rol.
 **Validación:** esquema Zod que valida el cuerpo antes de llegar al controlador. **Límite:** limitador de intentos.
@@ -90,6 +90,9 @@ Total: **120 endpoints** en 18 módulos.
 | Método | Ruta | Acceso | Validación | Límite |
 | --- | --- | --- | --- | --- |
 | POST | `/api/contenidos/:contenidoId/acceso` | ALUMNO |  |  |
+| POST | `/api/contenidos/:contenidoId/reportes` | ALUMNO | `reportarContenidoSchema` |  |
+| GET | `/api/materias/:materiaId/reportes-contenido` | PROFESOR |  |  |
+| POST | `/api/contenidos/:contenidoId/reportes/resolver` | PROFESOR |  |  |
 | GET | `/api/materias/:materiaId/accesos` | PROFESOR |  |  |
 | GET | `/api/materias/:materiaId/contenidos` | Autenticado |  |  |
 | GET | `/api/secciones/:seccionId/contenidos` | Autenticado |  |  |
@@ -117,6 +120,7 @@ Total: **120 endpoints** en 18 módulos.
 | POST | `/api/materias/:materiaId/tutor/resumen/pdf` | ALUMNO | `resumenPdfSchema` |  |
 | POST | `/api/materias/:materiaId/tutor/examen` | ALUMNO | `examenSchema` |  |
 | POST | `/api/materias/:materiaId/tutor/examen/corregir` | ALUMNO | `corregirExamenSchema` |  |
+| GET | `/api/materias/:materiaId/tutor/material-disponible` | ALUMNO |  |  |
 | GET | `/api/materias/:materiaId/tutor/simulacros` | ALUMNO |  |  |
 | GET | `/api/materias/:materiaId/tutor/latencia` | PROFESOR |  |  |
 | GET | `/api/admin/tutor/latencia` | ADMIN |  |  |

@@ -31,6 +31,7 @@ interface ContenidoDto {
   archivo_url?: string | null;
   url?: string | null;
   archivo_nombre?: string | null;
+  archivo_disponible?: boolean | null;
 }
 
 interface ClaseArbolDto {
@@ -104,6 +105,7 @@ function toCourseMaterial(c: ContenidoDto): CourseMaterial {
     url: apiUrl(c.archivo_url ?? c.url),
     archivo_nombre: c.archivo_nombre ?? null,
     texto: c.texto_contenido?.trim() ? c.texto_contenido : null,
+    disponible: c.archivo_disponible ?? null,
   };
 }
 

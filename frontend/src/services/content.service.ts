@@ -229,3 +229,36 @@ export async function uploadMaterialFile(input: {
   });
   return toUploadedMaterial(data.contenido);
 }
+// ─────────── CU-A02 (5A): archivos que no abren o están dañados ───────────
+
+/** El alumno avisa que un archivo no abre o está dañado. Devuelve si ya había un reporte abierto suyo. */
+export async function reportarProblemaMaterial(
+  contenidoId: string,
+  motivo?: string
+): Promise<{ reportado: boolean; ya_reportado: boolean }> {
+  return api(`/api/contenidos/${contenidoId}/reportes`, {
+    method: "POST",
+    body: JSON.stringify(motivo?.trim() ? { motivo: motivo.trim() } : {}),
+  });
+}
+
+export interface ReporteMaterial {
+  contenido_id: string;
+  titulo: string;
+  tipo: string;
+  archivo_nombre: string | null;
+  /** false = el archivo ya no está en el almacenamiento; null = no se pudo comprobar. */
+  archivo_disponible: boolean | null;
+  alumnos: number;
+  ultimo_reporte: string;
+  motivos: string[];
+}
+
+export async function getReportesMaterial(materiaId: string): Promise<ReporteMaterial[]> {
+  const data = await api<{ reportes: ReporteMaterial[] }>(`/api/materias/${materiaId}/reportes-contenido`);
+  return data.reportes ?? [];
+}
+
+export async function resolverReportesMaterial(contenidoId: string): Promise<{ resueltos: number }> {
+  return api(`/api/contenidos/${contenidoId}/reportes/resolver`, { method: "POST" });
+}

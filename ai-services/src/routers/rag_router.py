@@ -66,6 +66,19 @@ async def index_material_file(
     return IndexMaterialResponse(**result)
 
 
+@router.get("/material/estado/{subject_id}")
+async def estado_material(subject_id: str, request: Request) -> dict:
+    """Fragmentos de material indexados para la materia (el backend decide si alcanza)."""
+    try:
+        fragmentos = await request.app.state.retrieval_service.count_chunks(subject_id)
+    except Exception as exc:
+        logger.exception("estado_material_error", subject_id=subject_id)
+        raise HTTPException(
+            status_code=502, detail=f"No se pudo consultar el material: {exc}"
+        ) from exc
+    return {"subject_id": subject_id, "fragmentos": fragmentos}
+
+
 @router.delete("/material/{subject_id}/{material_id}")
 async def delete_material(subject_id: str, material_id: str, request: Request) -> dict:
     await request.app.state.retrieval_service.delete_material(subject_id, material_id)

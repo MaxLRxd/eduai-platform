@@ -46,9 +46,27 @@ const preguntaCorregirSchema = z.object({
 export const corregirExamenSchema = z.object({
   titulo: z.string().min(1).max(200),
   dificultad: z.enum(["facil", "media", "dificil"]).default("media"),
-  preguntas: z.array(preguntaCorregirSchema).min(1).max(20),
+  preguntas: z
+    .array(preguntaCorregirSchema)
+    .min(1)
+    .max(20)
+    .superRefine((preguntas, ctx) => {
+      // Una opcion multiple sin la opcion correcta no se puede corregir (las de desarrollo si: se
+      // corrigen contra el material de la materia).
+      preguntas.forEach((p, i) => {
+        if (p.tipo === "multiple_choice" && !p.respuesta_modelo.trim()) {
+          ctx.addIssue({
+            code: "custom",
+            message: `La pregunta ${i + 1} es de opcion multiple y necesita la opcion correcta`,
+            path: [i, "respuesta_modelo"],
+          });
+        }
+      });
+    }),
   // false = corregir sin guardar el intento en el historial (CU-A11, paso de confirmacion).
   registrar: z.boolean().default(true),
+  // CU-A11 (A2): material de la materia con el que se relacionan las respuestas propias del alumno.
+  contenido_id: z.string().uuid("El material de referencia no es valido").optional(),
 });
 
 export const resumenPdfSchema = z.object({

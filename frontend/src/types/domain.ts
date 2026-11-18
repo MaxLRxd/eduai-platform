@@ -27,6 +27,8 @@ export interface CourseMaterial {
   archivo_nombre?: string | null;
   /** Cuerpo de los materiales de texto (se leen dentro de la plataforma). */
   texto?: string | null;
+  /** false = el servidor detectó que el archivo ya no está y no se puede servir. null = no se pudo comprobar. */
+  disponible?: boolean | null;
 }
 
 export interface Course {

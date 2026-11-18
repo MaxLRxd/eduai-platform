@@ -120,3 +120,25 @@ export async function estadisticasDeAcceso(
   }
   res.json(await contenidosService.estadisticasDeAcceso(req.params.materiaId, req.user.id));
 }
+
+export async function reportarProblema(req: Request<{ contenidoId: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const motivo = typeof req.body?.motivo === "string" ? req.body.motivo : undefined;
+  res.status(201).json(await contenidosService.reportarProblema(req.params.contenidoId, req.user.id, motivo));
+}
+
+export async function listarReportes(req: Request<{ materiaId: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json({ reportes: await contenidosService.listarReportes(req.params.materiaId, req.user.id) });
+}
+
+export async function resolverReportes(req: Request<{ contenidoId: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await contenidosService.resolverReportes(req.params.contenidoId, req.user.id));
+}

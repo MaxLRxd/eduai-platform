@@ -37,6 +37,9 @@ class FakeRetrieval:
     async def delete_material(self, subject_id, material_id):
         return None
 
+    async def count_chunks(self, subject_id):
+        return 7
+
 
 class FakeCorreccionLLM:
     async def generate(self, system_instruction, messages, temperature=None, max_tokens=None):

@@ -257,6 +257,16 @@ class RetrievalService:
                 return results
             return [r for r in results if float(r.get("score", 0.0)) >= float(min_score)]
 
+    async def count_chunks(self, subject_id: str) -> int:
+        """Fragmentos de material indexados para la materia (0 = nada para fundamentar)."""
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            return int(
+                await conn.fetchval(
+                    "SELECT count(*) FROM ai_materials WHERE subject_id = $1", subject_id
+                )
+            )
+
     async def close(self) -> None:
         if self._pool is not None:
             await self._pool.close()

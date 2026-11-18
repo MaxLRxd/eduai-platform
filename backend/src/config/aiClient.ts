@@ -465,12 +465,22 @@ export interface CorreccionExamenItemResult {
   feedback: string;
 }
 
-/** CU-A11: corrige las respuestas de un simulacro. `null` si el servicio de IA no responde. */
+export interface CorreccionExamenResult {
+  resultados: CorreccionExamenItemResult[];
+  /** true si alguna pregunta sin respuesta modelo se corrigio sin encontrar material de la materia. */
+  material_limitado: boolean;
+}
+
+/**
+ * CU-A11: corrige las respuestas de un simulacro. `null` si el servicio de IA no responde.
+ * `materialReferencia` es el texto de un material que el alumno eligio para fundamentar respuestas propias.
+ */
 export async function corregirExamenIA(
   subjectId: string,
   titulo: string,
-  items: CorreccionExamenItemInput[]
-): Promise<CorreccionExamenItemResult[] | null> {
+  items: CorreccionExamenItemInput[],
+  materialReferencia = ""
+): Promise<CorreccionExamenResult | null> {
   if (!aiDisponible()) {
     logger.warn("AI_SERVICE_URL no configurado; no se pudo corregir el simulacro");
     return null;
@@ -480,7 +490,7 @@ export async function corregirExamenIA(
     const res = await fetch(`${baseUrl()}/tutor/examen/corregir`, {
       method: "POST",
       headers: aiHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ subject_id: subjectId, titulo, items }),
+      body: JSON.stringify({ subject_id: subjectId, titulo, items, material_referencia: materialReferencia }),
       signal: AbortSignal.timeout(120_000),
     });
 
@@ -489,9 +499,37 @@ export async function corregirExamenIA(
       return null;
     }
 
-    return ((await res.json()) as { resultados: CorreccionExamenItemResult[] }).resultados;
+    const cuerpo = (await res.json()) as { resultados: CorreccionExamenItemResult[]; material_limitado?: boolean };
+    return { resultados: cuerpo.resultados, material_limitado: cuerpo.material_limitado ?? false };
   } catch (err) {
     logger.error({ err }, "Error al comunicarse con ai-service para corregir el simulacro");
+    return null;
+  }
+}
+
+/**
+ * Cuantos fragmentos de material hay indexados para la materia (CU-A11 A4: material insuficiente).
+ * `null` si el servicio de IA no responde: en ese caso no se sabe, y no se debe bloquear al alumno.
+ */
+export async function contarFragmentosIA(subjectId: string): Promise<number | null> {
+  if (!aiDisponible()) {
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl()}/rag/material/estado/${encodeURIComponent(subjectId)}`, {
+      headers: aiHeaders(),
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al consultar el estado del material en ai-service");
+      return null;
+    }
+
+    return ((await res.json()) as { fragmentos: number }).fragmentos;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para consultar el material");
     return null;
   }
 }

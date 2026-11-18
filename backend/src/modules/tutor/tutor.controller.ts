@@ -248,6 +248,13 @@ export async function corregirSimulacro(
   res.json(await tutorService.corregirSimulacro(req.params.materiaId, req.body, req.user.id));
 }
 
+export async function materialDisponible(req: Request<{ materiaId: string }>, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  res.json(await tutorService.materialDisponible(req.params.materiaId, req.user.id));
+}
+
 export async function listarSimulacros(
   req: Request<{ materiaId: string }>,
   res: Response

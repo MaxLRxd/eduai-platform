@@ -3,6 +3,9 @@
 import json
 import re
 
+import structlog
+
+from src.config.settings import settings
 from src.prompts.correccion_examen import SYSTEM_PROMPT as CORRECCION_EXAMEN_PROMPT
 from src.schemas.tutor import (
     CorrectExamRequest,
@@ -13,6 +16,9 @@ from src.schemas.tutor import (
 from src.services.llm_service import LLMService
 from src.services.prompt_sanitizer import sanitize_prompt
 from src.services.texto import limpiar_markdown
+from src.use_cases._helpers import format_context
+
+logger = structlog.get_logger(__name__)
 
 MAX_CARACTERES_RESPUESTA = 4000
 VEREDICTOS_VALIDOS = {"correcta", "parcial", "incorrecta"}
@@ -58,14 +64,35 @@ def _limpiar_respuesta(texto: str) -> str:
 
 
 class CorregirSimulacroUseCase:
-    def __init__(self, llm: LLMService):
+    def __init__(self, llm: LLMService, embeddings=None, retrieval=None):
         self.llm = llm
+        # Opcionales: sin ellos la correccion solo puede comparar contra la respuesta modelo.
+        self.embeddings = embeddings
+        self.retrieval = retrieval
+
+    async def _contexto(self, subject_id: str, enunciado: str) -> str:
+        """Fragmentos del material de la materia relacionados con la pregunta ("" si no hay)."""
+        if self.embeddings is None or self.retrieval is None:
+            return ""
+        try:
+            embedding = await self.embeddings.embed_query(enunciado)
+            resultados = await self.retrieval.search(
+                subject_id, embedding, settings.retrieval_top_k, settings.retrieval_min_score
+            )
+        except Exception:  # noqa: BLE001 - sin contexto se corrige igual, avisando que es limitada
+            logger.warning("correccion_contexto_no_disponible", subject_id=subject_id)
+            return ""
+        return format_context(resultados)
 
     async def execute(self, req: CorrectExamRequest) -> CorrectExamResponse:
         resultados: dict[int, ExamItemResult] = {}
         desarrollo: list[tuple[int, ExamAnswerItem]] = []
 
         for indice, item in enumerate(req.items):
+            if item.tipo == "multiple_choice" and not item.respuesta_modelo.strip():
+                raise ValueError(
+                    f"La pregunta {indice + 1} es de opción múltiple y no tiene la opción correcta."
+                )
             if not item.respuesta_alumno.strip():
                 resultados[indice] = ExamItemResult(
                     indice=indice,
@@ -78,21 +105,47 @@ class CorregirSimulacroUseCase:
             else:
                 desarrollo.append((indice, item))
 
+        material_limitado = False
         if desarrollo:
-            resultados.update(await self._corregir_desarrollo(desarrollo))
+            corregidas, material_limitado = await self._corregir_desarrollo(
+                desarrollo, req.subject_id, req.material_referencia
+            )
+            resultados.update(corregidas)
 
-        return CorrectExamResponse(resultados=[resultados[i] for i in range(len(req.items))])
+        return CorrectExamResponse(
+            resultados=[resultados[i] for i in range(len(req.items))],
+            material_limitado=material_limitado,
+        )
 
     async def _corregir_desarrollo(
-        self, pendientes: list[tuple[int, ExamAnswerItem]]
-    ) -> dict[int, ExamItemResult]:
+        self,
+        pendientes: list[tuple[int, ExamAnswerItem]],
+        subject_id: str = "",
+        material_referencia: str = "",
+    ) -> tuple[dict[int, ExamItemResult], bool]:
         bloques = []
+        material_limitado = False
         for indice, item in pendientes:
-            bloques.append(
+            bloque = (
                 f"PREGUNTA (indice {indice}): {item.enunciado}\n"
                 f"RESPUESTA MODELO: {item.respuesta_modelo or '(no disponible)'}\n"
                 f"RESPUESTA DEL ALUMNO: {_limpiar_respuesta(item.respuesta_alumno)}"
             )
+            if not item.respuesta_modelo.strip():
+                # Pregunta propia del alumno: no hay respuesta modelo, la referencia es el material.
+                contexto = await self._contexto(subject_id, item.enunciado)
+                if material_referencia.strip():
+                    elegido = (
+                        "[Fuente: material elegido por el alumno]\n"
+                        f"{material_referencia.strip()}"
+                    )
+                    contexto = f"{elegido}\n\n{contexto}" if contexto else elegido
+                if contexto:
+                    bloque += f"\nMATERIAL DE LA CÁTEDRA:\n{contexto}"
+                else:
+                    bloque += "\nMATERIAL DE LA CÁTEDRA: (no se encontró material de la materia)"
+                    material_limitado = True
+            bloques.append(bloque)
         user_content = "\n\n".join(bloques) + "\n\nDevolvé únicamente el JSON."
 
         raw = await self.llm.generate(
@@ -109,7 +162,7 @@ class CorregirSimulacroUseCase:
             raise ValueError(
                 f"El modelo no corrigió todas las preguntas (faltan: {sorted(faltantes)})."
             )
-        return {indice: parseados[indice] for indice in esperados}
+        return {indice: parseados[indice] for indice in esperados}, material_limitado
 
     @staticmethod
     def _parsear(raw: str) -> dict[int, ExamItemResult]:

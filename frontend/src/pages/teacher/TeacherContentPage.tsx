@@ -16,6 +16,7 @@ import { Button } from "../../components/ui/Button";
 import { apiErrorMessage } from "../../services/api";
 import { resolverMateriaActiva } from "../../utils/materiaActiva";
 import { ContentAccessCard } from "../../components/teacher/ContentAccessCard";
+import { ReportesMaterialCard } from "../../components/teacher/ReportesMaterialCard";
 import { MaterialRow } from "../../components/teacher/MaterialRow";
 import { ActivityFormModal } from "../../components/teacher/ActivityFormModal";
 import { ClassFormModal } from "../../components/teacher/ClassFormModal";
@@ -573,6 +574,8 @@ export function TeacherContentPage(): React.ReactElement {
               Los archivos marcados como <strong>RAG</strong> ya están disponibles para el Tutor IA de la materia.
             </p>
           </Card>
+
+          <ReportesMaterialCard materiaId={activeCourse} />
 
           <ContentAccessCard materiaId={activeCourse} />
         </aside>

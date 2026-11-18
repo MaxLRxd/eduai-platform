@@ -3,7 +3,7 @@ import multer from "multer";
 import { validateBody } from "../../middlewares/validate";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { env } from "../../config/env";
-import { actualizarContenidoSchema, crearContenidoSchema } from "./contenidos.schemas";
+import { actualizarContenidoSchema, crearContenidoSchema, reportarContenidoSchema } from "./contenidos.schemas";
 import * as contenidosController from "./contenidos.controller";
 
 const router = Router();
@@ -18,6 +18,25 @@ router.post(
   requireAuth,
   requireRole("ALUMNO"),
   contenidosController.registrarAcceso
+);
+router.post(
+  "/contenidos/:contenidoId/reportes",
+  requireAuth,
+  requireRole("ALUMNO"),
+  validateBody(reportarContenidoSchema),
+  contenidosController.reportarProblema
+);
+router.get(
+  "/materias/:materiaId/reportes-contenido",
+  requireAuth,
+  requireRole("PROFESOR"),
+  contenidosController.listarReportes
+);
+router.post(
+  "/contenidos/:contenidoId/reportes/resolver",
+  requireAuth,
+  requireRole("PROFESOR"),
+  contenidosController.resolverReportes
 );
 router.get(
   "/materias/:materiaId/accesos",

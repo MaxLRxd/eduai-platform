@@ -13,6 +13,10 @@ export const crearContenidoSchema = z.object({
   clase_id: z.string().uuid("clase invalida").nullable().optional(),
 });
 
+export const reportarContenidoSchema = z.object({
+  motivo: z.string().trim().max(300, "El motivo es muy largo (maximo 300 caracteres)").optional(),
+});
+
 export const actualizarContenidoSchema = crearContenidoSchema.partial();
 
 export type CrearContenidoInput = z.infer<typeof crearContenidoSchema>;

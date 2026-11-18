@@ -88,6 +88,8 @@ class CorrectExamRequest(BaseModel):
     subject_id: str = Field(..., min_length=1)
     titulo: str = ""
     items: list[ExamAnswerItem] = Field(..., min_length=1, max_length=20)
+    # Texto de un material de la materia que el alumno eligio como referencia (respuestas externas).
+    material_referencia: str = Field(default="", max_length=8000)
 
 
 class ExamItemResult(BaseModel):
@@ -99,6 +101,8 @@ class ExamItemResult(BaseModel):
 
 class CorrectExamResponse(BaseModel):
     resultados: list[ExamItemResult]
+    # true si alguna pregunta sin respuesta modelo se corrigio sin encontrar material de la materia.
+    material_limitado: bool = False
 
 
 class IndexMaterialRequest(BaseModel):

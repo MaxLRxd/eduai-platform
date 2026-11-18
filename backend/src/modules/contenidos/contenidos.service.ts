@@ -1,3 +1,5 @@
+import { archivoDisponible } from "../../config/storage";
+import { crearNoLeidas } from "../notificaciones/notificaciones.service";
 import type { Rol, TipoContenido } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
@@ -157,7 +159,7 @@ export async function listarPorSeccion(
     orderBy: { created_at: "asc" },
   });
 
-  return contenidos.map(toContenidoDto);
+  return Promise.all(contenidos.map((c) => conDisponibilidad(toContenidoDto(c))));
 }
 
 async function verificarAccesoLecturaMateria(materiaId: string, usuarioId: string, rol: Rol) {
@@ -204,15 +206,15 @@ export async function obtenerArbol(materiaId: string, usuarioId: string, rol: Ro
   });
 
   return {
-    secciones: secciones.map((s) => ({
+    secciones: await Promise.all(secciones.map(async (s) => ({
       id: s.id,
       materia_id: s.materia_id,
       nombre: s.nombre,
       descripcion: s.descripcion,
       tipo: s.tipo,
       orden: s.orden,
-      contenidos: s.contenidos.map(toContenidoDto),
-      clases: s.clases.map((c) => ({
+      contenidos: await Promise.all(s.contenidos.map((c) => conDisponibilidad(toContenidoDto(c)))),
+      clases: await Promise.all(s.clases.map(async (c) => ({
         id: c.id,
         materia_id: c.materia_id,
         seccion_id: c.seccion_id,
@@ -224,9 +226,9 @@ export async function obtenerArbol(materiaId: string, usuarioId: string, rol: Ro
         material_nombre: c.material_nombre,
         material_formato: c.material_formato,
         material_tamano_kb: c.material_tamano_kb,
-        contenidos: c.contenidos.map(toContenidoDto),
-      })),
-    })),
+        contenidos: await Promise.all(c.contenidos.map((x) => conDisponibilidad(toContenidoDto(x)))),
+      }))),
+    }))),
   };
 }
 
@@ -390,6 +392,163 @@ export async function eliminar(contenidoId: string, usuarioId: string) {
 const VENTANA_ACCESO_MS = 5 * 60 * 1000;
 
 /** CU-A02: registra que un alumno abrio un material (alimenta las estadisticas del docente). */
+/**
+ * Agrega `archivo_disponible` (CU-A02 5A): false si el archivo ya no esta en el almacenamiento, para que el
+ * alumno vea un aviso en lugar de un enlace roto. null = no se pudo comprobar.
+ */
+async function conDisponibilidad<T extends { archivo_url: string | null }>(
+  dto: T
+): Promise<T & { archivo_disponible: boolean | null }> {
+  return { ...dto, archivo_disponible: await archivoDisponible(dto.archivo_url) };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * CU-A02 (5A): el alumno avisa que un archivo no abre o esta danado. Hay un reporte por alumno y material:
+ * repetirlo mientras sigue abierto no avisa de nuevo al docente; si ya estaba resuelto, se reabre.
+ */
+export async function reportarProblema(contenidoId: string, alumnoId: string, motivo?: string) {
+  if (!UUID_RE.test(contenidoId)) {
+    throw new AppError(404, "Contenido no encontrado");
+  }
+
+  const contenido = await prisma.contenido.findUnique({
+    where: { id: contenidoId },
+    include: { seccion: { select: { materia_id: true } } },
+  });
+
+  if (!contenido) {
+    throw new AppError(404, "Contenido no encontrado");
+  }
+
+  const materiaId = contenido.seccion.materia_id;
+
+  if (!(await obtenerInscripcion(materiaId, alumnoId))) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const previo = await prisma.reporteContenido.findUnique({
+    where: { contenido_id_alumno_id: { contenido_id: contenidoId, alumno_id: alumnoId } },
+  });
+  const yaAbierto = previo !== null && previo.resuelto_en === null;
+  const datos = { motivo: motivo || null, reportado_en: new Date(), resuelto_en: null };
+
+  await prisma.reporteContenido.upsert({
+    where: { contenido_id_alumno_id: { contenido_id: contenidoId, alumno_id: alumnoId } },
+    create: { contenido_id: contenidoId, alumno_id: alumnoId, ...datos },
+    update: datos,
+  });
+
+  if (!yaAbierto) {
+    const [alumno, profesores] = await Promise.all([
+      prisma.usuario.findUnique({ where: { id: alumnoId }, select: { nombre: true } }),
+      prisma.materiaProfesor.findMany({
+        where: { materia_id: materiaId, activo: true },
+        select: { profesor: { select: { usuario_id: true } } },
+      }),
+    ]);
+
+    await Promise.all(
+      profesores.map((mp) =>
+        crearNoLeidas({
+          usuario_id: mp.profesor.usuario_id,
+          tipo: "ALERTA",
+          titulo: "Archivo reportado",
+          mensaje: `${alumno?.nombre ?? "Un alumno"} reporto que "${contenido.titulo}" no abre o esta danado`,
+          referencia_tipo: "contenido",
+          referencia_id: contenidoId,
+        })
+      )
+    );
+  }
+
+  return { reportado: true, ya_reportado: yaAbierto };
+}
+
+/** Materiales de la materia con reportes abiertos, para que el docente los revise (CU-A02 5A). */
+export async function listarReportes(materiaId: string, usuarioId: string) {
+  if (!UUID_RE.test(materiaId)) {
+    throw new AppError(404, "Materia no encontrada");
+  }
+
+  if (!(await obtenerProfesorAsignado(materiaId, usuarioId))) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const reportes = await prisma.reporteContenido.findMany({
+    where: { resuelto_en: null, contenido: { seccion: { materia_id: materiaId } } },
+    include: { contenido: { select: { id: true, titulo: true, tipo: true, archivo_url: true, archivo_nombre: true } } },
+    orderBy: { reportado_en: "desc" },
+  });
+
+  const porContenido = new Map<string, typeof reportes>();
+  for (const r of reportes) {
+    porContenido.set(r.contenido_id, [...(porContenido.get(r.contenido_id) ?? []), r]);
+  }
+
+  return Promise.all(
+    [...porContenido.values()].map(async (filas) => {
+      const { contenido } = filas[0];
+      return {
+        contenido_id: contenido.id,
+        titulo: contenido.titulo,
+        tipo: contenido.tipo,
+        archivo_nombre: contenido.archivo_nombre,
+        archivo_disponible: await archivoDisponible(contenido.archivo_url),
+        alumnos: filas.length,
+        ultimo_reporte: filas[0].reportado_en,
+        motivos: [...new Set(filas.map((f) => f.motivo).filter((m): m is string => Boolean(m)))].slice(0, 5),
+      };
+    })
+  );
+}
+
+/** El docente marca como resuelto el problema de un material (lo reemplazo o confirmo que abre) y avisa a quienes reportaron. */
+export async function resolverReportes(contenidoId: string, usuarioId: string) {
+  if (!UUID_RE.test(contenidoId)) {
+    throw new AppError(404, "Contenido no encontrado");
+  }
+
+  const contenido = await prisma.contenido.findUnique({
+    where: { id: contenidoId },
+    include: { seccion: { select: { materia_id: true } } },
+  });
+
+  if (!contenido) {
+    throw new AppError(404, "Contenido no encontrado");
+  }
+
+  if (!(await obtenerProfesorAsignado(contenido.seccion.materia_id, usuarioId))) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const abiertos = await prisma.reporteContenido.findMany({
+    where: { contenido_id: contenidoId, resuelto_en: null },
+    select: { alumno_id: true },
+  });
+
+  await prisma.reporteContenido.updateMany({
+    where: { contenido_id: contenidoId, resuelto_en: null },
+    data: { resuelto_en: new Date() },
+  });
+
+  await Promise.all(
+    abiertos.map((r) =>
+      crearNoLeidas({
+        usuario_id: r.alumno_id,
+        tipo: "SISTEMA",
+        titulo: "Archivo revisado",
+        mensaje: `Tu docente revisó "${contenido.titulo}", que habías reportado. Si todavía no abre, volvé a reportarlo.`,
+        referencia_tipo: "contenido",
+        referencia_id: contenidoId,
+      })
+    )
+  );
+
+  return { resueltos: abiertos.length };
+}
+
 export async function registrarAcceso(contenidoId: string, alumnoId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contenidoId)) {
     throw new AppError(404, "Contenido no encontrado");

@@ -64,6 +64,12 @@ router.post(
   tutorController.corregirSimulacro
 );
 router.get(
+  "/materias/:materiaId/tutor/material-disponible",
+  requireAuth,
+  requireRole("ALUMNO"),
+  tutorController.materialDisponible
+);
+router.get(
   "/materias/:materiaId/tutor/simulacros",
   requireAuth,
   requireRole("ALUMNO"),

@@ -127,6 +127,25 @@ export async function eliminarArchivo(url: string | null): Promise<void> {
   }
 }
 
+/**
+ * CU-A02 (5A): dice si un archivo guardado todavia se puede servir. `true`/`false` solo cuando se puede
+ * comprobar (disco local); `null` si no se sabe (almacenamiento externo o una URL ajena): ahi no se
+ * adivina, para no mostrarle al alumno un aviso falso.
+ */
+export async function archivoDisponible(url: string | null): Promise<boolean | null> {
+  if (!url || usarS3 || !url.startsWith("/uploads/")) return null;
+
+  const ruta = path.join(UPLOADS_DIR, path.basename(url));
+  if (!ruta.startsWith(UPLOADS_DIR)) return null;
+
+  try {
+    await fs.promises.access(ruta, fs.constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Lee un archivo guardado con `guardarArchivo` a partir de su URL. */
 export async function leerArchivo(url: string | null): Promise<Buffer | null> {
   if (!url) return null;

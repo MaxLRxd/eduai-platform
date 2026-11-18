@@ -520,6 +520,17 @@ dio ninguna se devuelve un error (no se inventa una calificación). Migración `
 respuesta completa dio 10 y una pobre 4,0 (60 % × Regular 50 % + 40 % × Insuficiente 25 %), y el formulario se
 probó en el navegador (crear, reabrir con sus niveles y borrar).
 
+**Archivos reportados y corrección de respuestas propias (2026-11-18).**
+- **CU-A02 (5A):** el servidor detecta cuándo un archivo ya no está guardado (`archivo_disponible`) y el alumno ve un aviso
+  que lo invita a reportarlo; también puede reportar uno que no abre. El docente recibe una notificación y ve *Archivos
+  reportados* en Contenidos; al resolver, los alumnos que reportaron reciben un aviso. Migración
+  `20261120120000_reportes_contenido`. Probado en el navegador de punta a punta (archivo borrado del disco → aviso →
+  reporte → tarjeta del docente → resuelto).
+- **CU-A11 (A2, A4):** el alumno puede corregir preguntas propias con sus respuestas. Sin respuesta modelo, el tutor corrige
+  contra el material indexado (antes el corrector no usaba el material). Antes de corregir se consulta cuántos fragmentos
+  hay indexados (mínimo 3): con poco material se avisa que la corrección puede ser limitada y el alumno elige continuar o
+  cancelar. Probado con la IA real: sin material la corrección sale marcada como limitada; con material cita la cátedra.
+
 ## OCR de imágenes y PDF escaneado (CU-P02, 2026-09-30)
 
 `ai-services/src/services/ocr_service.py`:
@@ -613,5 +624,5 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-17):** backend **310** en **34** suites · frontend **128** en
-**19** archivos · ai-services **126** (+1 omitido) · E2E **42**.
+**Conteo actual de tests (2026-11-17):** backend **348** en **36** suites · frontend **154** en
+**21** archivos · ai-services **139** (+1 omitido) · E2E **42**.

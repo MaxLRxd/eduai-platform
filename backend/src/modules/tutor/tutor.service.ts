@@ -2,7 +2,14 @@ import path from "node:path";
 import type { ModoSesionIA } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { chatTutor, corregirExamenIA, extraerTextoArchivo, generarExamen, resumirDocumento } from "../../config/aiClient";
+import {
+  chatTutor,
+  contarFragmentosIA,
+  corregirExamenIA,
+  extraerTextoArchivo,
+  generarExamen,
+  resumirDocumento,
+} from "../../config/aiClient";
 import { nombreArchivoUtf8 } from "../../utils/nombreArchivo";
 import { registrarConsultaTutor, seccionDeFuentes } from "../analytics/analytics.service";
 import { renderMaterialPdf } from "../asistente/materialPdf";
@@ -521,10 +528,47 @@ export async function generarSimulacro(materiaId: string, input: ExamenInput, al
  * intento en su historial. Si el servicio de IA falla no se pierde nada: el cliente conserva
  * las respuestas y puede reintentar (A5).
  */
+/** Con menos fragmentos que esto, el material de la materia no alcanza para fundamentar una correccion. */
+export const MIN_FRAGMENTOS_PARA_CORREGIR = 3;
+
+/**
+ * CU-A11 (A4): le dice al alumno, antes de corregir, si hay material indexado suficiente. `suficiente: null`
+ * significa que no se pudo saber (servicio de IA caido): no se bloquea nada.
+ */
+export async function materialDisponible(materiaId: string, alumnoId: string) {
+  await exigirInscripcion(materiaId, alumnoId);
+
+  const fragmentos = await contarFragmentosIA(materiaId);
+
+  return {
+    fragmentos,
+    minimo: MIN_FRAGMENTOS_PARA_CORREGIR,
+    suficiente: fragmentos === null ? null : fragmentos >= MIN_FRAGMENTOS_PARA_CORREGIR,
+  };
+}
+
 export async function corregirSimulacro(materiaId: string, input: CorregirExamenInput, alumnoId: string) {
   await exigirInscripcion(materiaId, alumnoId);
 
-  const resultados = await corregirExamenIA(
+  // CU-A11 (A2): las respuestas propias se asocian a un material de ESTA materia y disponible. Si el material
+  // tiene texto se usa como referencia; si es un archivo se valida igual y se corrige con el material indexado.
+  let materialReferencia = "";
+  if (input.contenido_id) {
+    const contenido = await prisma.contenido.findUnique({
+      where: { id: input.contenido_id },
+      include: { seccion: { select: { materia_id: true } } },
+    });
+
+    if (!contenido || contenido.seccion.materia_id !== materiaId) {
+      throw new AppError(404, "Material no encontrado en esta materia");
+    }
+    if (!contenido.rag_indexado && !contenido.texto_contenido?.trim()) {
+      throw new AppError(409, "Ese material todavia no esta disponible para fundamentar la correccion");
+    }
+    materialReferencia = (contenido.texto_contenido ?? "").trim().slice(0, 8000);
+  }
+
+  const correccion = await corregirExamenIA(
     materiaId,
     input.titulo,
     input.preguntas.map((p) => ({
@@ -533,16 +577,18 @@ export async function corregirSimulacro(materiaId: string, input: CorregirExamen
       opciones: p.opciones,
       respuesta_modelo: p.respuesta_modelo,
       respuesta_alumno: p.respuesta_alumno,
-    }))
+    })),
+    materialReferencia
   );
 
-  if (!resultados || resultados.length !== input.preguntas.length) {
+  if (!correccion || correccion.resultados.length !== input.preguntas.length) {
     throw new AppError(
       502,
       "No fue posible corregir el simulacro en este momento. Tus respuestas se conservan: podés reintentar más tarde"
     );
   }
 
+  const resultados = correccion.resultados;
   const ordenados = [...resultados].sort((a, b) => a.indice - b.indice);
   const cuenta = (v: string) => ordenados.filter((r) => r.veredicto === v).length;
   const puntaje = Math.round((ordenados.reduce((s, r) => s + r.puntaje, 0) / ordenados.length) * 1000) / 100;
@@ -576,7 +622,8 @@ export async function corregirSimulacro(materiaId: string, input: CorregirExamen
     id = intento.id;
   }
 
-  return { id, ...resumen, resultados: detalle };
+  // `material_limitado` no se guarda en el historial: es un aviso de esta correccion.
+  return { id, ...resumen, material_limitado: correccion.material_limitado, resultados: detalle };
 }
 
 /** Historial de simulacros corregidos del alumno en la materia (mas recientes primero). */

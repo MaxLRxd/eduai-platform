@@ -113,6 +113,7 @@ model Usuario {
   alertasRiesgo  AlertaRiesgoAcademico[]
   notificaciones Notificacion[]
   accesosContenido AccesoContenido[]
+  reportesContenido ReporteContenido[]
   intentosSimulacro IntentoSimulacro[]
   conversaciones ConversacionMiembro[]
   mensajesEnviados MensajeDirecto[]
@@ -264,6 +265,7 @@ model Contenido {
   seccion  Seccion           @relation(fields: [seccion_id], references: [id])
   clase    PlanningClase?    @relation(fields: [clase_id], references: [id], onDelete: SetNull)
   accesos  AccesoContenido[]
+  reportes ReporteContenido[]
 
   @@index([clase_id])
   @@map("contenidos")
@@ -282,6 +284,24 @@ model AccesoContenido {
   @@index([contenido_id])
   @@index([alumno_id, accedido_en])
   @@map("accesos_contenido")
+}
+
+/// CU-A02 (5A): un alumno avisa que un archivo no abre o esta danado. Uno por alumno y material.
+model ReporteContenido {
+  id           String    @id @default(uuid()) @db.Uuid
+  contenido_id String    @db.Uuid
+  alumno_id    String    @db.Uuid
+  motivo       String?   @db.VarChar(300)
+  reportado_en DateTime  @default(now())
+  // null = abierto. Cuando el docente lo resuelve se completa; un nuevo reporte del alumno lo reabre.
+  resuelto_en  DateTime?
+
+  contenido Contenido @relation(fields: [contenido_id], references: [id], onDelete: Cascade)
+  alumno    Usuario   @relation(fields: [alumno_id], references: [id])
+
+  @@unique([contenido_id, alumno_id])
+  @@index([contenido_id])
+  @@map("reportes_contenido")
 }
 
 /// CU-A11: simulacro corregido por el tutor, guardado en el historial del alumno.
