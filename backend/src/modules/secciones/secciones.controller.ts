@@ -3,6 +3,7 @@ import * as seccionesService from "./secciones.service";
 import type {
   ActualizarSeccionInput,
   CrearSeccionInput,
+  ReordenarSeccionesInput,
 } from "./secciones.schemas";
 import { AppError } from "../../middlewares/error";
 
@@ -52,4 +53,15 @@ export async function eliminar(
   }
   const resultado = await seccionesService.eliminar(req.params.seccionId, req.user.id);
   res.json(resultado);
+}
+
+export async function reordenar(
+  req: Request<{ materiaId: string }, unknown, ReordenarSeccionesInput>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const secciones = await seccionesService.reordenar(req.params.materiaId, req.body, req.user.id);
+  res.json({ secciones });
 }

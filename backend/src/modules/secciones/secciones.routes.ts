@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { validateBody } from "../../middlewares/validate";
 import { requireAuth, requireRole } from "../../middlewares/auth";
-import { actualizarSeccionSchema, crearSeccionSchema } from "./secciones.schemas";
+import { actualizarSeccionSchema, crearSeccionSchema, reordenarSeccionesSchema } from "./secciones.schemas";
 import * as seccionesController from "./secciones.controller";
 
 const router = Router();
@@ -17,6 +17,13 @@ router.post(
   requireRole("PROFESOR"),
   validateBody(crearSeccionSchema),
   seccionesController.crear
+);
+router.put(
+  "/materias/:materiaId/secciones/orden",
+  requireAuth,
+  requireRole("PROFESOR"),
+  validateBody(reordenarSeccionesSchema),
+  seccionesController.reordenar
 );
 router.put(
   "/secciones/:seccionId",

@@ -5,6 +5,8 @@ import {
   getCourseContentTree,
   getCourseSections,
   getUploadedMaterials,
+  reorderSections,
+  updateSection,
   uploadMaterial,
   uploadMaterialFile,
 } from "../services/content.service";
@@ -39,6 +41,24 @@ export function useCreateSection() {
     mutationFn: ({ courseId, input }: { courseId: string; input: Parameters<typeof createSection>[1] }) =>
       createSection(courseId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content"] }),
+  });
+}
+
+export function useUpdateSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sectionId, input }: { sectionId: string; input: Parameters<typeof updateSection>[1] }) =>
+      updateSection(sectionId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content"] }),
+  });
+}
+
+export function useReorderSections() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, ids }: { courseId: string; ids: string[] }) => reorderSections(courseId, ids),
+    // Pase lo que pase se recarga: si el orden se rechazo, la pantalla vuelve a mostrar el real.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["content"] }),
   });
 }
 

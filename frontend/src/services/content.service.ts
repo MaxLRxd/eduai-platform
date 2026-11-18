@@ -161,6 +161,31 @@ export async function createSection(courseId: string, input: CreateSectionInput)
   return data.seccion;
 }
 
+export async function updateSection(
+  sectionId: string,
+  input: { nombre?: string; tipo?: "TEORIA" | "PRACTICA" }
+): Promise<ContentSection> {
+  const data = await api<{ seccion: ContentSection }>(`/api/secciones/${sectionId}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return data.seccion;
+}
+
+/** Guarda el orden de las unidades: recibe TODOS los ids de la materia en el orden nuevo. */
+export async function reorderSections(courseId: string, ids: string[]): Promise<void> {
+  await api(`/api/materias/${courseId}/secciones/orden`, { method: "PUT", body: JSON.stringify({ ids }) });
+}
+
+/** Devuelve los ids con la unidad de `indice` movida una posicion (-1 sube, +1 baja), o null si no se puede. */
+export function moverUnidad(ids: string[], indice: number, delta: -1 | 1): string[] | null {
+  const destino = indice + delta;
+  if (indice < 0 || indice >= ids.length || destino < 0 || destino >= ids.length) return null;
+  const copia = [...ids];
+  [copia[indice], copia[destino]] = [copia[destino], copia[indice]];
+  return copia;
+}
+
 export async function deleteSection(sectionId: string): Promise<void> {
   await api(`/api/secciones/${sectionId}`, { method: "DELETE" });
 }

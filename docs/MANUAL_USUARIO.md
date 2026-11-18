@@ -165,6 +165,8 @@ Solo ves las materias que el administrador te asignó. Cuando te asignan una, te
 
 1. Entrá desde **Mis materias** con **Gestionar contenidos**, o elegí la **materia** en la pantalla.
 2. Creá las **unidades** con **Nueva sección**. El nombre no puede repetirse dentro de la materia. Al crearla podés, opcionalmente, subir material de la unidad y crear su primera clase.
+   - **Editar:** el botón **Editar** de cada unidad permite cambiarle el nombre y el tipo (teoría o práctica).
+   - **Reordenar:** los botones **↑** y **↓** suben o bajan la unidad; el orden se guarda al instante y es el que ven los alumnos.
 3. Dentro de cada unidad agregá **clases** con **+ Clase** (o desde **Planificación**). Elegí si un archivo pertenece a la unidad o a una clase.
 4. Para el material de una clase tenés dos opciones: **Elegir de Contenidos** (un material ya subido) o **subir un archivo** nuevo.
 5. Las evaluaciones se vinculan con **+ Evaluación**, en la unidad o en la clase; en cada una se ve a qué clase pertenece.

@@ -6,6 +6,8 @@ import {
   useCourseSections,
   useCreateSection,
   useDeleteSection,
+  useReorderSections,
+  useUpdateSection,
   useUploadMaterialFile,
 } from "../../hooks/useContent";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -18,6 +20,8 @@ import { MaterialRow } from "../../components/teacher/MaterialRow";
 import { ActivityFormModal } from "../../components/teacher/ActivityFormModal";
 import { ClassFormModal } from "../../components/teacher/ClassFormModal";
 import { ClassMaterialModal } from "../../components/teacher/ClassMaterialModal";
+import { SeccionEditForm } from "../../components/teacher/SeccionEditForm";
+import { moverUnidad } from "../../services/content.service";
 import { useTeacherActivities } from "../../hooks/useActivities";
 import { useRubrics } from "../../hooks/useCorrections";
 import { TIPO_ACTIVIDAD_LABEL } from "../../services/activities.service";
@@ -58,6 +62,10 @@ export function TeacherContentPage(): React.ReactElement {
 
   const createSection = useCreateSection();
   const deleteSection = useDeleteSection();
+  const updateSection = useUpdateSection();
+  const reorderSections = useReorderSections();
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [sectionName, setSectionName] = useState("");
   const [sectionTipo, setSectionTipo] = useState<"TEORIA" | "PRACTICA">("TEORIA");
   const [sectionFile, setSectionFile] = useState<File | null>(null);
@@ -114,6 +122,31 @@ export function TeacherContentPage(): React.ReactElement {
           }
         },
         onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo crear la sección")),
+      }
+    );
+  };
+
+  const handleMoveSection = (index: number, delta: -1 | 1): void => {
+    const ids = moverUnidad((tree ?? []).map((s) => s.id), index, delta);
+    if (!ids || !activeCourse) return;
+    setSectionError(null);
+    setSectionMsg("");
+    reorderSections.mutate(
+      { courseId: activeCourse, ids },
+      { onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo cambiar el orden")) }
+    );
+  };
+
+  const handleSaveSection = (id: string, cambios: { nombre: string; tipo: "TEORIA" | "PRACTICA" }): void => {
+    setEditError(null);
+    updateSection.mutate(
+      { sectionId: id, input: cambios },
+      {
+        onSuccess: () => {
+          setEditingSectionId(null);
+          setSectionMsg("Unidad actualizada.");
+        },
+        onError: (err) => setEditError(apiErrorMessage(err, "No se pudo guardar la unidad")),
       }
     );
   };
@@ -244,7 +277,7 @@ export function TeacherContentPage(): React.ReactElement {
               Elegí si el archivo pertenece a la unidad o a una clase. Podés crear clases acá o desde Planificación.
             </p>
             <div className="flex flex-col gap-2.5 mb-3">
-              {(tree ?? []).map((s) => {
+              {(tree ?? []).map((s, indice, todas) => {
                 const esUnidadDestino = activeSection === s.id && !activeClass;
                 const actividadesUnidad = (activities ?? []).filter(
                   (a) => a.seccion_id === s.id && !a.clase_id
@@ -273,6 +306,37 @@ export function TeacherContentPage(): React.ReactElement {
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={indice === 0 || reorderSections.isPending}
+                          onClick={() => handleMoveSection(indice, -1)}
+                          aria-label={`Subir la unidad ${s.nombre}`}
+                          title="Subir"
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={indice === todas.length - 1 || reorderSections.isPending}
+                          onClick={() => handleMoveSection(indice, 1)}
+                          aria-label={`Bajar la unidad ${s.nombre}`}
+                          title="Bajar"
+                        >
+                          ↓
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditError(null);
+                            setEditingSectionId(editingSectionId === s.id ? null : s.id);
+                          }}
+                          aria-label={`Editar la unidad ${s.nombre}`}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           disabled={deleteSection.isPending}
                           onClick={() => handleDeleteSection(s.id)}
                           aria-label={`Eliminar sección ${s.nombre}`}
@@ -281,6 +345,16 @@ export function TeacherContentPage(): React.ReactElement {
                         </Button>
                       </div>
                     </div>
+                    {editingSectionId === s.id && (
+                      <SeccionEditForm
+                        nombre={s.nombre}
+                        tipo={s.tipo}
+                        guardando={updateSection.isPending}
+                        error={editError}
+                        onGuardar={(cambios) => handleSaveSection(s.id, cambios)}
+                        onCancelar={() => setEditingSectionId(null)}
+                      />
+                    )}
                     <div className="px-3 py-2.5 flex flex-col gap-2">
                       {s.materials.length > 0 && (
                         <div className="flex flex-col gap-1">

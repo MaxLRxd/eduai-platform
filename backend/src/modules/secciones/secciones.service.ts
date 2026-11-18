@@ -9,6 +9,7 @@ import {
 import type {
   ActualizarSeccionInput,
   CrearSeccionInput,
+  ReordenarSeccionesInput,
 } from "./secciones.schemas";
 
 function toSeccionDto(seccion: {
@@ -61,7 +62,7 @@ export async function listarPorMateria(materiaId: string, usuarioId: string, rol
   const secciones = await prisma.seccion.findMany({
     where: { materia_id: materiaId },
     include: seccionInclude,
-    orderBy: { orden: "asc" },
+    orderBy: [{ orden: "asc" }, { created_at: "asc" }],
   });
 
   return secciones.map(toSeccionDto);
@@ -149,6 +150,34 @@ export async function actualizar(
   });
 
   return toSeccionDto(seccion);
+}
+
+/**
+ * CU-P01: reordena las unidades de la materia. Recibe TODOS los ids en el orden nuevo y los renumera
+ * 0..n-1 en una sola transaccion (asi no quedan huecos ni repetidos). Si falta o sobra alguno, se
+ * rechaza: significa que la pantalla estaba desactualizada.
+ */
+export async function reordenar(materiaId: string, input: ReordenarSeccionesInput, usuarioId: string) {
+  await assertUuid(materiaId);
+
+  const perfil = await obtenerProfesorAsignado(materiaId, usuarioId);
+  if (!perfil) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  const existentes = await prisma.seccion.findMany({ where: { materia_id: materiaId }, select: { id: true } });
+  const idsExistentes = new Set(existentes.map((s) => s.id));
+  const coincide =
+    input.ids.length === idsExistentes.size && input.ids.every((id) => idsExistentes.has(id));
+  if (!coincide) {
+    throw new AppError(409, "Las unidades cambiaron mientras ordenabas. Recarga la pagina e intenta de nuevo");
+  }
+
+  await prisma.$transaction(
+    input.ids.map((id, orden) => prisma.seccion.update({ where: { id }, data: { orden } }))
+  );
+
+  return listarPorMateria(materiaId, usuarioId, "PROFESOR");
 }
 
 export async function eliminar(seccionId: string, usuarioId: string) {

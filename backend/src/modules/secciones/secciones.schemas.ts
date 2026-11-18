@@ -11,5 +11,12 @@ export const crearSeccionSchema = z.object({
 
 export const actualizarSeccionSchema = crearSeccionSchema.partial();
 
+export const reordenarSeccionesSchema = z
+  .object({
+    ids: z.array(z.string().uuid("id de seccion invalido")).min(1, "Falta la lista de secciones"),
+  })
+  .refine((v) => new Set(v.ids).size === v.ids.length, { message: "Hay secciones repetidas", path: ["ids"] });
+
+export type ReordenarSeccionesInput = z.infer<typeof reordenarSeccionesSchema>;
 export type CrearSeccionInput = z.infer<typeof crearSeccionSchema>;
 export type ActualizarSeccionInput = z.infer<typeof actualizarSeccionSchema>;

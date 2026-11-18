@@ -3,9 +3,9 @@
 Estado de los **26 casos de uso** especificados en el Anexo B, contrastados con el código y las pruebas.
 Las especificaciones están en la carpeta *Casos de Uso* de la documentación del proyecto.
 
-**Resumen:** 22 casos completos y 4 parciales. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
+**Resumen:** 23 casos completos y 3 parciales. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
 
-> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso; P01 sigue sin pantalla para editar y reordenar secciones (verificado en `TeacherContentPage`).
+> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01 se completó el 2026-11-18 (editar y reordenar unidades desde la pantalla).
 
 Referencias de la columna *Prueba*: `E2E` = `e2e/flujo-completo.e2e.mjs`; el resto son archivos de `backend/src/tests/`, `ai-services/src/tests/` o `frontend/src/tests/`.
 
@@ -33,7 +33,7 @@ Leyenda: ✅ completo · 🟡 parcial
 
 | CU | Nombre | Estado | Dónde está | Prueba | Observaciones |
 | --- | --- | --- | --- | --- | --- |
-| P01 | Crear y gestionar secciones | 🟡 | `secciones.service` · `TeacherContentPage` | `reglas-casos-de-uso`, E2E | Crear y eliminar desde la pantalla; rechaza nombres duplicados (E1). **Editar y reordenar** existen en la API (`PUT /api/secciones/:id`, campo `orden`) pero **la pantalla no los ofrece**. |
+| P01 | Crear y gestionar secciones | ✅ | `secciones.service` · `TeacherContentPage` · `SeccionEditForm` | `reglas-casos-de-uso`, `secciones-edicion`, E2E | Crear, **editar** (nombre y tipo), **reordenar** (↑ ↓) y eliminar desde la pantalla; rechaza nombres duplicados (E1), también al editar. El orden se guarda de forma atómica (`PUT /api/materias/:id/secciones/orden`) y si la lista cambió mientras se ordenaba se rechaza y se recarga. |
 | P02 | Subir contenido | ✅ | `contenidos.service` · `TeacherContentPage` | `entrega-archivo`, `rag-indexer`, E2E | PDF, DOCX, PPTX, imágenes y texto hasta 50 MB; indexado automático en segundo plano para el tutor. |
 | P03 | Definir espacio de entrega | ✅ | `actividades.service.crear` · `ActivityFormModal` | `reglas-casos-de-uso`, E2E | Cuatro tipos, formatos permitidos, rúbrica opcional (sin rúbrica = revisión manual), rechaza fecha límite en el pasado (E1). Más tarde el docente puede mover la fecha al pasado para cerrar la entrega. |
 | P04 | Configurar rúbrica | ✅ | `actividades.service` (rúbricas) · `RubricFormModal` | `rubricas`, E2E | Los pesos deben sumar 100 %; advierte si la rúbrica está en uso. Cada criterio lleva "lo esperado" (usado por la IA). **No tiene niveles de desempeño** (Excelente/Bueno/…) configurables. |
@@ -80,7 +80,6 @@ Lo que queda fuera, en orden de importancia para la defensa:
 
 1. **Medir el tiempo real del LLM** con las claves de Gemini configuradas (`npm run benchmark:tutor`); en el entorno de desarrollo no hay clave.
 2. P08/P09: filtros por período o unidad y detalle por tema en el dashboard del docente.
-3. P01: pantalla para editar y reordenar secciones.
-4. A05 (A1): adjuntar un archivo propio al resumen.
-5. P04: niveles de desempeño configurables en la rúbrica.
-6. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.
+3. A05 (A1): adjuntar un archivo propio al resumen.
+4. P04: niveles de desempeño configurables en la rúbrica.
+5. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.

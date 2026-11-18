@@ -598,6 +598,6 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-17):** backend **240** en **30** suites · frontend **84** en
-**15** archivos · ai-services: 21 archivos de tests (107 según `DOCUMENTACION_TECNICA.md`, sin
+**Conteo actual de tests (2026-11-17):** backend **251** en **31** suites · frontend **91** en
+**16** archivos · ai-services: 21 archivos de tests (107 según `DOCUMENTACION_TECNICA.md`, sin
 reverificar) · E2E **42**.

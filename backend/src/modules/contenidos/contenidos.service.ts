@@ -187,7 +187,7 @@ export async function obtenerArbol(materiaId: string, usuarioId: string, rol: Ro
 
   const secciones = await prisma.seccion.findMany({
     where: { materia_id: materiaId },
-    orderBy: { orden: "asc" },
+    orderBy: [{ orden: "asc" }, { created_at: "asc" }],
     include: {
       contenidos: {
         where: { clase_id: null },
