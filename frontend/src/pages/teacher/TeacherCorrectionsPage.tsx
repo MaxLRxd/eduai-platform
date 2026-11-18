@@ -259,6 +259,11 @@ export function TeacherCorrectionsPage(): React.ReactElement {
               {primaryRubric && (
                 <div className="border-t border-border mt-4.5 pt-4">
                   <div className="font-bold text-[13px] text-text-1 mb-2.5">📋 Rúbrica asociada: {primaryRubric.name}</div>
+                  {primaryRubric.levels.length > 0 && (
+                    <div className="text-[11px] text-text-2 mb-2">
+                      Niveles: {primaryRubric.levels.map((l) => `${l.name} (${l.score}%)`).join(" · ")}
+                    </div>
+                  )}
                   {criteria.map((c) => (
                     <div key={c.name} className="flex justify-between items-start py-1.5 border-b border-border last:border-0 gap-3">
                       <div>
@@ -305,6 +310,7 @@ export function TeacherCorrectionsPage(): React.ReactElement {
                       <div className="text-[13px] font-semibold text-text-1">{r.name}</div>
                       <div className="text-[11px] text-text-3">
                         {r.criteriaCount} criterios · {r.activitiesCount} actividades
+                        {r.levels.length > 0 && ` · ${r.levels.length} niveles`}
                       </div>
                     </div>
                     <div className="flex gap-1">

@@ -161,7 +161,7 @@ describe("entregas: plazo y correccion automatica (CU-A03)", () => {
     expect(aiMock).toHaveBeenCalledWith(
       expect.objectContaining({
         subject_id: MATERIA_ID,
-        rubrica: [{ nombre: "Conceptos", peso: 100, esperado: "Define el modelo." }],
+        rubrica: [{ nombre: "Conceptos", peso: 100, esperado: "Define el modelo.", descriptores: {} }],
       })
     );
   });

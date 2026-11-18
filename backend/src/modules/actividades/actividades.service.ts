@@ -1,5 +1,6 @@
+import { rubricaParaIA, validarDescriptores, type CriterioRubrica, type NivelDesempeno } from "./rubricas";
 import path from "node:path";
-import type { Prisma, Rol } from "@prisma/client";
+import { Prisma, type Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { corregirEntregaIA } from "../../config/aiClient";
 import { logger } from "../../config/logger";
@@ -581,6 +582,7 @@ function toRubricaDto(rubrica: {
   nombre: string;
   descripcion: string | null;
   criterios: Prisma.JsonValue;
+  niveles?: Prisma.JsonValue | null;
   _count: { actividades: number };
 }) {
   return {
@@ -588,6 +590,7 @@ function toRubricaDto(rubrica: {
     nombre: rubrica.nombre,
     descripcion: rubrica.descripcion,
     criterios: rubrica.criterios as object,
+    niveles: (rubrica.niveles as object | null | undefined) ?? null,
     actividades: rubrica._count.actividades,
   };
 }
@@ -610,6 +613,7 @@ export async function crearRubrica(
       nombre: input.nombre,
       descripcion: input.descripcion,
       criterios: input.criterios as Prisma.InputJsonValue,
+      ...(input.niveles ? { niveles: input.niveles as Prisma.InputJsonValue } : {}),
     },
     include: { _count: { select: { actividades: true } } },
   });
@@ -626,12 +630,24 @@ export async function actualizarRubrica(
 
   await exigirAccesoAMateria(rubrica.materia_id, usuarioId);
 
+  // Si llega solo una de las dos partes, la consistencia (descriptores vs niveles) se revisa contra
+  // lo que ya estaba guardado: asi no queda una rubrica con descriptores de un nivel que ya no existe.
+  const criteriosFinales = (input.criterios ?? rubrica.criterios) as CriterioRubrica[];
+  const nivelesFinales = (input.niveles === undefined ? rubrica.niveles : input.niveles) as NivelDesempeno[] | null;
+  validarDescriptores(criteriosFinales, nivelesFinales);
+
   const actualizada = await prisma.rubrica.update({
     where: { id: rubricaId },
     data: {
       nombre: input.nombre,
       descripcion: input.descripcion,
       criterios: (input.criterios as Prisma.InputJsonValue) ?? undefined,
+      niveles:
+        input.niveles === undefined
+          ? undefined
+          : input.niveles === null
+            ? Prisma.DbNull
+            : (input.niveles as Prisma.InputJsonValue),
     },
     include: { _count: { select: { actividades: true } } },
   });
@@ -682,18 +698,15 @@ async function generarBorradorIA(
     ? await prisma.rubrica.findUnique({ where: { id: actividad.rubrica_id } })
     : null;
 
-  const criterios = (rubrica?.criterios as { nombre: string; peso: number; esperado?: string }[] | undefined) ?? [];
+  const { rubrica: criterios, niveles } = rubricaParaIA(rubrica);
 
   const resultado = await corregirEntregaIA({
     subject_id: materiaId,
     material_id: actividad.id,
     consigna: actividad.consigna,
     entrega: contenido || `[entrega adjunta: ${entrega.archivo_nombre}]`,
-    rubrica: criterios.map((c) => ({
-      nombre: c.nombre,
-      peso: c.peso,
-      esperado: c.esperado ?? "",
-    })),
+    rubrica: criterios,
+    niveles,
   });
 
   if (!resultado) {

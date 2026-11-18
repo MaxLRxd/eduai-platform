@@ -30,7 +30,8 @@ interface RubricaApi {
   id: string;
   nombre: string;
   descripcion: string | null;
-  criterios: { nombre: string; peso: number; esperado?: string }[];
+  criterios: { nombre: string; peso: number; esperado?: string; descriptores?: Record<string, string> }[];
+  niveles?: { nombre: string; puntaje: number }[] | null;
   actividades: number;
 }
 
@@ -38,12 +39,16 @@ export interface RubricCriterionInput {
   nombre: string;
   peso: number;
   esperado: string;
+  /** Qué se ve en la entrega para cada nivel (clave = nombre del nivel). Opcional. */
+  descriptores?: Record<string, string>;
 }
 
 export interface RubricInput {
   nombre: string;
   descripcion?: string;
   criterios: RubricCriterionInput[];
+  /** Niveles de desempeño. `null` (al editar) quita los niveles de la rúbrica; omitido = sin cambios. */
+  niveles?: { nombre: string; puntaje: number }[] | null;
 }
 
 function toRubric(r: RubricaApi): Rubric {
@@ -57,7 +62,9 @@ function toRubric(r: RubricaApi): Rubric {
       name: c.nombre,
       weight: `${c.peso}%`,
       expected: c.esperado ?? "",
+      descriptors: c.descriptores ?? {},
     })),
+    levels: (r.niveles ?? []).map((n) => ({ name: n.nombre, score: n.puntaje })),
   };
 }
 

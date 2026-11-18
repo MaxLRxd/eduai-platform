@@ -195,6 +195,13 @@ Podés **Archivar** una actividad (los alumnos dejan de verla pero se conservan 
 
 **Rúbricas**: en **Gestionar rúbricas** tocá **Nueva rúbrica**, definí criterios con su peso y qué esperás encontrar en cada uno. **Los pesos deben sumar 100%.** Si la rúbrica está en uso, el sistema te avisa antes de modificarla o borrarla.
 
+**Niveles de desempeño (opcional).** Al final del formulario, activá **Usar niveles de desempeño** para calificar por niveles en lugar de dejar que la IA decida la nota:
+
+- Definí entre **2 y 6 niveles**, de mejor a peor (por ejemplo *Excelente 100 %*, *Bueno 75 %*, *Regular 50 %*, *Insuficiente 25 %*). Con **Niveles típicos** arrancás de esa lista. El porcentaje es lo que se obtiene del peso del criterio en ese nivel; el primero vale 100 % y cada uno baja respecto del anterior.
+- En cada criterio, **Descriptores por nivel** te deja escribir qué se ve en la entrega en cada nivel (por ejemplo, qué es un *Excelente* en "Conceptos"). Es opcional, pero ayuda a la IA a elegir mejor.
+- La IA elige **un nivel por criterio** y la **nota se calcula** con los porcentajes de esos niveles: no depende de una cuenta del modelo. El feedback termina con un resumen *Niveles alcanzados* con el nivel de cada criterio. Como siempre, es un borrador: vos revisás y publicás.
+- Si más adelante desactivás los niveles, la rúbrica vuelve a funcionar como antes. Las rúbricas que ya tenías siguen igual hasta que les agregues niveles.
+
 **Cola de correcciones**: lista las entregas pendientes de revisar.
 
 1. Cuando un alumno entrega una actividad con rúbrica, el sistema **deja un borrador de corrección hecho por la IA** (nota y feedback).

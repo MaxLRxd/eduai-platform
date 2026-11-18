@@ -5,7 +5,7 @@ Las especificaciones están en la carpeta *Casos de Uso* de la documentación de
 
 **Resumen:** los 26 casos están completos. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
 
-> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01, P08, P09 y A05 se completaron el 2026-11-18 (editar y reordenar unidades; filtros y detalle por tema en el dashboard del docente; resumen de un archivo propio).
+> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01, P04, P08, P09 y A05 se completaron el 2026-11-18 (editar y reordenar unidades; niveles de desempeño en la rúbrica; filtros y detalle por tema en el dashboard del docente; resumen de un archivo propio).
 
 Referencias de la columna *Prueba*: `E2E` = `e2e/flujo-completo.e2e.mjs`; el resto son archivos de `backend/src/tests/`, `ai-services/src/tests/` o `frontend/src/tests/`.
 
@@ -36,7 +36,7 @@ Leyenda: ✅ completo · 🟡 parcial
 | P01 | Crear y gestionar secciones | ✅ | `secciones.service` · `TeacherContentPage` · `SeccionEditForm` | `reglas-casos-de-uso`, `secciones-edicion`, E2E | Crear, **editar** (nombre y tipo), **reordenar** (↑ ↓) y eliminar desde la pantalla; rechaza nombres duplicados (E1), también al editar. El orden se guarda de forma atómica (`PUT /api/materias/:id/secciones/orden`) y si la lista cambió mientras se ordenaba se rechaza y se recarga. |
 | P02 | Subir contenido | ✅ | `contenidos.service` · `TeacherContentPage` | `entrega-archivo`, `rag-indexer`, E2E | PDF, DOCX, PPTX, imágenes y texto hasta 50 MB; indexado automático en segundo plano para el tutor. |
 | P03 | Definir espacio de entrega | ✅ | `actividades.service.crear` · `ActivityFormModal` | `reglas-casos-de-uso`, E2E | Cuatro tipos, formatos permitidos, rúbrica opcional (sin rúbrica = revisión manual), rechaza fecha límite en el pasado (E1). Más tarde el docente puede mover la fecha al pasado para cerrar la entrega. |
-| P04 | Configurar rúbrica | ✅ | `actividades.service` (rúbricas) · `RubricFormModal` | `rubricas`, E2E | Los pesos deben sumar 100 %; advierte si la rúbrica está en uso. Cada criterio lleva "lo esperado" (usado por la IA). **No tiene niveles de desempeño** (Excelente/Bueno/…) configurables. |
+| P04 | Configurar rúbrica | ✅ | `actividades.service` (rúbricas) · `rubricas.ts` · `RubricFormModal` · `correct_submission` | `rubricas`, `rubricas-niveles`, `test_correccion_niveles`, E2E | Los pesos deben sumar 100 %; advierte si la rúbrica está en uso. Cada criterio lleva "lo esperado" (usado por la IA). **Niveles de desempeño** opcionales (Excelente/Bueno/…, de 2 a 6, con % del peso y descriptores por criterio): la IA elige un nivel por criterio y **la nota se calcula con esos niveles**, no con una cuenta del modelo. Sin niveles, la rúbrica funciona como antes. |
 | P05 | Gestionar correcciones | ✅ | `correccion` · `TeacherCorrectionsPage` | `rubricas`, `reglas-casos-de-uso`, E2E | La entrega llega con un borrador pre-generado: numérico automático para opción múltiple, por IA contra la rúbrica para el resto. El docente edita, hace override manual y publica; el alumno recibe el aviso. Si la IA falla, corrige a mano. |
 | P06 | Registrar notas | ✅ | `notas` · `TeacherGradesPage` | `calificaciones`, E2E | Marca de edición para el historial. Notas por evaluación con **categorías y pesos** por materia (nota final ponderada) e importación de las correcciones publicadas de una actividad. |
 | P07 | Registrar asistencia | ✅ | `asistencias` · `TeacherAttendancePage` | E2E | Presente / ausente / tardanza; una clase ya cargada se edita en lugar de duplicarse. |
@@ -79,5 +79,4 @@ Además, el requisito de rendimiento del tutor (*primera respuesta visible en me
 Lo que queda fuera, en orden de importancia para la defensa:
 
 1. **Latencia del tutor (CU-A04, < 3 s):** medida el 2026-11-18 con la IA real y **no cumple**: mediana de 6,84 s hasta la primera respuesta. La plataforma agrega unos 0,6 s; el resto es la latencia de Gemini con clave gratuita, que varía entre 0,7 s y 22 s para el mismo pedido. Detalle y opciones en la [documentación técnica](./DOCUMENTACION_TECNICA.md#12-rendimiento-del-tutor).
-2. P04: niveles de desempeño configurables en la rúbrica.
-3. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.
+2. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.

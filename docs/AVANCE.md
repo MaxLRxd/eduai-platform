@@ -511,6 +511,15 @@ desvincula con `rubrica_id: null` y ahí sí se borra; el alumno y el docente aj
 cargada, `POST /api/entregas/:id/corregir-ia` devolvió 200 en ~9 s, calificación 5, `feedback_ia`
 que referencia explícitamente el `esperado`, `revision_tipo=IA` y `publicado=false`.
 
+**Niveles de desempeño (2026-11-18).** La rúbrica puede definir de 2 a 6 niveles (Excelente, Bueno…) con un % del
+peso de cada criterio, y descriptores opcionales por criterio y nivel. Con niveles, la IA elige un nivel por
+criterio y **la nota la calcula el código** (suma de peso × % del nivel), no el modelo; el feedback termina con un
+resumen "Niveles alcanzados". Si el modelo omite un criterio o inventa un nivel se usa la nota que haya dado, y si no
+dio ninguna se devuelve un error (no se inventa una calificación). Migración `20261119120000_rubrica_niveles`
+(columna `rubricas.niveles`, nula = sin niveles; las rúbricas existentes no cambian). Verificado con la IA real: una
+respuesta completa dio 10 y una pobre 4,0 (60 % × Regular 50 % + 40 % × Insuficiente 25 %), y el formulario se
+probó en el navegador (crear, reabrir con sus niveles y borrar).
+
 ## OCR de imágenes y PDF escaneado (CU-P02, 2026-09-30)
 
 `ai-services/src/services/ocr_service.py`:
@@ -604,5 +613,5 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-17):** backend **283** en **33** suites · frontend **112** en
-**18** archivos · ai-services **116** (+1 omitido) · E2E **42**.
+**Conteo actual de tests (2026-11-17):** backend **310** en **34** suites · frontend **128** en
+**19** archivos · ai-services **126** (+1 omitido) · E2E **42**.

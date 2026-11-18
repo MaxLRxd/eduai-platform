@@ -1,3 +1,4 @@
+import { rubricaParaIA } from "../actividades/rubricas";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { corregirEntregaIA } from "../../config/aiClient";
@@ -46,7 +47,7 @@ export async function generarCorreccionIA(entregaId: string, usuarioId: string) 
     material_id: null,
     consigna: entrega.actividad.consigna,
     entrega: textoEntrega,
-    rubrica: entrega.actividad.rubrica?.criterios ?? null,
+    ...rubricaParaIA(entrega.actividad.rubrica ?? null),
   });
 
   if (!resultado) {

@@ -276,8 +276,8 @@ describe("rúbricas (CU-P04)", () => {
         expect.objectContaining({
           consigna: "Explique el modelo relacional.",
           rubrica: [
-            { nombre: "Conceptos", peso: 60, esperado: "Define el modelo relacional." },
-            { nombre: "Ejemplos", peso: 40, esperado: "Incluye al menos un ejemplo propio." },
+            { nombre: "Conceptos", peso: 60, esperado: "Define el modelo relacional.", descriptores: {} },
+            { nombre: "Ejemplos", peso: 40, esperado: "Incluye al menos un ejemplo propio.", descriptores: {} },
           ],
         })
       );
@@ -295,7 +295,7 @@ describe("rúbricas (CU-P04)", () => {
 
       expect(res.status).toBe(200);
       expect(aiMock).toHaveBeenCalledWith(
-        expect.objectContaining({ rubrica: [{ nombre: "Conceptos", peso: 100, esperado: "" }] })
+        expect.objectContaining({ rubrica: [{ nombre: "Conceptos", peso: 100, esperado: "", descriptores: {} }] })
       );
     });
 

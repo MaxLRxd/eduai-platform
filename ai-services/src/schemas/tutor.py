@@ -124,12 +124,21 @@ class MaterialResponse(BaseModel):
     sources: list[Source] = Field(default_factory=list)
 
 
+class NivelDesempeno(BaseModel):
+    """Un nivel de la rubrica (Excelente, Bueno...); `puntaje` es el % del peso que se obtiene."""
+
+    nombre: str = Field(..., min_length=1, max_length=40)
+    puntaje: float = Field(..., ge=0.0, le=100.0)
+
+
 class CriterioRubrica(BaseModel):
     nombre: str = Field(..., min_length=1)
     peso: float = Field(..., ge=0.0, le=100.0)
     # Lo que el docente espera encontrar en la entrega. Sin esto la rubrica
     # solo dice cuanto pesa cada criterio y el modelo corrige a ciegas.
     esperado: str = Field("", description="Contenido clave esperado para el criterio")
+    # CU-P04: que se ve en la entrega para cada nivel (clave = nombre del nivel). Opcional.
+    descriptores: dict[str, str] = Field(default_factory=dict)
 
 
 class CorrectSubmissionRequest(BaseModel):
@@ -138,11 +147,22 @@ class CorrectSubmissionRequest(BaseModel):
     consigna: str = Field(default="", max_length=10000)
     entrega: str = Field(..., min_length=1, max_length=20000)
     rubrica: list[CriterioRubrica] = Field(default_factory=list)
+    # Niveles de desempeño de la rubrica. Si vienen, la nota sale del nivel de cada criterio.
+    niveles: list[NivelDesempeno] = Field(default_factory=list)
+
+
+class DetalleCriterio(BaseModel):
+    nombre: str
+    nivel: str
+    puntaje: float | None = None
+    comentario: str = ""
 
 
 class CorrectSubmissionResponse(BaseModel):
     feedback: str
     calificacion: float
+    # Solo cuando la rubrica tiene niveles: el nivel que obtuvo cada criterio.
+    detalle_por_criterio: list[DetalleCriterio] = Field(default_factory=list)
 
 
 class DepurarPromptRequest(BaseModel):

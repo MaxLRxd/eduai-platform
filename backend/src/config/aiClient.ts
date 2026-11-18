@@ -328,6 +328,8 @@ export interface CorreccionIARequest {
   consigna: string;
   entrega: string;
   rubrica: unknown;
+  /** Niveles de desempeno de la rubrica ([{nombre, puntaje}]); vacio = sin niveles. */
+  niveles?: { nombre: string; puntaje: number }[];
 }
 
 export interface CorreccionIAResult {
@@ -350,6 +352,7 @@ export async function corregirEntregaIA(input: CorreccionIARequest): Promise<Cor
         consigna: input.consigna,
         entrega: input.entrega,
         rubrica: Array.isArray(input.rubrica) ? input.rubrica : [],
+        niveles: input.niveles ?? [],
       }),
       signal: AbortSignal.timeout(120_000),
     });

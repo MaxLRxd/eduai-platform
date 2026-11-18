@@ -170,6 +170,14 @@ export interface RubricCriterion {
   weight: string;
   /** Lo que el docente espera que aparezca en la entrega. Es lo que usa la IA. */
   expected: string;
+  /** Qué se ve en la entrega para cada nivel (clave = nombre del nivel). Vacío si no hay. */
+  descriptors: Record<string, string>;
+}
+
+/** Nivel de desempeño de una rúbrica (Excelente, Bueno...). `score` es el % del peso que se obtiene. */
+export interface RubricLevel {
+  name: string;
+  score: number;
 }
 
 export interface Rubric {
@@ -179,6 +187,8 @@ export interface Rubric {
   criteriaCount: number;
   activitiesCount: number;
   criterios: RubricCriterion[];
+  /** Niveles de desempeño, de mejor a peor. Vacío = la rúbrica no usa niveles. */
+  levels: RubricLevel[];
 }
 
 export interface TopicUnderstanding {

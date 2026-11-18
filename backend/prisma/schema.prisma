@@ -314,6 +314,8 @@ model Rubrica {
   nombre      String   @db.VarChar(200)
   descripcion String?
   criterios   Json     @db.JsonB
+  // Niveles de desempeno ([{nombre, puntaje}], de mejor a peor). null = sin niveles: la IA califica como siempre.
+  niveles     Json?    @db.JsonB
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
