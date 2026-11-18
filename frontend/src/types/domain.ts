@@ -182,8 +182,27 @@ export interface Rubric {
 }
 
 export interface TopicUnderstanding {
+  /** Id de la unidad; null = consultas que no se pudieron ligar a una unidad. */
+  id: string | null;
   topic: string;
-  level: "Dominado" | "En proceso" | "Crítico";
+  /** "Sin evaluar" = hay consultas pero todavia no hay una medicion de comprension. */
+  level: "Dominado" | "En proceso" | "Crítico" | "Sin evaluar";
+  consultas: number;
+  errores: number;
+}
+
+/** Una pregunta o error concreto de un tema, con las veces que se repitio. */
+export interface TopicDetailItem {
+  id: string;
+  tipo: "DUDA" | "ERROR";
+  descripcion: string;
+  frecuencia: number;
+}
+
+export interface AnalyticsFilters {
+  periodo?: string;
+  /** Id de una unidad o "general". */
+  seccionId?: string;
 }
 
 export type RiskLevel = "Alto" | "Medio" | "Bajo";

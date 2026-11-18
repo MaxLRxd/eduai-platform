@@ -219,6 +219,11 @@ La IA **solo sugiere**: nada llega al alumno hasta que vos publiques. Si la IA n
 
 Muestra cómo viene el grupo: el **mapa de comprensión por tema**, las **alertas de alumnos en riesgo**, los **errores conceptuales más frecuentes** y las **dudas frecuentes al tutor IA**. Si todavía no hay actividad suficiente, lo indica.
 
+- **Filtros:** elegí la **materia**, el **período** (por ejemplo 2026-1) y la **unidad**. El mapa, los errores y las dudas se ajustan al filtro. Las alertas de riesgo muestran siempre la situación actual y no se filtran.
+- **Detalle de un tema:** tocá un tema del mapa para ver las **preguntas y errores concretos** de esa unidad y cuántas veces se repitieron. Sirve para decidir qué reforzar en clase. Volvé a tocar el tema (o **Cerrar**) para ocultarlo.
+- **Cómo se arman los datos:** cada consulta de un alumno al tutor se cuenta en la unidad de los materiales que el tutor citó en su respuesta. Las que no citan ningún material quedan en *General (sin unidad)*.
+- **Sin evaluar:** un tema en gris tiene consultas pero todavía no una medición de comprensión; no significa que esté mal.
+
 ### 3.7 Asistente IA (preparar clases)
 
 Sirve para generar material con el contenido de tu materia.

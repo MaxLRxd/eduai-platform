@@ -3,9 +3,9 @@
 Estado de los **26 casos de uso** especificados en el Anexo B, contrastados con el código y las pruebas.
 Las especificaciones están en la carpeta *Casos de Uso* de la documentación del proyecto.
 
-**Resumen:** 23 casos completos y 3 parciales. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
+**Resumen:** 25 casos completos y 1 parcial. Ningún caso quedó sin implementar. Las excepciones menores dentro de casos "completos" se listan en la columna *Observaciones*.
 
-> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01 se completó el 2026-11-18 (editar y reordenar unidades desde la pantalla).
+> Nota (2026-11-17): la reorganización del menú del docente y la jerarquía unidad → clase → archivos no cambian el estado de los casos de uso. P01, P08 y P09 se completaron el 2026-11-18 (editar y reordenar unidades; filtros y detalle por tema en el dashboard del docente).
 
 Referencias de la columna *Prueba*: `E2E` = `e2e/flujo-completo.e2e.mjs`; el resto son archivos de `backend/src/tests/`, `ai-services/src/tests/` o `frontend/src/tests/`.
 
@@ -40,8 +40,8 @@ Leyenda: ✅ completo · 🟡 parcial
 | P05 | Gestionar correcciones | ✅ | `correccion` · `TeacherCorrectionsPage` | `rubricas`, `reglas-casos-de-uso`, E2E | La entrega llega con un borrador pre-generado: numérico automático para opción múltiple, por IA contra la rúbrica para el resto. El docente edita, hace override manual y publica; el alumno recibe el aviso. Si la IA falla, corrige a mano. |
 | P06 | Registrar notas | ✅ | `notas` · `TeacherGradesPage` | `calificaciones`, E2E | Marca de edición para el historial. Notas por evaluación con **categorías y pesos** por materia (nota final ponderada) e importación de las correcciones publicadas de una actividad. |
 | P07 | Registrar asistencia | ✅ | `asistencias` · `TeacherAttendancePage` | E2E | Presente / ausente / tardanza; una clase ya cargada se edita en lugar de duplicarse. |
-| P08 | Dashboard de la clase | 🟡 | `analytics` · `TeacherAnalyticsPage`; `perfil-alumno.service` · `TeacherStudentProfilePage` | `perfil-alumno`, E2E | Mapa de comprensión, alertas de riesgo y perfil individual del alumno (notas, asistencia, entregas, uso del tutor, simulacros). **Pendiente:** filtrar por período o unidad (solo se filtra por materia). |
-| P09 | Dudas y errores frecuentes | 🟡 | `analytics` · `TeacherAnalyticsPage` | — (sin prueba automática propia) | Ranking de dudas y errores conceptuales. **Pendiente:** el detalle de preguntas al hacer clic en un tema. |
+| P08 | Dashboard de la clase | ✅ | `analytics` · `TeacherAnalyticsPage`; `perfil-alumno.service` · `TeacherStudentProfilePage` | `analytics-docente`, `perfil-alumno`, E2E | Mapa de comprensión por tema, alertas de riesgo y perfil individual del alumno. **Filtros por período y por unidad** (`?periodo=`, `?seccion_id=`). Un tema sin medición figura como *Sin evaluar*, no como crítico. Las alertas de riesgo reflejan el estado actual y no se filtran. |
+| P09 | Dudas y errores frecuentes | ✅ | `analytics` · `TeacherAnalyticsPage` · `TopicDetailPanel` | `analytics-docente` | Ranking de dudas y errores, filtrable por período y unidad. **Al tocar un tema** se ven las preguntas y errores concretos de esa unidad con las veces que se repitieron. Cada consulta al tutor se liga a la unidad de los materiales que citó. |
 | P10 | Materiales de clase con IA | ✅ | `asistente` · `TeacherAIPage` | `material-pdf`, `tutor-tools`, E2E | Genera con el contexto de la materia y de la planificación, opción de incluir soluciones (FA1), edición del resultado, descarga en PDF y **publicación directa en una sección**. |
 
 ## Módulo Administrador
@@ -79,7 +79,6 @@ Además, el requisito de rendimiento del tutor (*primera respuesta visible en me
 Lo que queda fuera, en orden de importancia para la defensa:
 
 1. **Medir el tiempo real del LLM** con las claves de Gemini configuradas (`npm run benchmark:tutor`); en el entorno de desarrollo no hay clave.
-2. P08/P09: filtros por período o unidad y detalle por tema en el dashboard del docente.
-3. A05 (A1): adjuntar un archivo propio al resumen.
-4. P04: niveles de desempeño configurables en la rúbrica.
-5. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.
+2. A05 (A1): adjuntar un archivo propio al resumen.
+3. P04: niveles de desempeño configurables en la rúbrica.
+4. A02 (A5A) y A11 (A2, A4): reporte de archivo dañado, corrección de respuestas externas y aviso de material insuficiente.

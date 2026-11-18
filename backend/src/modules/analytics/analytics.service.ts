@@ -46,7 +46,7 @@ function toComprensionDto(c: {
   seccion_id: string | null;
   total_consultas: number;
   total_errores: number;
-  nivel_comprension: { toNumber(): number };
+  nivel_comprension: { toNumber(): number } | null;
   periodo: string;
   actualizado_en: Date;
 }) {
@@ -55,21 +55,49 @@ function toComprensionDto(c: {
     seccion_id: c.seccion_id,
     total_consultas: c.total_consultas,
     total_errores: c.total_errores,
-    nivel_comprension: c.nivel_comprension.toNumber(),
+    nivel_comprension: c.nivel_comprension?.toNumber() ?? null,
     periodo: c.periodo,
     actualizado_en: c.actualizado_en,
   };
 }
 
-export async function listarComprension(materiaId: string, usuarioId: string, rol: Rol) {
+/** Filtros del dashboard del docente: por periodo y/o por unidad ("general" = consultas sin unidad). */
+export interface FiltrosAnalytics {
+  periodo?: string;
+  seccion_id?: string;
+}
+
+function whereDeFiltros(materiaId: string, filtros: FiltrosAnalytics) {
+  return {
+    materia_id: materiaId,
+    ...(filtros.periodo ? { periodo: filtros.periodo } : {}),
+    ...(filtros.seccion_id ? { seccion_id: filtros.seccion_id === "general" ? null : filtros.seccion_id } : {}),
+  };
+}
+
+export async function listarComprension(
+  materiaId: string,
+  usuarioId: string,
+  rol: Rol,
+  filtros: FiltrosAnalytics = {}
+) {
   await verificarLecturaMateria(materiaId, usuarioId, rol);
 
-  const registros = await prisma.analyticsComprensionTema.findMany({
-    where: { materia_id: materiaId },
-    orderBy: { actualizado_en: "desc" },
-  });
+  const [registros, periodos] = await Promise.all([
+    prisma.analyticsComprensionTema.findMany({
+      where: whereDeFiltros(materiaId, filtros),
+      orderBy: { actualizado_en: "desc" },
+    }),
+    // Los periodos disponibles no dependen del filtro: son los que alimentan el selector.
+    prisma.analyticsComprensionTema.findMany({
+      where: { materia_id: materiaId },
+      distinct: ["periodo"],
+      select: { periodo: true },
+      orderBy: { periodo: "asc" },
+    }),
+  ]);
 
-  return registros.map(toComprensionDto);
+  return { comprension: registros.map(toComprensionDto), periodos: periodos.map((p) => p.periodo) };
 }
 
 export async function listarRiesgo(materiaId: string, usuarioId: string, rol: Rol) {
@@ -94,11 +122,16 @@ export async function listarRiesgo(materiaId: string, usuarioId: string, rol: Ro
   }));
 }
 
-export async function listarDudas(materiaId: string, usuarioId: string, rol: Rol) {
+export async function listarDudas(
+  materiaId: string,
+  usuarioId: string,
+  rol: Rol,
+  filtros: FiltrosAnalytics = {}
+) {
   await verificarLecturaMateria(materiaId, usuarioId, rol);
 
   const registros = await prisma.errorDudaFrecuente.findMany({
-    where: { materia_id: materiaId },
+    where: whereDeFiltros(materiaId, filtros),
     orderBy: { frecuencia: "desc" },
   });
 
@@ -193,8 +226,6 @@ export async function eliminarPreguntaFrecuente(preguntaId: string, usuarioId: s
   return { ok: true };
 }
 
-const PERIODO_ACTUAL = "2026-1";
-
 /** Período académico (YYYY-1 / YYYY-2) al que pertenece una fecha de clase. */
 export function periodoDeFecha(fecha: Date): string {
   const anio = fecha.getUTCFullYear();
@@ -202,13 +233,46 @@ export function periodoDeFecha(fecha: Date): string {
   return `${anio}-${mes <= 6 ? 1 : 2}`;
 }
 
+/**
+ * Unidad a la que pertenece una consulta del tutor: la unidad de los materiales que el tutor cito.
+ * Si cito materiales de varias unidades gana la mas citada; sin fuentes (o de otra materia) es null.
+ */
+export async function seccionDeFuentes(
+  materiaId: string,
+  fuentes: { material_id: string }[]
+): Promise<string | null> {
+  const ids = [...new Set(fuentes.map((f) => f.material_id))];
+  if (ids.length === 0) return null;
+
+  const contenidos = await prisma.contenido.findMany({
+    where: { id: { in: ids }, seccion: { materia_id: materiaId } },
+    select: { id: true, seccion_id: true },
+  });
+  const seccionPorContenido = new Map(contenidos.map((c) => [c.id, c.seccion_id]));
+
+  const votos = new Map<string, number>();
+  for (const f of fuentes) {
+    const seccion = seccionPorContenido.get(f.material_id);
+    if (seccion) votos.set(seccion, (votos.get(seccion) ?? 0) + 1);
+  }
+  const ranking = [...votos.entries()].sort((a, b) => b[1] - a[1]);
+  return ranking[0]?.[0] ?? null;
+}
+
+/**
+ * Cuenta una consulta del tutor en el tema (unidad) y el periodo que corresponden. No inventa un nivel
+ * de comprension: eso queda sin evaluar hasta que haya una medicion real.
+ */
 export async function registrarConsultaTutor(
   materiaId: string,
   descripcion: string,
-  esError: boolean
+  esError: boolean,
+  seccionId: string | null = null
 ) {
+  const periodo = periodoDeFecha(new Date());
+
   const existente = await prisma.analyticsComprensionTema.findFirst({
-    where: { materia_id: materiaId, periodo: PERIODO_ACTUAL },
+    where: { materia_id: materiaId, seccion_id: seccionId, periodo },
   });
 
   if (existente) {
@@ -217,7 +281,6 @@ export async function registrarConsultaTutor(
       data: {
         total_consultas: { increment: 1 },
         total_errores: { increment: esError ? 1 : 0 },
-        nivel_comprension: 0.0,
         actualizado_en: new Date(),
       },
     });
@@ -225,16 +288,17 @@ export async function registrarConsultaTutor(
     await prisma.analyticsComprensionTema.create({
       data: {
         materia_id: materiaId,
+        seccion_id: seccionId,
         total_consultas: 1,
         total_errores: esError ? 1 : 0,
-        nivel_comprension: 0.0,
-        periodo: PERIODO_ACTUAL,
+        nivel_comprension: null,
+        periodo,
       },
     });
   }
 
   const duda = await prisma.errorDudaFrecuente.findFirst({
-    where: { materia_id: materiaId, descripcion, periodo: PERIODO_ACTUAL },
+    where: { materia_id: materiaId, seccion_id: seccionId, descripcion, periodo },
   });
 
   if (duda) {
@@ -246,10 +310,11 @@ export async function registrarConsultaTutor(
     await prisma.errorDudaFrecuente.create({
       data: {
         materia_id: materiaId,
+        seccion_id: seccionId,
         tipo: esError ? ("ERROR" as TipoErrorDuda) : ("DUDA" as TipoErrorDuda),
         descripcion,
         frecuencia: 1,
-        periodo: PERIODO_ACTUAL,
+        periodo,
       },
     });
   }

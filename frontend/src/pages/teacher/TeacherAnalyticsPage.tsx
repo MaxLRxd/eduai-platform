@@ -4,6 +4,8 @@ import { useAnalytics } from "../../hooks/useAnalytics";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Tag } from "../../components/ui/Tag";
 import { InfoBox } from "../../components/ui/InfoBox";
+import { TopicDetailPanel } from "../../components/teacher/TopicDetailPanel";
+import { useCourseSections } from "../../hooks/useContent";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import type { TopicUnderstanding } from "../../types/domain";
 
@@ -11,6 +13,7 @@ const TOPIC_BG: Record<TopicUnderstanding["level"], string> = {
   Dominado: "bg-emerald-100",
   "En proceso": "bg-amber-100",
   Crítico: "bg-red-100",
+  "Sin evaluar": "bg-surface-2",
 };
 
 export function TeacherAnalyticsPage(): React.ReactElement {
@@ -18,10 +21,28 @@ export function TeacherAnalyticsPage(): React.ReactElement {
   const [courseId, setCourseId] = useState<string | null>(null);
   const activeCourse = courseId ?? courses?.[0]?.id ?? null;
 
-  const { topics, risks, errors, questions } = useAnalytics(activeCourse);
+  const [periodo, setPeriodo] = useState("");
+  const [seccionId, setSeccionId] = useState("");
+  const [temaAbierto, setTemaAbierto] = useState<string | null>(null);
+  const { data: sections } = useCourseSections(activeCourse);
+
+  const { topics, risks, errors, questions } = useAnalytics(activeCourse, {
+    periodo: periodo || undefined,
+    seccionId: seccionId || undefined,
+  });
+  const temas = topics.data?.topics ?? [];
+  const periodos = topics.data?.periodos ?? [];
+  const tema = temas.find((t) => (t.id ?? "general") === temaAbierto) ?? null;
+
+  const cambiarMateria = (id: string): void => {
+    setCourseId(id);
+    setPeriodo("");
+    setSeccionId("");
+    setTemaAbierto(null);
+  };
 
   const kpis = [
-    { icon: "🧠", label: "Temas analizados", value: String(topics.data?.length ?? 0), color: "#003d7a" },
+    { icon: "🧠", label: "Temas analizados", value: String(temas.length), color: "#003d7a" },
     { icon: "⚠️", label: "Alertas de riesgo activas", value: String(risks.data?.length ?? 0), color: "#dc2626" },
     { icon: "🔁", label: "Errores frecuentes", value: String(errors.data?.length ?? 0), color: "#2563eb" },
     { icon: "💬", label: "Dudas frecuentes", value: String(questions.data?.length ?? 0), color: "#059669" },
@@ -40,22 +61,64 @@ export function TeacherAnalyticsPage(): React.ReactElement {
         <p className="text-[13px] text-text-2">Dashboard de comprensión, alertas académicas y errores frecuentes</p>
       </div>
 
-      <div className="max-w-md mb-5">
-        <label htmlFor="analytics-course" className="block text-xs font-semibold text-text-1 mb-1.5">
-          Materia / curso
-        </label>
-        <select
-          id="analytics-course"
-          value={activeCourse ?? ""}
-          onChange={(e) => setCourseId(e.target.value)}
-          className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
-        >
-          {(courses ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label} — {c.curso}
-            </option>
-          ))}
-        </select>
+      <div className="grid md:grid-cols-3 gap-3 max-w-3xl mb-5">
+        <div>
+          <label htmlFor="analytics-course" className="block text-xs font-semibold text-text-1 mb-1.5">
+            Materia / curso
+          </label>
+          <select
+            id="analytics-course"
+            value={activeCourse ?? ""}
+            onChange={(e) => cambiarMateria(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+          >
+            {(courses ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label} — {c.curso}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="analytics-periodo" className="block text-xs font-semibold text-text-1 mb-1.5">
+            Período
+          </label>
+          <select
+            id="analytics-periodo"
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+          >
+            <option value="">Todos los períodos</option>
+            {periodos.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="analytics-unidad" className="block text-xs font-semibold text-text-1 mb-1.5">
+            Unidad
+          </label>
+          <select
+            id="analytics-unidad"
+            value={seccionId}
+            onChange={(e) => {
+              setSeccionId(e.target.value);
+              setTemaAbierto(null);
+            }}
+            className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+          >
+            <option value="">Todas las unidades</option>
+            {(sections ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre}
+              </option>
+            ))}
+            <option value="general">General (sin unidad)</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
@@ -73,22 +136,43 @@ export function TeacherAnalyticsPage(): React.ReactElement {
       <div className="grid lg:grid-cols-2 gap-5 mb-5">
         <Card>
           <CardHeader title="🗺️ Mapa de comprensión por tema" />
-          <p className="text-xs text-text-3 mb-3">Intensidad = frecuencia de dudas y errores · verde = dominado · rojo = área crítica</p>
+          <p className="text-xs text-text-3 mb-3">
+            Tocá un tema para ver las preguntas concretas · verde = dominado · rojo = área crítica · gris = todavía sin evaluar
+          </p>
           <div className="grid grid-cols-2 gap-1.5 mb-3">
-            {(topics.data ?? []).map((t) => (
-              <div key={t.topic} className={`rounded-sm px-1.5 py-2 text-center ${TOPIC_BG[t.level]}`} title={t.level}>
-                <div className="text-[10px] font-bold text-text-1 leading-tight">{t.topic}</div>
-                <div className="text-[9px] text-text-2 mt-0.5">{t.level}</div>
-              </div>
-            ))}
-            {!topics.isLoading && (topics.data ?? []).length === 0 && (
-              <p className="text-xs text-text-2 col-span-2">Sin datos de comprensión para esta materia.</p>
+            {temas.map((t) => {
+              const clave = t.id ?? "general";
+              return (
+                <button
+                  key={clave}
+                  type="button"
+                  aria-pressed={temaAbierto === clave}
+                  onClick={() => setTemaAbierto(temaAbierto === clave ? null : clave)}
+                  className={`rounded-sm px-1.5 py-2 text-center border-2 transition-colors ${TOPIC_BG[t.level]} ${
+                    temaAbierto === clave ? "border-primary" : "border-transparent hover:border-border-strong"
+                  }`}
+                  title={`${t.level} · ${t.consultas} consultas`}
+                >
+                  <div className="text-[10px] font-bold text-text-1 leading-tight">{t.topic}</div>
+                  <div className="text-[9px] text-text-2 mt-0.5">
+                    {t.level} · {t.consultas} consulta{t.consultas === 1 ? "" : "s"}
+                  </div>
+                </button>
+              );
+            })}
+            {!topics.isLoading && temas.length === 0 && (
+              <p className="text-xs text-text-2 col-span-2">
+                {periodo || seccionId
+                  ? "No hay datos de comprensión con estos filtros."
+                  : "Sin datos de comprensión para esta materia."}
+              </p>
             )}
           </div>
-          <div className="flex gap-3 text-xs text-text-2">
+          <div className="flex gap-3 text-xs text-text-2 flex-wrap">
             <span>🟢 Dominado</span>
             <span>🟡 En proceso</span>
             <span>🔴 Crítico</span>
+            <span>⚪ Sin evaluar</span>
           </div>
         </Card>
 
@@ -119,8 +203,20 @@ export function TeacherAnalyticsPage(): React.ReactElement {
         </Card>
       </div>
 
+      {tema && activeCourse && (
+        <TopicDetailPanel
+          courseId={activeCourse}
+          topic={tema}
+          periodo={periodo || undefined}
+          onClose={() => setTemaAbierto(null)}
+        />
+      )}
+
       <Card className="mb-4.5">
-        <CardHeader title="🔁 Errores conceptuales más frecuentes" action={<Tag color="blue">Período 2026-1</Tag>} />
+        <CardHeader
+          title="🔁 Errores conceptuales más frecuentes"
+          action={<Tag color="blue">{periodo ? `Período ${periodo}` : "Todos los períodos"}</Tag>}
+        />
         <TableWrap>
           <Table>
             <Thead>

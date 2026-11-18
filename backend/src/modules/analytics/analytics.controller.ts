@@ -6,6 +6,22 @@ import type {
 } from "./analytics.schemas";
 import { AppError } from "../../middlewares/error";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Lee ?periodo= y ?seccion_id= (un uuid o "general"); un valor invalido es un error, no se ignora en silencio. */
+function filtrosDe(query: Request["query"]): analyticsService.FiltrosAnalytics {
+  const periodo = typeof query.periodo === "string" && query.periodo.trim() ? query.periodo.trim() : undefined;
+  const seccion = typeof query.seccion_id === "string" && query.seccion_id.trim() ? query.seccion_id.trim() : undefined;
+
+  if (periodo && periodo.length > 50) {
+    throw new AppError(400, "Periodo invalido");
+  }
+  if (seccion && seccion !== "general" && !UUID.test(seccion)) {
+    throw new AppError(400, "Unidad invalida");
+  }
+  return { periodo, seccion_id: seccion };
+}
+
 function requireUser(req: Request) {
   if (!req.user) {
     throw new AppError(401, "No autenticado");
@@ -21,9 +37,10 @@ export async function comprension(
   const data = await analyticsService.listarComprension(
     req.params.materiaId,
     user.id,
-    user.rol
+    user.rol,
+    filtrosDe(req.query)
   );
-  res.json({ comprension: data });
+  res.json(data);
 }
 
 export async function riesgo(
@@ -40,7 +57,7 @@ export async function dudas(
   res: Response
 ): Promise<void> {
   const user = requireUser(req);
-  const data = await analyticsService.listarDudas(req.params.materiaId, user.id, user.rol);
+  const data = await analyticsService.listarDudas(req.params.materiaId, user.id, user.rol, filtrosDe(req.query));
   res.json({ dudas: data });
 }
 

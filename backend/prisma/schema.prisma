@@ -495,7 +495,8 @@ model AnalyticsComprensionTema {
   seccion_id        String?  @db.Uuid
   total_consultas   Int
   total_errores     Int
-  nivel_comprension Decimal  @db.Decimal(4, 2)
+  // null = todavia sin evaluar: el tutor cuenta consultas pero no mide comprension por si solo.
+  nivel_comprension Decimal? @db.Decimal(4, 2)
   periodo           String   @db.VarChar(50)
   actualizado_en    DateTime @default(now())
 

@@ -2,7 +2,7 @@ import type { ModoSesionIA } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { chatTutor, corregirExamenIA, generarExamen, resumirDocumento } from "../../config/aiClient";
-import { registrarConsultaTutor } from "../analytics/analytics.service";
+import { registrarConsultaTutor, seccionDeFuentes } from "../analytics/analytics.service";
 import { renderMaterialPdf } from "../asistente/materialPdf";
 import { obtenerInscripcion, obtenerProfesorAsignado } from "../materias/materias.service";
 import type {
@@ -178,12 +178,6 @@ export async function enviarMensaje(
     },
   });
 
-  try {
-    await registrarConsultaTutor(sesion.materia_id, input.contenido, false);
-  } catch {
-    // los analytics no deben interrumpir el flujo del chat
-  }
-
   // CU-A04 (A5.1): si coincide con una pregunta frecuente de la materia se responde con la
   // respuesta ya preparada por el docente, sin consumir la IA. Solo en modo normal: en los
   // modos socratico y pistas la respuesta directa contradiria el objetivo del modo.
@@ -191,6 +185,7 @@ export async function enviarMensaje(
 
   if (frecuente) {
     const respuestaFrecuente = await registrarRespuestaPreguntaFrecuente(sesionId, frecuente, modo);
+    await contarConsulta(sesion.materia_id, input.contenido, []);
 
     return {
       pregunta: {
@@ -226,6 +221,9 @@ export async function enviarMensaje(
   if (!resultado) {
     throw new AppError(502, "No se pudo obtener respuesta del tutor en este momento");
   }
+
+  // Se cuenta la consulta ya con la unidad de los materiales que el tutor cito.
+  await contarConsulta(sesion.materia_id, input.contenido, resultado.sources);
 
   const respuesta = await prisma.mensajeIA.create({
     data: {
@@ -299,13 +297,30 @@ export async function prepararStream(
   };
 }
 
+/**
+ * Cuenta la consulta en los analytics del docente, con la unidad de las fuentes citadas.
+ * Los analytics nunca deben interrumpir el chat: si algo falla, se ignora.
+ */
+export async function contarConsulta(
+  materiaId: string,
+  contenido: string,
+  fuentes: { material_id: string }[]
+): Promise<void> {
+  try {
+    const seccion = await seccionDeFuentes(materiaId, fuentes);
+    await registrarConsultaTutor(materiaId, contenido, false, seccion);
+  } catch {
+    // los analytics no deben interrumpir el flujo del chat
+  }
+}
+
 export async function registrarMensajeUsuario(
   sesionId: string,
   contenido: string,
   alumnoId: string,
   modo?: ModoSesionIA
 ) {
-  const sesion = await obtenerSesionDeAlumno(sesionId, alumnoId);
+  await obtenerSesionDeAlumno(sesionId, alumnoId);
 
   const usuario = await prisma.mensajeIA.create({
     data: {
@@ -316,12 +331,6 @@ export async function registrarMensajeUsuario(
       prompt_original: contenido,
     },
   });
-
-  try {
-    await registrarConsultaTutor(sesion.materia_id, contenido, false);
-  } catch {
-    // los analytics no deben interrumpir el flujo del chat
-  }
 
   return {
     id: usuario.id,
@@ -402,7 +411,10 @@ export async function resumir(materiaId: string, input: ResumenInput, alumnoId: 
   }
 
   try {
-    await registrarConsultaTutor(materiaId, "resumen de material", false);
+    const seccion = input.contenido_id
+      ? await seccionDeFuentes(materiaId, [{ material_id: input.contenido_id }])
+      : null;
+    await registrarConsultaTutor(materiaId, "resumen de material", false, seccion);
   } catch {
     // los analytics no deben interrumpir el flujo
   }

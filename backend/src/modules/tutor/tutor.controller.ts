@@ -76,6 +76,23 @@ export async function examen(
   res.json(resultado);
 }
 
+/** Fuentes que el tutor cito: vienen en el evento final ("done") del streaming. */
+function extraerFuentesSse(sse: string): { material_id: string }[] {
+  for (const linea of sse.split("\n")) {
+    const line = linea.trim();
+    if (!line.startsWith("data:")) continue;
+    try {
+      const payload = JSON.parse(line.slice(5).trim()) as { type?: string; sources?: { material_id?: string }[] };
+      if (payload.type === "done" && Array.isArray(payload.sources)) {
+        return payload.sources.filter((s): s is { material_id: string } => typeof s?.material_id === "string");
+      }
+    } catch {
+      // ignora lineas de datos no parseables
+    }
+  }
+  return [];
+}
+
 function extraerTextoSse(sse: string): string {
   let texto = "";
   for (const linea of sse.split("\n")) {
@@ -130,6 +147,8 @@ export async function stream(
     res.write(`data: ${JSON.stringify({ type: "done", sources: [], cached: true, pregunta_frecuente: true })}\n\n`);
     res.end();
 
+    await tutorService.contarConsulta(materiaId, req.body.contenido, []);
+
     try {
       await tutorService.registrarRespuestaPreguntaFrecuente(req.params.sesionId, frecuente, modoSesion);
     } catch {
@@ -175,7 +194,12 @@ export async function stream(
     res.end();
   }
 
-  const respuestaTexto = extraerTextoSse(fragmentosSse.join(""));
+  const sseCompleto = fragmentosSse.join("");
+  const respuestaTexto = extraerTextoSse(sseCompleto);
+
+  if (respuestaTexto.trim()) {
+    await tutorService.contarConsulta(materiaId, req.body.contenido, extraerFuentesSse(sseCompleto));
+  }
 
   if (respuestaTexto.trim()) {
     try {

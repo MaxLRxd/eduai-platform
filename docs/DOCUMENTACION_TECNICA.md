@@ -163,6 +163,7 @@ Reglas relevantes:
 - **Integridad:** claves foráneas en todas las relaciones; unicidad de (alumno, materia) en inscripciones, (alumno, actividad) en entregas y (alumno, materia, fecha) en asistencias.
 - **Historial conservado:** dar de baja a un usuario o desmatricular a un alumno **no borra** sus notas, entregas ni asistencias.
 - **Calificaciones:** cada nota tiene evaluación, categoría (con peso por materia) y, si viene de una actividad, queda ligada a ella. La nota final es el promedio ponderado por categoría (promedio simple si la materia no definió categorías), calculado en un único lugar (`notas.promedio.ts`).
+- **Analytics del docente:** cada consulta al tutor se registra por unidad (la de los materiales citados) y período real; el nivel de comprensión queda `NULL` (sin evaluar) hasta que haya una medición, en lugar de un 0 que marcaba todo como crítico. Los endpoints de comprensión y dudas aceptan `?periodo=` y `?seccion_id=` (un id o `general`).
 - **Latencia medida:** `mensajes_ia.primer_token_ms` guarda cuánto tardó en verse la primera palabra de cada respuesta.
 - **Vectores:** los *embeddings* viven en el almacén vectorial del servicio de IA (tabla propia con índice HNSW en pgvector), no en el esquema de Prisma.
 
@@ -244,9 +245,9 @@ Casos de uso (`ai-services/src/use_cases`):
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 251 pruebas en 31 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Backend | Jest + Supertest | 268 pruebas en 32 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
 | Servicio de IA | pytest | 107 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 91 pruebas en 16 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
+| Frontend | Vitest + Testing Library | 100 pruebas en 17 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
 | **E2E** | `node:test` | **42 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
