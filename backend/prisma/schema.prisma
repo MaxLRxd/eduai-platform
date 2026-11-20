@@ -105,6 +105,7 @@ model Usuario {
 
   perfilProfesor Profesor?
   sesiones       Sesion[]
+  tokensRecuperacion TokenRecuperacion[]
   inscripciones  Inscripcion[]
   entregas       Entrega[]
   sesionesIa     SesionIA[]
@@ -148,6 +149,22 @@ model Sesion {
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
   @@map("sesiones")
+}
+
+// Enlaces de recuperación de contraseña: se guarda solo el hash del token (como en `sesiones`),
+// vencen y sirven una única vez.
+model TokenRecuperacion {
+  id         String    @id @default(uuid()) @db.Uuid
+  usuario_id String    @db.Uuid
+  token_hash String    @unique @db.VarChar(255)
+  expires_at DateTime
+  usado_at   DateTime?
+  created_at DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@map("tokens_recuperacion")
 }
 
 // ─────────────────────── MATERIAS y INSCRIPCIONES ────────────────────

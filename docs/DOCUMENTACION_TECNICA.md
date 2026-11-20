@@ -94,7 +94,8 @@ El contenedor del backend aplica las migraciones al arrancar. Para cargar datos 
 
 ```bash
 npm install
-npm run db:seed --workspace backend     # ⚠️ BORRA los datos existentes y carga el set de prueba
+npm run db:seed --workspace backend     # ⚠️ BORRA los datos existentes y carga el set de prueba (sin indexar el material)
+npm run demo:reset --workspace backend  # ⚠️ seed + borra huérfanos y reindexa el material en el RAG (base lista para demo; con el ai-service arriba)
 ```
 
 Direcciones: frontend <http://localhost:5173> · API <http://localhost:3000> · servicio de IA <http://localhost:8000/healthz>.
@@ -175,7 +176,7 @@ La API completa (124 endpoints, con rol requerido y esquema de validación de ca
 
 | Módulo | Responsabilidad |
 | --- | --- |
-| `auth` | Registro, login, renovación de sesión, cambio de contraseña |
+| `auth` | Registro, login, renovación de sesión, cambio de contraseña y recuperación por correo |
 | `materias` | Materias del usuario, inscripción por clave, perfil del alumno para el docente |
 | `secciones`, `contenidos` | Unidades, material, registro de accesos y estadísticas |
 | `actividades` | Actividades, entregas con plazo, rúbricas, corrección y publicación |
@@ -249,9 +250,9 @@ Casos de uso (`ai-services/src/use_cases`):
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 351 pruebas en 37 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Backend | Jest + Supertest | 363 pruebas en 38 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
 | Servicio de IA | pytest | 161 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 188 pruebas en 22 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
+| Frontend | Vitest + Testing Library | 195 pruebas en 23 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
 | **E2E** | `node:test` | **44 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
@@ -293,7 +294,7 @@ Calidad estática: TypeScript estricto en backend y frontend, ESLint sin adverte
 
 **Qué se puede hacer** (no implementado): usar una clave con plan pago o una cuenta con cuota dedicada; reintentar a mitad del *stream* ante un 503 (hoy solo se reintenta al abrirlo); y mostrar un indicador de espera. Las preguntas frecuentes que carga el docente responden al instante y sin IA, y el alumno ya recibe un aviso con botón *Reintentar* si pasan 10 s sin respuesta.
 
-> **Aviso sobre los datos del seed:** los materiales de prueba del seed tienen una sola frase cada uno y figuran como indexados sin estarlo, así que con ellos el tutor responde "no tengo información" sin llamar al modelo. Para medir hay que cargar un material real (se indexa solo).
+> **Datos del seed (actualizado 2026-11-20):** el seed trae ahora material de estudio real (3 textos por materia) y `npm run demo:reset` lo indexa de verdad, así que el tutor responde y cita el material sin cargar nada a mano. En la medición original el seed tenía una sola frase por material y figuraba indexado sin estarlo.
 
 ## 13. Variables de entorno
 
@@ -307,7 +308,8 @@ Calidad estática: TypeScript estricto en backend y frontend, ESLint sin adverte
 | `VECTOR_STORE` | `pgvector` (por defecto) o `pinecone` (requiere `PINECONE_API_KEY`) |
 | `CORS_ORIGIN` | Origen permitido del frontend |
 | `R2_*` | Opcionales: sin ellas los archivos se guardan en `UPLOAD_DIR` |
-| `EMAIL_PROVIDER` | `none` (por defecto), `resend`, `brevo` o `smtp`: copia por email de las notificaciones |
+| `EMAIL_PROVIDER` | `none` (por defecto), `resend`, `brevo` o `smtp`: copia por email de las notificaciones y **correos de recuperación de contraseña** |
+| `APP_URL` | URL pública del frontend para los enlaces de los correos (por defecto, el primer `CORS_ORIGIN`) |
 
 Nunca se versionan valores reales: `.env` está en `.gitignore`.
 
@@ -331,7 +333,7 @@ El plan de proyecto (Anexo, sección 3.5) planteaba algunas tecnologías que, al
 - **Los tokens de acceso no se invalidan al instante** al dar de baja a un usuario: siguen válidos hasta 15 minutos; la renovación sí queda bloqueada.
 - **Los archivos subidos se sirven por URL no adivinable** (sufijo aleatorio de 128 bits) pero sin control de sesión; en producción real conviene un bucket privado con URLs firmadas.
 - **Contraseña temporal:** el aviso de alta no incluye la contraseña (no se guarda ni se envía en claro); el administrador se la entrega al usuario por otro medio.
-- **Sin recuperación de contraseña por email.** El administrador asigna una temporal.
+- **Recuperación de contraseña por correo.** `POST /api/auth/password/olvide` y `POST /api/auth/password/restablecer`; pantallas `/recuperar` y `/restablecer`. El enlace lleva un token aleatorio de 256 bits del que en la base solo se guarda el hash; vence a los 60 minutos (`RESET_TOKEN_MINUTES`), sirve una sola vez, y pedir otro invalida el anterior. La respuesta del pedido es idéntica exista o no la cuenta (no permite averiguar quién tiene cuenta). Al restablecer se cierran **todas** las sesiones de la cuenta y se avisa por correo. Límites: 3 pedidos por cuenta y 20 por IP cada 15 minutos. Requiere `EMAIL_PROVIDER` configurado y `APP_URL` (URL pública del frontend); sin correo, en desarrollo el enlace se escribe en el log del backend y en producción se registra un error. Si un usuario no tiene acceso a su correo, el administrador sigue pudiendo asignarle una contraseña temporal.
 - **Visibilidad de entregas por archivo:** la IA corrige el texto o código de una entrega; de un archivo adjunto solo registra el nombre.
 
 ---

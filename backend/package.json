@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "jest --passWithNoTests",
-    "rag:reindex": "tsx src/scripts/reindexar-rag.ts"
+    "rag:reindex": "tsx src/scripts/reindexar-rag.ts",
+    "demo:reset": "tsx prisma/seed.ts && tsx src/scripts/reindexar-rag.ts --limpiar"
   },
   "keywords": [],
   "author": "",

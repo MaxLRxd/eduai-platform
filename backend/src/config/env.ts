@@ -24,6 +24,9 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16),
   PORT: z.coerce.number().default(3000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  // URL pública del frontend, para armar los enlaces de los correos. Si falta, se usa el primer CORS_ORIGIN.
+  APP_URL: z.string().optional(),
+  RESET_TOKEN_MINUTES: z.coerce.number().default(60),
   REFRESH_TTL_DAYS: z.coerce.number().default(7),
 });
 

@@ -22,6 +22,8 @@
 cp .env.example .env              # completar JWT_SECRET y GEMINI_API_KEY
 docker compose up --build         # frontend :5173 · API :3000 · ai-service :8000
 npm install && npm run db:seed --workspace backend   # datos de prueba (borra los existentes)
+# con el stack levantado, base lista para demo (seed + material indexado en el RAG):
+# npm run demo:reset --workspace backend
 ```
 
 Usuarios de prueba (contraseña `Clave1234`): `admin@ies.edu`, `profe1@ies.edu`, `alumno1@ies.edu`.

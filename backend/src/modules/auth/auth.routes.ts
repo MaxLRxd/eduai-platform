@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { validateBody } from "../../middlewares/validate";
 import { requireAuth } from "../../middlewares/auth";
-import { cambiarPasswordSchema, loginSchema, registerSchema } from "./auth.schemas";
+import {
+  cambiarPasswordSchema,
+  loginSchema,
+  olvidePasswordSchema,
+  registerSchema,
+  restablecerPasswordSchema,
+} from "./auth.schemas";
 import * as authController from "./auth.controller";
 import { rateLimit } from "../../middlewares/security";
 
@@ -23,6 +29,25 @@ router.post("/login", limiteLoginPorIp, limiteLoginPorCuenta, validateBody(login
 router.post("/refresh", authController.refresh);
 router.post("/logout", authController.logout);
 router.get("/me", requireAuth, authController.me);
+// Recuperación: pedir el enlace cuenta TODO (también lo exitoso) para que nadie llene de correos
+// una casilla ajena; por IP y por cuenta. Usar el enlace solo cuenta si falla.
+const limiteOlvideIp = rateLimit({ max: 20, ventanaMs: VENTANA });
+const limiteOlvideCuenta = rateLimit({ max: 3, ventanaMs: VENTANA, porEmail: true });
+const limiteRestablecer = rateLimit({ max: 10, ventanaMs: VENTANA, soloFallos: true });
+
+router.post(
+  "/password/olvide",
+  limiteOlvideIp,
+  limiteOlvideCuenta,
+  validateBody(olvidePasswordSchema),
+  authController.olvidePassword
+);
+router.post(
+  "/password/restablecer",
+  limiteRestablecer,
+  validateBody(restablecerPasswordSchema),
+  authController.restablecerPassword
+);
 router.post(
   "/password",
   requireAuth,

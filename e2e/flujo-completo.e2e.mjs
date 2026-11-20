@@ -9,12 +9,14 @@
  *
  * Uso: npm run e2e
  *
+ * Cada corrida deja 1 materia dada de baja y 3 usuarios nuevos (no se pueden borrar por API):
+ * `npm run demo:reset --workspace backend` restaura la base de demo.
  * Cada corrida crea su propia materia y sus propios usuarios (sufijo único): se puede repetir
  * sin limpiar la base.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
 
 const BASE = (process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/+$/, "");
 const PASSWORD = process.env.E2E_PASSWORD ?? "Clave1234";
@@ -64,6 +66,13 @@ const lista = (body, ...claves) => {
 const ctx = {};
 
 describe(`EduAI E2E (${BASE})${CON_IA ? " + IA" : ""}`, { concurrency: false }, () => {
+  // La materia de la corrida no se puede borrar por API (solo dar de baja): al menos no dejar
+  // sus vectores huérfanos en el almacén. Para volver a la base de demo: `npm run demo:reset`.
+  after(async () => {
+    if (!CON_IA || !ctx.materiaId) return;
+    await fetch(`${AI_URL}/rag/materias/${ctx.materiaId}`, { method: "DELETE" }).catch(() => undefined);
+  });
+
   describe("Sistema y autenticación", () => {
     it("el backend responde y la base está conectada", async () => {
       const r = await llamar("GET", "/api/healthz");

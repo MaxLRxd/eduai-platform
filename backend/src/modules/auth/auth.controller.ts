@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import * as authService from "./auth.service";
-import type { CambiarPasswordInput, LoginInput, RegisterInput } from "./auth.schemas";
+import * as recuperacion from "./recuperacion.service";
+import type {
+  CambiarPasswordInput,
+  LoginInput,
+  OlvidePasswordInput,
+  RegisterInput,
+  RestablecerPasswordInput,
+} from "./auth.schemas";
 import { AppError } from "../../middlewares/error";
 
 export async function register(
@@ -54,5 +61,25 @@ export async function cambiarPassword(
   }
   const token = req.cookies?.[authService.refreshCookieName] as string | undefined;
   await authService.cambiarPassword(req.user.id, req.body, token);
+  res.json({ ok: true });
+}
+
+const RESPUESTA_OLVIDE =
+  "Si el email corresponde a una cuenta, te enviamos un enlace para restablecer la contraseña.";
+
+export async function olvidePassword(
+  req: Request<unknown, unknown, OlvidePasswordInput>,
+  res: Response
+): Promise<void> {
+  await recuperacion.solicitarRecuperacion(req.body.email);
+  // Siempre la misma respuesta: no se revela si la cuenta existe.
+  res.json({ ok: true, mensaje: RESPUESTA_OLVIDE });
+}
+
+export async function restablecerPassword(
+  req: Request<unknown, unknown, RestablecerPasswordInput>,
+  res: Response
+): Promise<void> {
+  await recuperacion.restablecerPassword(req.body.token, req.body.password_nueva);
   res.json({ ok: true });
 }

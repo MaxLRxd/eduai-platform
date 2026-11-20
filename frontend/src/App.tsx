@@ -5,6 +5,8 @@ import { ProtectedRoute } from "./router/ProtectedRoute";
 import { DEFAULT_PATH_BY_ROLE } from "./router/navConfig";
 import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./pages/LoginPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { StudentDashboardPage } from "./pages/student/StudentDashboardPage";
 import { StudentCoursesPage } from "./pages/student/StudentCoursesPage";
 import { StudentCourseDetailPage } from "./pages/student/StudentCourseDetailPage";
@@ -46,6 +48,9 @@ export function App(): React.ReactElement {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={DEFAULT_PATH_BY_ROLE[user.role]} replace /> : <LoginPage />} />
+
+      <Route path="/recuperar" element={user ? <Navigate to={DEFAULT_PATH_BY_ROLE[user.role]} replace /> : <ForgotPasswordPage />} />
+      <Route path="/restablecer" element={<ResetPasswordPage />} />
 
       {/* Alumno */}
       <Route

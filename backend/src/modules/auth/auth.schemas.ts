@@ -21,6 +21,17 @@ export const cambiarPasswordSchema = z
     path: ["password_nueva"],
   });
 
+export const olvidePasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(255),
+});
+
+export const restablecerPasswordSchema = z.object({
+  token: z.string().min(20, "enlace inválido").max(200),
+  password_nueva: z.string().min(8, "minimo 8 caracteres").max(72),
+});
+
+export type OlvidePasswordInput = z.infer<typeof olvidePasswordSchema>;
+export type RestablecerPasswordInput = z.infer<typeof restablecerPasswordSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CambiarPasswordInput = z.infer<typeof cambiarPasswordSchema>;

@@ -93,11 +93,11 @@ La pantalla ya existía; se resolvieron los dos detalles que faltaban y se hizo 
 ## 🟡 DEUDA TÉCNICA Y RIESGOS CONOCIDOS
 
 ### 7. Cobertura de tests del frontend — mejoró (humo de todas las páginas agregado 2026-11-20)
-`frontend` pasó de 1 archivo/3 tests a **22 archivos/188 tests** (login, branding, chat del tutor,
+`frontend` pasó de 1 archivo/3 tests a **23 archivos/195 tests** (login, branding, chat del tutor,
 servicios, materiales, calificaciones, analytics, rúbricas, resumen y corrección de respuestas propias).
 `paginas-humo.test.tsx` monta la app real en **cada ruta de cada rol** (30 rutas, red simulada sin datos) y
 verifica que carga sin romperse, que un alumno no entra a /admin y que sin sesión se va al login. Sigue
-faltando probar el comportamiento fino de varias pantallas. Backend: **37 suites/351 tests**;
+faltando probar el comportamiento fino de varias pantallas. Backend: **38 suites/363 tests**;
 ai-services: **161 tests**.
 
 ### 8. ✅ `mensajeIA` persiste el modo (2026-10-17)
@@ -161,6 +161,31 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 - Nuevo E2E de la exportación de reportes (PDF y CSV) contra la base real.
 - Probado contra el stack real: `GET /rag/materias` y `npm run rag:reindex -- --huerfanos` (borró las 71
   fragmentos huérfanos de una materia inexistente y conservó el resto).
+
+### 17. ✅ Recuperación de contraseña por correo (2026-11-20)
+- Backend: tabla `tokens_recuperacion` (migración `20261120180000`), `auth/recuperacion.service.ts`, rutas
+  `POST /api/auth/password/olvide` y `/restablecer`. Token de 256 bits, **solo se guarda su hash**, vence en
+  60 min, un solo uso (consumo atómico: dos pedidos simultáneos con el mismo enlace, gana uno), un enlace
+  vigente por cuenta. La respuesta del pedido es igual para cuentas reales, inexistentes o desactivadas.
+  Al restablecer se **revocan todas las sesiones** y se manda un aviso de cambio. Límites 3/cuenta y 20/IP
+  cada 15 min (pedir) y 10 fallos/IP (usar).
+- Frontend: «¿Olvidaste tu contraseña?» en el login, pantallas `/recuperar` y `/restablecer?token=`.
+- Verificado en el stack real (login, pedido, enlace, cambio, enlace reusado, clave vieja, sesión previa
+  cerrada, límite 429). Tests: 12 backend + 7 frontend.
+- **No verificado:** el envío real del correo. Sin `EMAIL_PROVIDER` configurado (estado actual) el enlace sale
+  en el log del backend solo en desarrollo. Para producción hace falta configurar un proveedor
+  (`resend`/`brevo`/`smtp`) con `EMAIL_FROM` y `APP_URL`, y probar un envío.
+
+### 16. ✅ Base lista para demo (2026-11-20)
+- El seed traía una frase de relleno por material y lo marcaba como indexado sin estarlo (el tutor respondía
+  «no tengo información»). Ahora `backend/prisma/material-demo.ts` trae **3 textos reales por materia** (POO y
+  estructuras de datos, modelo relacional y SQL, OSI/TCP-IP y subnetting) y el seed los deja con
+  `rag_indexado = false`.
+- Nuevo `npm run demo:reset`: seed + borrado de vectores huérfanos + reindexado limpio. Verificado en el stack
+  real: 9 contenidos indexados, 0 fallos, y el tutor respondió «una red /26 tiene 62 hosts utilizables»
+  citando el material.
+- Los E2E dejan 1 materia dada de baja y 3 usuarios (no se pueden borrar por API); ahora al terminar borran
+  los vectores de su materia y `demo:reset` devuelve la base al estado de demo.
 
 ### 15. ✅ El CI estaba en rojo y no se veía (2026-11-20)
 Al reproducir los 3 jobs de `.github/workflows/ci.yml` desde un **clon limpio** (`npm ci`, entorno virtual
@@ -653,5 +678,5 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-20):** backend **351** en **37** suites · frontend **188** en
-**22** archivos · ai-services **161** (+1 omitido) · E2E **44**.
+**Conteo actual de tests (2026-11-20):** backend **363** en **38** suites · frontend **195** en
+**23** archivos · ai-services **161** (+1 omitido) · E2E **44**.

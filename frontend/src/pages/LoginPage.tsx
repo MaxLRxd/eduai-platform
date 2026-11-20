@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useBranding } from "../contexts/BrandingContext";
 
@@ -78,6 +79,11 @@ export function LoginPage(): React.ReactElement {
           >
             {loading ? "Ingresando…" : "Ingresar"}
           </button>
+          <p className="text-center text-[13px] mt-4">
+            <Link to="/recuperar" className="text-primary font-semibold hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
         </form>
 
         {import.meta.env.DEV && (

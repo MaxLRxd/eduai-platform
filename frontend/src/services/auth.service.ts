@@ -59,3 +59,19 @@ export async function changePasswordRequest(currentPassword: string, newPassword
     body: JSON.stringify({ password_actual: currentPassword, password_nueva: newPassword }),
   });
 }
+
+/** Pide el enlace de recuperación. La respuesta es la misma exista o no la cuenta. */
+export async function forgotPasswordRequest(email: string): Promise<void> {
+  await api<{ ok: boolean }>("/api/auth/password/olvide", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** Cambia la contraseña con el token del enlace recibido por correo. */
+export async function resetPasswordRequest(token: string, newPassword: string): Promise<void> {
+  await api<{ ok: boolean }>("/api/auth/password/restablecer", {
+    method: "POST",
+    body: JSON.stringify({ token, password_nueva: newPassword }),
+  });
+}

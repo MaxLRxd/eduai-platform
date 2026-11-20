@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import { MATERIAL_DEMO } from "./material-demo";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -137,12 +138,16 @@ async function main(): Promise<void> {
     });
 
     // Contenidos
+    // Material real de estudio. `rag_indexado` queda en false: lo indexa de verdad
+    // `npm run demo:reset` (o `npm run rag:reindex`) a traves del ai-service.
     await prisma.contenido.createMany({
-      data: [
-        { seccion_id: seccionTeorica.id, tipo: "TEXTO", titulo: `Introducción a ${def.nombre}`, texto_contenido: `Material teórico de ${def.nombre}: fundamentos y conceptos principales.`, rag_indexado: true },
-        { seccion_id: seccionTeorica.id, tipo: "TEXTO", titulo: `Guía de ${def.nombre}`, texto_contenido: `Guía de estudio de ${def.nombre}: unidades, bibliografía y criterios de aprobación. El material completo se publica en clase o por el aula virtual.`, rag_indexado: true },
-        { seccion_id: seccionPractica.id, tipo: "TEXTO", titulo: `Ejercicios prácticos de ${def.nombre}`, texto_contenido: `Banco de ejercicios para resolver en clase y en casa.`, rag_indexado: true },
-      ],
+      data: (MATERIAL_DEMO[def.nombre] ?? []).map((c) => ({
+        seccion_id: c.seccion === "teoria" ? seccionTeorica.id : seccionPractica.id,
+        tipo: "TEXTO" as const,
+        titulo: c.titulo,
+        texto_contenido: c.texto,
+        rag_indexado: false,
+      })),
     });
 
     // Rúbrica
