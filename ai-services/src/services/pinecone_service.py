@@ -5,6 +5,8 @@ vector store con la variable VECTOR_STORE. Usa un namespace por subject_id
 y guarda el texto del chunk en los metadatos de cada vector.
 """
 
+import asyncio
+import threading
 import time
 
 import structlog
@@ -35,8 +37,15 @@ class PineconeRetrievalService:
         self._metric = metric
         self._pc: Pinecone | None = None
         self._index = None
+        # El cliente de Pinecone es sincrono y los metodos async lo corren en un hilo: dos
+        # pedidos simultaneos no deben crear el cliente (ni el indice) dos veces.
+        self._lock = threading.Lock()
 
     def _ensure_index(self):
+        with self._lock:
+            return self._crear_indice_si_falta()
+
+    def _crear_indice_si_falta(self):
         if self._index is None:
             self._pc = Pinecone(api_key=self._api_key)
             existing = {index.name for index in self._pc.list_indexes()}
@@ -59,7 +68,19 @@ class PineconeRetrievalService:
             return bool(status.get("ready", False))
         return bool(getattr(status, "ready", False))
 
+    # El cliente de Pinecone es SINCRONO: llamarlo directo desde una corrutina congelaba el event
+    # loop (y con el, a todos los alumnos) mientras duraba la red. Cada operacion corre en un hilo.
+
     async def upsert_chunks(
+        self,
+        subject_id: str,
+        material_id: str,
+        chunks: list[str],
+        vectors: list[list[float]],
+    ) -> None:
+        await asyncio.to_thread(self._upsert_sync, subject_id, material_id, chunks, vectors)
+
+    def _upsert_sync(
         self,
         subject_id: str,
         material_id: str,
@@ -87,6 +108,9 @@ class PineconeRetrievalService:
             )
 
     async def delete_material(self, subject_id: str, material_id: str) -> None:
+        await asyncio.to_thread(self._delete_sync, subject_id, material_id)
+
+    def _delete_sync(self, subject_id: str, material_id: str) -> None:
         index = self._ensure_index()
         try:
             index.delete(filter={"material_id": material_id}, namespace=subject_id)
@@ -103,6 +127,15 @@ class PineconeRetrievalService:
         embedding: list[float],
         top_k: int = 5,
         min_score: float | None = None,
+    ) -> list[dict]:
+        return await asyncio.to_thread(self._search_sync, subject_id, embedding, top_k, min_score)
+
+    def _search_sync(
+        self,
+        subject_id: str,
+        embedding: list[float],
+        top_k: int,
+        min_score: float | None,
     ) -> list[dict]:
         index = self._ensure_index()
         response = index.query(
@@ -126,14 +159,45 @@ class PineconeRetrievalService:
             return rows
         return [r for r in rows if float(r.get("score", 0.0)) >= float(min_score)]
 
+    async def list_subjects(self) -> list[dict]:
+        """Materias (namespaces) con fragmentos indexados, con cuantos."""
+        return await asyncio.to_thread(self._list_subjects_sync)
+
+    def _list_subjects_sync(self) -> list[dict]:
+        stats = self._ensure_index().describe_index_stats()
+        namespaces = stats.get("namespaces") if isinstance(stats, dict) else stats.namespaces
+        materias = []
+        for nombre, info in sorted((namespaces or {}).items()):
+            if not nombre:  # el namespace "" es el por defecto: aca no se usa
+                continue
+            cantidad = info.get("vector_count") if isinstance(info, dict) else info.vector_count
+            materias.append({"subject_id": nombre, "fragmentos": int(cantidad or 0)})
+        return materias
+
+    async def delete_subject(self, subject_id: str) -> None:
+        """Borra TODO el material indexado de una materia (su namespace)."""
+        await asyncio.to_thread(self._delete_subject_sync, subject_id)
+
+    def _delete_subject_sync(self, subject_id: str) -> None:
+        try:
+            self._ensure_index().delete(delete_all=True, namespace=subject_id)
+        except NotFoundError:
+            logger.info("pinecone_namespace_missing", namespace=subject_id)
+
     async def count_chunks(self, subject_id: str) -> int:
         """Cuantos fragmentos hay indexados para la materia (cada materia es un namespace)."""
+        return await asyncio.to_thread(self._count_sync, subject_id)
+
+    def _count_sync(self, subject_id: str) -> int:
         stats = self._ensure_index().describe_index_stats()
-        namespaces = getattr(stats, "namespaces", None) or stats.get("namespaces", {})
-        info = namespaces.get(subject_id)
+        # La respuesta puede ser un objeto o un dict, y en un indice vacio `namespaces` es {}
+        # (falsy): por eso no se encadena con `or`, que caia a un `.get` que el objeto no tiene.
+        namespaces = stats.get("namespaces") if isinstance(stats, dict) else stats.namespaces
+        info = (namespaces or {}).get(subject_id)
         if info is None:
             return 0
-        return int(getattr(info, "vector_count", None) or info.get("vector_count", 0))
+        cantidad = info.get("vector_count") if isinstance(info, dict) else info.vector_count
+        return int(cantidad or 0)
 
     async def close(self) -> None:
         if self._pc is not None:

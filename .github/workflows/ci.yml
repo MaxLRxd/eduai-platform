@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      # Prisma 7 no genera el cliente al instalar: sin este paso fallan los tipos y casi todos los tests
+      # ("Cannot find module '.prisma/client/default'"). No necesita DATABASE_URL.
+      - run: npx prisma generate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

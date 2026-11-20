@@ -249,14 +249,14 @@ Casos de uso (`ai-services/src/use_cases`):
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 348 pruebas en 36 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
-| Servicio de IA | pytest | 139 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 154 pruebas en 21 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
-| **E2E** | `node:test` | **42 pruebas** | Los tres roles encadenados contra el stack real |
+| Backend | Jest + Supertest | 351 pruebas en 37 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Servicio de IA | pytest | 161 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
+| Frontend | Vitest + Testing Library | 188 pruebas en 22 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
+| **E2E** | `node:test` | **44 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
 
-Calidad estática: TypeScript estricto en backend y frontend, ESLint sin advertencias, `ruff` en Python. El pipeline de CI (`.github/workflows/ci.yml`) corre lint, tipos y pruebas de los tres servicios en cada *push* y *pull request*.
+Calidad estática: TypeScript estricto en backend y frontend, ESLint sin advertencias, `ruff` en Python. El pipeline de CI (`.github/workflows/ci.yml`) corre lint, tipos y pruebas de los tres servicios en cada *push* y *pull request* (el backend genera antes el cliente de Prisma con `npx prisma generate`). No ejecuta la suite E2E, que necesita el stack levantado.
 
 ## 12. Rendimiento del tutor
 
@@ -327,7 +327,7 @@ El plan de proyecto (Anexo, sección 3.5) planteaba algunas tecnologías que, al
 ## 15. Limitaciones conocidas
 
 - **Dependencias con salto de versión mayor pendiente:** `zod` 3 → 4 (riesgo de agotar memoria con colecciones enormes; mitigado por el límite de 1 MB del cuerpo) y `react-router` 6 → 7 (afecta redirecciones y renderizado en servidor, que no se usa). Las herramientas de prueba (`vitest`) tienen una advertencia crítica que solo aplica a desarrollo.
-- **Tiempos del LLM real sin medir** en el entorno de desarrollo (ver sección 12).
+- **La latencia del tutor no cumple el objetivo** de la primera respuesta en menos de 3 s: se midió con la IA real (mediana de 6,84 s) y depende de la capacidad de Gemini con clave gratuita (ver sección 12).
 - **Los tokens de acceso no se invalidan al instante** al dar de baja a un usuario: siguen válidos hasta 15 minutos; la renovación sí queda bloqueada.
 - **Los archivos subidos se sirven por URL no adivinable** (sufijo aleatorio de 128 bits) pero sin control de sesión; en producción real conviene un bucket privado con URLs firmadas.
 - **Contraseña temporal:** el aviso de alta no incluye la contraseña (no se guarda ni se envía en claro); el administrador se la entrega al usuario por otro medio.

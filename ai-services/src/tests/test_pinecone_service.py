@@ -1,5 +1,8 @@
 """Tests del servicio de búsqueda vectorial en Pinecone."""
 
+import asyncio
+import time
+
 import pytest
 from pinecone import NotFoundError
 
@@ -52,9 +55,7 @@ class FakePinecone:
         return [_Named(name) for name in sorted(self._indexes)]
 
     def create_index(self, name, dimension, metric, spec):
-        self._created.append(
-            {"name": name, "dimension": dimension, "metric": metric, "spec": spec}
-        )
+        self._created.append({"name": name, "dimension": dimension, "metric": metric, "spec": spec})
         self._indexes.add(name)
 
     def describe_index(self, name):
@@ -186,3 +187,160 @@ async def test_close_closes_client(fake_pinecone):
     await service.upsert_chunks("mat-1", "m1", ["c"], [[0.1] * 3072])
     await service.close()
     assert fake_pinecone._closed is True
+
+
+# ───────────── el cliente síncrono no debe congelar el event loop ─────────────
+
+
+class IndiceLento(FakeIndex):
+    """Un índice cuya red tarda: cada operación bloquea el hilo que la ejecuta."""
+
+    DEMORA = 0.3
+
+    def upsert(self, vectors, namespace):
+        time.sleep(self.DEMORA)
+        super().upsert(vectors, namespace)
+
+    def query(self, vector, top_k, namespace, include_metadata):
+        time.sleep(self.DEMORA)
+        return super().query(vector, top_k, namespace, include_metadata)
+
+    def delete(self, filter, namespace):
+        time.sleep(self.DEMORA)
+        super().delete(filter, namespace)
+
+    def describe_index_stats(self):
+        time.sleep(self.DEMORA)
+        return type("Stats", (), {"namespaces": {}})()
+
+
+async def _latidos_durante(operacion) -> int:
+    """Cuántas veces pudo correr otra corrutina mientras `operacion` esperaba la red."""
+    latidos = 0
+    detener = asyncio.Event()
+
+    async def latir():
+        nonlocal latidos
+        while not detener.is_set():
+            await asyncio.sleep(0.02)
+            latidos += 1
+
+    tarea = asyncio.create_task(latir())
+    await operacion
+    detener.set()
+    await tarea
+    return latidos
+
+
+def _servicio_lento(fake_pinecone) -> PineconeRetrievalService:
+    fake_pinecone.index = IndiceLento()
+    return PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operacion", ["search", "upsert", "delete", "count"])
+async def test_ninguna_operacion_congela_el_event_loop(fake_pinecone, operacion):
+    servicio = _servicio_lento(fake_pinecone)
+    fake_pinecone.index.namespaces.add(
+        "mat"
+    )  # para que el borrado no falle por namespace inexistente
+    await asyncio.to_thread(
+        servicio._ensure_index
+    )  # el índice ya existe: se mide solo la operación
+
+    llamadas = {
+        "search": lambda: servicio.search("mat", [0.1, 0.2, 0.3], top_k=3),
+        "upsert": lambda: servicio.upsert_chunks("mat", "m1", ["a"], [[0.1, 0.2, 0.3]]),
+        "delete": lambda: servicio.delete_material("mat", "m1"),
+        "count": lambda: servicio.count_chunks("mat"),
+    }
+
+    latidos = await _latidos_durante(llamadas[operacion]())
+
+    # Con el loop congelado serían ~0; con la operación en un hilo, unos 10-15 en 0,3 s.
+    assert latidos >= 5
+
+
+@pytest.mark.asyncio
+async def test_dos_pedidos_simultaneos_crean_el_cliente_una_sola_vez(fake_pinecone, monkeypatch):
+    creados = []
+    original = fake_pinecone.list_indexes
+
+    def contar():
+        creados.append(1)
+        return original()
+
+    fake_pinecone.list_indexes = contar
+    servicio = PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+    await asyncio.gather(*[servicio.search("mat", [0.1, 0.2, 0.3]) for _ in range(6)])
+
+    assert len(creados) == 1
+
+
+@pytest.mark.asyncio
+async def test_count_chunks_cuenta_los_vectores_del_namespace_de_la_materia(fake_pinecone):
+    class Info:
+        vector_count = 7
+
+    fake_pinecone.index.describe_index_stats = lambda: type(
+        "Stats", (), {"namespaces": {"redes": Info()}}
+    )()
+    servicio = PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+    assert await servicio.count_chunks("redes") == 7
+    assert await servicio.count_chunks("otra-materia") == 0
+
+
+@pytest.mark.asyncio
+async def test_count_chunks_tambien_acepta_una_respuesta_tipo_dict_y_un_indice_vacio(fake_pinecone):
+    servicio = PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+    fake_pinecone.index.describe_index_stats = lambda: {"namespaces": {"m": {"vector_count": 4}}}
+    assert await servicio.count_chunks("m") == 4
+
+    fake_pinecone.index.describe_index_stats = lambda: {"namespaces": {}}
+    assert await servicio.count_chunks("m") == 0
+
+
+@pytest.mark.asyncio
+async def test_list_subjects_lista_namespaces_y_omite_el_por_defecto(fake_pinecone):
+    class Info:
+        def __init__(self, cantidad):
+            self.vector_count = cantidad
+
+    fake_pinecone.index.describe_index_stats = lambda: type(
+        "Stats", (), {"namespaces": {"": Info(1), "redes": Info(7), "bd": Info(3)}}
+    )()
+    servicio = PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+    assert await servicio.list_subjects() == [
+        {"subject_id": "bd", "fragmentos": 3},
+        {"subject_id": "redes", "fragmentos": 7},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_list_subjects_con_un_indice_vacio_devuelve_lista_vacia(fake_pinecone):
+    fake_pinecone.index.describe_index_stats = lambda: {"namespaces": {}}
+    servicio = PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+    assert await servicio.list_subjects() == []
+
+
+@pytest.mark.asyncio
+async def test_delete_subject_borra_todo_el_namespace_y_tolera_que_no_exista(fake_pinecone):
+    borrados = []
+
+    def borrar(delete_all=False, namespace="", **_resto):
+        if namespace == "inexistente":
+            raise NotFoundError("[404] Namespace not found")
+        borrados.append((delete_all, namespace))
+
+    fake_pinecone.index.delete = borrar
+    servicio = PineconeRetrievalService(api_key="k", index_name="idx", dimension=3)
+
+    await servicio.delete_subject("redes")
+    await servicio.delete_subject("inexistente")  # no debe lanzar
+
+    assert borrados == [(True, "redes")]

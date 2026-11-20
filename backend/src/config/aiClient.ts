@@ -533,3 +533,48 @@ export async function contarFragmentosIA(subjectId: string): Promise<number | nu
     return null;
   }
 }
+
+export interface MateriaIndexada {
+  subject_id: string;
+  fragmentos: number;
+}
+
+/** Materias con material indexado en el almacén vectorial (para detectar vectores huérfanos). */
+export async function listarMateriasIndexadasIA(): Promise<MateriaIndexada[] | null> {
+  if (!aiDisponible()) return null;
+
+  try {
+    const res = await fetch(`${baseUrl()}/rag/materias`, {
+      headers: aiHeaders(),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+      logger.error({ status: res.status }, "Fallo al listar las materias indexadas en ai-service");
+      return null;
+    }
+    return ((await res.json()) as { materias: MateriaIndexada[] }).materias;
+  } catch (err) {
+    logger.error({ err }, "Error al comunicarse con ai-service para listar las materias indexadas");
+    return null;
+  }
+}
+
+/** Borra TODO el material indexado de una materia. `true` si se borró. */
+export async function borrarMateriaIndexadaIA(subjectId: string): Promise<boolean> {
+  if (!aiDisponible()) return false;
+
+  try {
+    const res = await fetch(`${baseUrl()}/rag/materias/${encodeURIComponent(subjectId)}`, {
+      method: "DELETE",
+      headers: aiHeaders(),
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) {
+      logger.error({ status: res.status, subjectId }, "Fallo al borrar la materia del almacén vectorial");
+    }
+    return res.ok;
+  } catch (err) {
+    logger.error({ err, subjectId }, "Error al comunicarse con ai-service para borrar la materia");
+    return false;
+  }
+}

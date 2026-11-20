@@ -13,10 +13,12 @@
  * sin limpiar la base.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const BASE = (process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/+$/, "");
 const PASSWORD = process.env.E2E_PASSWORD ?? "Clave1234";
+const AI_URL = (process.env.E2E_AI_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 const CON_IA = process.env.E2E_AI === "1";
 const SUFIJO = Math.random().toString(36).slice(2, 8);
 const CLAVE_NUEVA = "OtraClave2026";
@@ -476,6 +478,31 @@ describe(`EduAI E2E (${BASE})${CON_IA ? " + IA" : ""}`, { concurrency: false }, 
     });
   });
 
+  describe("Reportes del administrador (datos reales)", () => {
+    it("cada reporte se exporta como PDF válido y como CSV, y los docentes no pueden", async () => {
+      const lista = await llamar("GET", "/api/admin/reports", { token: ctx.admin });
+      assert.equal(lista.status, 200, JSON.stringify(lista.body));
+      assert.ok(lista.body.reports.length > 0, "hay reportes");
+
+      for (const reporte of lista.body.reports) {
+        const tipo = reporte.type ?? reporte.id ?? reporte.key;
+        const pdf = await llamar("GET", `/api/admin/reports/${tipo}/export?format=pdf`, { token: ctx.admin });
+        assert.equal(pdf.status, 200, `PDF de ${tipo}: ${JSON.stringify(pdf.body)}`);
+        const bytes = Buffer.from(pdf.body.pdf, "base64");
+        assert.equal(bytes.subarray(0, 5).toString(), "%PDF-", `${tipo} no es un PDF`);
+        assert.ok(bytes.length > 1000, `${tipo}: PDF demasiado chico`);
+        assert.match(pdf.body.filename, /\.pdf$/);
+
+        const csv = await llamar("GET", `/api/admin/reports/${tipo}/export`, { token: ctx.admin });
+        assert.equal(csv.status, 200, `CSV de ${tipo}`);
+      }
+
+      const tipo = lista.body.reports[0].type ?? lista.body.reports[0].id ?? lista.body.reports[0].key;
+      const ajeno = await llamar("GET", `/api/admin/reports/${tipo}/export?format=pdf`, { token: ctx.tokDocente });
+      assert.equal(ajeno.status, 403);
+    });
+  });
+
   describe("Cuenta: cambio de contraseña", () => {
     it("cambia la contraseña, la anterior deja de servir y se puede volver a ingresar", async () => {
       const mala = await llamar("POST", "/api/auth/password", {
@@ -512,6 +539,17 @@ describe(`EduAI E2E (${BASE})${CON_IA ? " + IA" : ""}`, { concurrency: false }, 
       assert.equal(r.status, 200, JSON.stringify(r.body));
       const texto = JSON.stringify(r.body);
       assert.match(texto, /Contame qu/);
+    });
+
+    it("OCR: extrae el texto de un PDF escaneado (solo imagen) sin guardarlo", async () => {
+      const pdf = readFileSync(new URL("./fixtures/escaneado.pdf", import.meta.url));
+      const form = new FormData();
+      form.append("archivo", new Blob([pdf], { type: "application/pdf" }), "escaneado.pdf");
+      const res = await fetch(`${AI_URL}/tutor/extraer-texto`, { method: "POST", body: form });
+      const cuerpo = await res.json();
+      assert.equal(res.status, 200, JSON.stringify(cuerpo));
+      assert.match(cuerpo.texto, /fotos[ií]ntesis/i);
+      assert.match(cuerpo.texto, /cloroplastos/i);
     });
 
     it("CU-A11: corrige un simulacro de opción múltiple y lo guarda en el historial", async () => {

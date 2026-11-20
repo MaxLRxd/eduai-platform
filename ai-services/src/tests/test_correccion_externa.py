@@ -211,3 +211,34 @@ def test_el_endpoint_de_correccion_devuelve_material_limitado():
 
     assert response.status_code == 200
     assert response.json()["material_limitado"] is True
+
+
+def test_endpoint_lista_las_materias_con_material_indexado():
+    response = TestClient(_build_app()).get("/rag/materias")
+
+    assert response.status_code == 200
+    assert response.json()["materias"][0] == {"subject_id": "redes", "fragmentos": 7}
+
+
+def test_endpoint_borra_todo_el_material_de_una_materia():
+    app = _build_app()
+
+    response = TestClient(app).delete("/rag/materias/materia-borrada")
+
+    assert response.status_code == 200
+    assert response.json() == {"subject_id": "materia-borrada", "deleted": True}
+    assert app.state.retrieval_service.materias_borradas == ["materia-borrada"]
+
+
+def test_los_endpoints_de_limpieza_responden_502_si_el_almacen_falla():
+    app = _build_app()
+
+    async def roto(*_args):
+        raise RuntimeError("sin conexion")
+
+    app.state.retrieval_service.list_subjects = roto
+    app.state.retrieval_service.delete_subject = roto
+    client = TestClient(app)
+
+    assert client.get("/rag/materias").status_code == 502
+    assert client.delete("/rag/materias/redes").status_code == 502

@@ -40,6 +40,15 @@ class FakeRetrieval:
     async def count_chunks(self, subject_id):
         return 7
 
+    async def list_subjects(self):
+        return [
+            {"subject_id": "redes", "fragmentos": 7},
+            {"subject_id": "materia-borrada", "fragmentos": 71},
+        ]
+
+    async def delete_subject(self, subject_id):
+        self.materias_borradas = [*getattr(self, "materias_borradas", []), subject_id]
+
 
 class FakeCorreccionLLM:
     async def generate(self, system_instruction, messages, temperature=None, max_tokens=None):

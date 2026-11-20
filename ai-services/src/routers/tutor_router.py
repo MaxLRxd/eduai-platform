@@ -25,7 +25,8 @@ from src.schemas.tutor import (
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 
-# Tope defensivo: el backend ya limita el tamaño, esto evita leer en memoria algo enorme si alguien llama directo.
+# Tope defensivo: el backend ya limita el tamaño; esto evita leer en memoria algo enorme
+# si alguien llama directo.
 LIMITE_BYTES_EXTRACCION = 15 * 1024 * 1024
 
 
@@ -47,7 +48,7 @@ async def chat_stream(req: TutorRequest, request: Request) -> StreamingResponse:
             async for event in request.app.state.ask_tutor_use_case.stream(req):
                 payload = json.dumps(event, ensure_ascii=False)
                 yield f"data: {payload}\n\n"
-            yield 'event: done\ndata: {}\n\n'
+            yield "event: done\ndata: {}\n\n"
         except Exception as exc:
             payload = json.dumps({"error": str(exc)}, ensure_ascii=False)
             yield f"event: error\ndata: {payload}\n\n"
@@ -63,7 +64,8 @@ async def chat_stream(req: TutorRequest, request: Request) -> StreamingResponse:
 async def extraer_texto(request: Request, archivo: UploadFile = File(...)) -> dict:
     """Devuelve el texto de un archivo (PDF, DOCX, PPTX, TXT, imagen) SIN guardarlo ni indexarlo.
 
-    Lo usa el backend para resumir un archivo propio del alumno: el contenido pasa por acá y se descarta.
+    Lo usa el backend para resumir un archivo propio del alumno: el contenido pasa por acá
+    y se descarta.
     """
     try:
         data = await archivo.read()
@@ -81,7 +83,10 @@ async def extraer_texto(request: Request, archivo: UploadFile = File(...)) -> di
     if not texto.strip():
         raise HTTPException(
             status_code=422,
-            detail="No se pudo extraer texto del archivo (puede estar escaneado, vacío o en un formato no soportado).",
+            detail=(
+                "No se pudo extraer texto del archivo "
+                "(puede estar escaneado, vacío o en un formato no soportado)."
+            ),
         )
     return {"texto": texto, "caracteres": len(texto)}
 

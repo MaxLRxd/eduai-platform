@@ -62,9 +62,7 @@ class LLMService:
         contents = []
         for message in messages:
             role = "model" if message["role"] == "assistant" else "user"
-            contents.append(
-                types.Content(role=role, parts=[types.Part(text=message["content"])])
-            )
+            contents.append(types.Content(role=role, parts=[types.Part(text=message["content"])]))
         return contents
 
     def _build_config(
@@ -139,19 +137,34 @@ class LLMService:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ):
-        # Solo se reintenta abrir el stream. Si el error llega despues de haber
-        # emitido tokens, reintentar duplicaria texto en el cliente.
-        async def abrir():
-            return await self.client.aio.models.generate_content_stream(
+        # Se reintenta hasta tener el PRIMER fragmento de texto: Gemini suele devolver el 503
+        # al empezar a leer el stream, no al abrirlo, y todavia no se emitio nada al cliente.
+        # Despues del primer fragmento ya no se reintenta: duplicaria texto en el cliente.
+        async def abrir_y_leer_primero():
+            respuesta = await self.client.aio.models.generate_content_stream(
                 model=self.model,
                 contents=self._build_contents(messages),
                 config=self._build_config(system_instruction, temperature, max_tokens),
             )
+            iterador = respuesta.__aiter__()
+            while True:
+                try:
+                    chunk = await iterador.__anext__()
+                except StopAsyncIteration:
+                    return iterador, ""
+                if chunk.text:
+                    return iterador, chunk.text
 
-        stream = await self._con_reintentos(abrir, "stream_open")
+        iterador, primero = await self._con_reintentos(abrir_y_leer_primero, "stream_open")
 
         try:
-            async for chunk in stream:
+            if primero:
+                yield primero
+            while True:
+                try:
+                    chunk = await iterador.__anext__()
+                except StopAsyncIteration:
+                    break
                 if chunk.text:
                     yield chunk.text
         except Exception as exc:  # noqa: BLE001

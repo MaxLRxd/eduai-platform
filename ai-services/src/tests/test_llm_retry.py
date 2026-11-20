@@ -40,6 +40,7 @@ class _Respuesta:
 @pytest.fixture(autouse=True)
 def _sin_espera(monkeypatch):
     """Elimina el sleep para que los tests no tarden."""
+
     async def _rapido(_segundos):
         return None
 
@@ -116,3 +117,129 @@ async def test_generate_agota_los_reintentos_y_propaga(monkeypatch):
 
     # 1 intento inicial + llm_max_retries reintentos
     assert service.client.llamadas == 5
+
+
+# ───────────── streaming: el 503 llega al leer el primer fragmento ─────────────
+
+
+class _Flujo:
+    """Un stream de Gemini: cada elemento es un texto, None (fragmento sin texto) o un error."""
+
+    def __init__(self, elementos):
+        self.elementos = list(elementos)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if not self.elementos:
+            raise StopAsyncIteration
+        elemento = self.elementos.pop(0)
+        if isinstance(elemento, Exception):
+            raise elemento
+        return _Respuesta(elemento)
+
+
+class _ClienteStream:
+    def __init__(self, flujos):
+        self.flujos = list(flujos)
+        self.llamadas = 0
+        self.aio = self
+        self.models = self
+
+    async def generate_content_stream(self, **_kwargs):
+        self.llamadas += 1
+        flujo = self.flujos.pop(0)
+        if isinstance(flujo, Exception):
+            raise flujo
+        return flujo
+
+
+def _service_stream(flujos) -> tuple[LLMService, _ClienteStream]:
+    service = LLMService.__new__(LLMService)
+    service._api_key = "test"
+    service.model = "gemini-test"
+    cliente = _ClienteStream(flujos)
+    object.__setattr__(service, "_client", cliente)
+    return service, cliente
+
+
+async def _consumir(service):
+    textos = []
+    async for texto in service.stream("sistema", [{"role": "user", "content": "hola"}]):
+        textos.append(texto)
+    return textos
+
+
+_ALTA_DEMANDA = _Transitorio("503 UNAVAILABLE. This model is currently experiencing high demand.")
+
+
+@pytest.mark.asyncio
+async def test_stream_reintenta_el_503_que_llega_al_leer_el_primer_fragmento():
+    service, cliente = _service_stream([_Flujo([_ALTA_DEMANDA]), _Flujo(["Hola", " mundo"])])
+
+    assert await _consumir(service) == ["Hola", " mundo"]
+    assert cliente.llamadas == 2
+
+
+@pytest.mark.asyncio
+async def test_stream_reintenta_el_503_al_abrir_como_antes():
+    service, cliente = _service_stream([_ALTA_DEMANDA, _Flujo(["ok"])])
+
+    assert await _consumir(service) == ["ok"]
+    assert cliente.llamadas == 2
+
+
+@pytest.mark.asyncio
+async def test_stream_ignora_fragmentos_sin_texto_antes_del_primero():
+    service, cliente = _service_stream([_Flujo([None, "", "Hola", None, " mundo"])])
+
+    assert await _consumir(service) == ["Hola", " mundo"]
+    assert cliente.llamadas == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_no_reintenta_un_error_permanente_en_el_primer_fragmento():
+    service, cliente = _service_stream(
+        [_Flujo([_Permanente("400 INVALID_ARGUMENT")]), _Flujo(["x"])]
+    )
+
+    with pytest.raises(_Permanente):
+        await _consumir(service)
+    assert cliente.llamadas == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_no_reintenta_si_el_error_llega_despues_del_primer_fragmento():
+    # Reintentar duplicaria "Hola" en pantalla: el error se propaga y lo ya emitido se conserva.
+    service, cliente = _service_stream(
+        [_Flujo(["Hola", _ALTA_DEMANDA]), _Flujo(["Hola", " completo"])]
+    )
+    textos = []
+
+    with pytest.raises(_Transitorio):
+        async for texto in service.stream("sistema", [{"role": "user", "content": "hola"}]):
+            textos.append(texto)
+
+    assert textos == ["Hola"]
+    assert cliente.llamadas == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_agota_los_reintentos_y_propaga_el_error():
+    from src.config.settings import settings
+
+    intentos = settings.llm_max_retries + 1
+    service, cliente = _service_stream([_Flujo([_ALTA_DEMANDA]) for _ in range(intentos)])
+
+    with pytest.raises(_Transitorio):
+        await _consumir(service)
+    assert cliente.llamadas == intentos
+
+
+@pytest.mark.asyncio
+async def test_stream_vacio_no_emite_nada_ni_falla():
+    service, cliente = _service_stream([_Flujo([None, ""])])
+
+    assert await _consumir(service) == []
+    assert cliente.llamadas == 1

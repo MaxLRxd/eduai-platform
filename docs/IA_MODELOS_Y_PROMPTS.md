@@ -9,8 +9,8 @@ Documento de referencia del proyecto EduAI que explica **qué IA se utilizó**, 
 ## 1. Resumen ejecutivo
 
 - **Proveedor de IA:** Google **Gemini** (Google AI Studio / Gemini API).
-- **LLM de chat (generación de texto):** `gemini-3.6-flash` (configurable con `GEMINI_MODEL`).
-- **Modelo de embeddings:** `gemini-embedding-2` (3072 dimensiones, configurable con `GEMINI_EMBEDDING_MODEL`).
+- **LLM de chat (generación de texto):** `gemini-3.5-flash-lite` (configurable con `GEMINI_MODEL`).
+- **Modelo de embeddings:** `gemini-embedding-2` (1536 dimensiones, configurable con `GEMINI_EMBEDDING_MODEL`).
 - **Patrón central:** **RAG (Retrieval-Augmented Generation)** — el modelo solo genera basándose en el material oficial de la cátedra, indexado en una base vectorial. Las respuestas incluyen las **fuentes** del material usado.
 - **Bases vectoriales soportadas:** `pgvector` (PostgreSQL, por defecto) o `Pinecone` (se elige con `VECTOR_STORE`).
 - **Caché:** Redis (TTL 1 hora por defecto) con **degradación silenciosa** (si no hay Redis, la app sigue funcionando sin caché).
@@ -25,15 +25,15 @@ Valores actuales en `ai-services/src/config/settings.py`:
 | Variable | Valor por defecto | Uso |
 |---|---|---|
 | `GEMINI_API_KEY` | *(obligatoria, va en `.env`)* | Autenticación ante la API de Gemini |
-| `GEMINI_MODEL` | `gemini-3.6-flash` | LLM de chat (texto) |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | LLM de chat (texto) |
 | `GEMINI_EMBEDDING_MODEL` | `gemini-embedding-2` | Convierte texto → vector |
-| `EMBEDDING_DIMENSIONS` | `3072` | Dimensiones del vector (debe coincidir con el modelo) |
+| `EMBEDDING_DIMENSIONS` | `1536` | Dimensiones del vector (≤ 2000, el tope del índice HNSW de pgvector) |
 | `LLM_PROVIDER` | `gemini` | Único proveedor soportado por ahora |
 
 Elección de modelo y justificación:
 
-- **`gemini-3.6-flash`** — se priorizó un modelo *flash* por **latencia y costo**, apropiado para el volumen esperado de consultas de estudiantes y docentes. El nombre se mantiene **centralizado en `settings.py`** para poder cambiarlo sin tocar código.
-- **`gemini-embedding-2`** — embeddings de alta dimensión (3072) que dan buena separación semántica del material educativo.
+- **`gemini-3.5-flash-lite`** — se priorizó un modelo *flash-lite* por **latencia y costo**, apropiado para el volumen esperado de consultas de estudiantes y docentes. Los modelos *flash* más grandes devolvían 503 "high demand" de forma frecuente en cuentas gratuitas. El nombre se mantiene **centralizado en `settings.py`** para poder cambiarlo sin tocar código. La latencia medida con la IA real está en `DOCUMENTACION_TECNICA.md` §12.
+- **`gemini-embedding-2`** — embeddings con buena separación semántica del material educativo, pedidos a **1536 dimensiones** (`output_dimensionality`) para que el índice HNSW de pgvector pueda crearse (el tope es 2000).
 
 ### Cómo se llama a Gemini (capa única de abstracción)
 
@@ -306,17 +306,20 @@ Lógica de elección de temperatura: **chat** y **material** buscan creatividad/
 
 | Endpoint ai-service | Caso de uso | Consumido por backend Node |
 |---|---|---|
-| `POST /tutor/chat` (+`/stream`) | CU-A04 | módulo `tutor/` (sesiones del alumno) |
-| `POST /tutor/resumen` | CU-A05 | *(pendiente de proxyeación)* |
-| `POST /tutor/examen` | CU-A08 | *(pendiente de proxyeación)* |
-| `POST /tutor/generar-material` | CU-A09 | `POST /api/asistente/generar` (asistente docente del profesor) |
-| `POST /tutor/corregir-entrega` | CU-A13 | `GET /api/entregas/:entregaId/correccion-ia` (Auto-correction Engine) |
-| `POST /rag/material` · `DELETE /rag/material/{subject}/{material}` | RAG | indexación al publicar contenido |
-| `POST /tutor/depurar` | CU-SYS01 | reporte de depuración de prompts |
+| `POST /tutor/chat` (+`/stream`) | CU-A04 | `POST /api/tutor/sesiones/:id/mensajes` y `/stream` (módulo `tutor/`) |
+| `POST /tutor/resumen` | CU-A05 | `POST /api/materias/:id/tutor/resumen` |
+| `POST /tutor/extraer-texto` | CU-A05 (A1) | `POST /api/materias/:id/tutor/resumen/archivo` (resumen de un archivo propio; el archivo no se guarda) |
+| `POST /tutor/examen` | CU-A08 | `POST /api/materias/:id/tutor/examen` |
+| `POST /tutor/examen/corregir` | CU-A11 | `POST /api/materias/:id/tutor/examen/corregir` (también respuestas propias, sin respuesta modelo) |
+| `GET /rag/material/estado/{materia}` | CU-A11 (A4) | `GET /api/materias/:id/tutor/material-disponible` (¿hay material indexado suficiente?) |
+| `POST /tutor/generar-material` | CU-P10 | `POST /api/asistente/generar` (asistente docente del profesor) |
+| `POST /tutor/corregir-entrega` | CU-A07 | `POST /api/entregas/:id/corregir-ia` y corrección automática al recibir una entrega (con niveles de desempeño, CU-P04) |
+| `POST /rag/material` · `POST /rag/material/archivo` · `DELETE /rag/material/{subject}/{material}` | RAG | indexación al publicar o borrar contenido |
+| `POST /tutor/depurar` | CU-SYS01 | depuración de prompts (se aplica a todas las interfaces de IA) |
 
 ---
 
 ## 9. Estado actual y próximos pasos
 
-- **Hecho:** chat tutor (3 modos) con RAG/caché/streaming · resumen de documentos · simulacro de examen · indexación de material · asistente docente · Auto-correction Engine · tests (33 passing) y lint (ruff).
-- **Pendientes:** proxyeación de `/tutor/resumen` y `/tutor/examen` desde Node (endpoints ya listos en el ai-service) · rúbricas reales en el frontend del profesor (hoy devuelven `[]`) · probar en vivo con `GEMINI_API_KEY` real (en `.env` de `ai-services/`) y `AI_SERVICE_URL` apuntando al servicio (en `backend/.env`).
+- **Hecho:** chat tutor (3 modos) con RAG/caché/streaming · resumen de documentos (material, texto o archivo propio) · simulacro de examen y su corrección (incluidas respuestas propias y aviso de material insuficiente) · indexación de material · asistente docente · Auto-correction Engine con rúbricas y niveles de desempeño · depuración de prompts · tests (161 pasan) y lint (ruff).
+- **Pendiente:** la latencia del tutor con la IA real mide una mediana de 6,84 s contra el objetivo de 3 s, por la capacidad de Gemini con clave gratuita (detalle y opciones en `DOCUMENTACION_TECNICA.md` §12). El resto de los pendientes del proyecto está en `AVANCE.md` y `MATRIZ_CASOS_DE_USO.md`.

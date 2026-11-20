@@ -153,7 +153,13 @@ def test_extraer_texto_devuelve_el_texto_sin_indexar():
     client = TestClient(app)
     response = client.post(
         "/tutor/extraer-texto",
-        files={"archivo": ("apuntes.txt", "Redes: el modelo OSI tiene siete capas.".encode(), "text/plain")},
+        files={
+            "archivo": (
+                "apuntes.txt",
+                "Redes: el modelo OSI tiene siete capas.".encode(),
+                "text/plain",
+            )
+        },
     )
     assert response.status_code == 200
     body = response.json()
@@ -163,7 +169,9 @@ def test_extraer_texto_devuelve_el_texto_sin_indexar():
 
 def test_extraer_texto_archivo_vacio_es_400():
     client = TestClient(_build_app())
-    response = client.post("/tutor/extraer-texto", files={"archivo": ("vacio.txt", b"", "text/plain")})
+    response = client.post(
+        "/tutor/extraer-texto", files={"archivo": ("vacio.txt", b"", "text/plain")}
+    )
     assert response.status_code == 400
 
 

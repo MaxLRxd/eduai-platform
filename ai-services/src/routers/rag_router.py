@@ -45,9 +45,7 @@ async def index_material_file(
     document = request.app.state.document_service
     text = await asyncio.to_thread(document.extract_text, data, filename)
 
-    logger.info(
-        "archivo_texto_extraido", archivo=filename, bytes=len(data), caracteres=len(text)
-    )
+    logger.info("archivo_texto_extraido", archivo=filename, bytes=len(data), caracteres=len(text))
     if not text.strip():
         raise HTTPException(
             status_code=422,
@@ -64,6 +62,32 @@ async def index_material_file(
         logger.exception("indexado_error", material_id=material_id, archivo=filename)
         raise HTTPException(status_code=502, detail=f"Error al indexar el archivo: {exc}") from exc
     return IndexMaterialResponse(**result)
+
+
+@router.get("/materias")
+async def listar_materias(request: Request) -> dict:
+    """Materias con material indexado y cuantos fragmentos tiene cada una."""
+    try:
+        materias = await request.app.state.retrieval_service.list_subjects()
+    except Exception as exc:
+        logger.exception("listar_materias_error")
+        raise HTTPException(
+            status_code=502, detail=f"No se pudo consultar el almacén vectorial: {exc}"
+        ) from exc
+    return {"materias": materias}
+
+
+@router.delete("/materias/{subject_id}")
+async def borrar_materia(subject_id: str, request: Request) -> dict:
+    """Borra todo el material indexado de una materia (limpieza y reindexado a limpio)."""
+    try:
+        await request.app.state.retrieval_service.delete_subject(subject_id)
+    except Exception as exc:
+        logger.exception("borrar_materia_error", subject_id=subject_id)
+        raise HTTPException(
+            status_code=502, detail=f"No se pudo borrar el material de la materia: {exc}"
+        ) from exc
+    return {"subject_id": subject_id, "deleted": True}
 
 
 @router.get("/material/estado/{subject_id}")

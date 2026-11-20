@@ -83,8 +83,7 @@ class RetrievalService:
                 """
             )
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ai_materials_subject "
-                "ON ai_materials (subject_id)"
+                "CREATE INDEX IF NOT EXISTS idx_ai_materials_subject ON ai_materials (subject_id)"
             )
             await self._crear_indice_hnsw(conn)
             if pendientes:
@@ -165,9 +164,7 @@ class RetrievalService:
             return
         vectores = await self._embed_documents([fila["content"] for fila in filas])
         if len(vectores) != len(filas):
-            raise RuntimeError(
-                f"Reindexado: {len(vectores)} vectores para {len(filas)} filas."
-            )
+            raise RuntimeError(f"Reindexado: {len(vectores)} vectores para {len(filas)} filas.")
         await conn.executemany(
             """
             INSERT INTO ai_materials
@@ -256,6 +253,22 @@ class RetrievalService:
             if min_score is None or min_score <= 0.0:
                 return results
             return [r for r in results if float(r.get("score", 0.0)) >= float(min_score)]
+
+    async def list_subjects(self) -> list[dict]:
+        """Materias que tienen fragmentos indexados, con cuantos """
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT subject_id, count(*) AS fragmentos FROM ai_materials "
+                "GROUP BY subject_id ORDER BY subject_id"
+            )
+        return [{"subject_id": r["subject_id"], "fragmentos": int(r["fragmentos"])} for r in rows]
+
+    async def delete_subject(self, subject_id: str) -> None:
+        """Borra TODO el material indexado de una materia."""
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("DELETE FROM ai_materials WHERE subject_id = $1", subject_id)
 
     async def count_chunks(self, subject_id: str) -> int:
         """Fragmentos de material indexados para la materia (0 = nada para fundamentar)."""

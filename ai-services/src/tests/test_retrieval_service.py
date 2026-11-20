@@ -129,3 +129,28 @@ async def test_si_el_reindexado_falla_la_migracion_se_revierte():
 
     assert conn.executed[-1] == "ROLLBACK"
     assert conn.executemany_calls == []
+
+
+async def test_list_subjects_agrupa_los_fragmentos_por_materia():
+    servicio = RetrievalService("postgresql://x", 1536)
+    conn = FakeConn()
+    conn.fetch_result = [
+        {"subject_id": "bd", "fragmentos": 3},
+        {"subject_id": "redes", "fragmentos": 7},
+    ]
+    servicio._pool = FakePool(conn)
+
+    assert await servicio.list_subjects() == [
+        {"subject_id": "bd", "fragmentos": 3},
+        {"subject_id": "redes", "fragmentos": 7},
+    ]
+
+
+async def test_delete_subject_borra_solo_los_fragmentos_de_esa_materia():
+    servicio = RetrievalService("postgresql://x", 1536)
+    conn = FakeConn()
+    servicio._pool = FakePool(conn)
+
+    await servicio.delete_subject("redes")
+
+    assert "DELETE FROM ai_materials WHERE subject_id = $1" in _sql(conn)

@@ -1,6 +1,6 @@
 # EduAI Platform — Avance del Proyecto
 
-> Snapshot original: **2026-09-30** (estado de los bugs actualizado el 2026-11-17) · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
+> Snapshot original: **2026-09-30** (bugs y casos de uso actualizados hasta el 2026-11-20) · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
 >
 > **Este documento es un traspaso.** Lo que importa para seguir trabajando está en
 > [QUÉ FALTA](#qué-falta). Abajo queda el detalle técnico de lo ya hecho y por qué.
@@ -74,7 +74,8 @@ Backend ya estaba completo (4 endpoints) y ahora tiene consumidor real:
 - Frontend: `exportReportPdf` + `downloadPdf` (`adminReports.service.ts`), hook
   `useExportReportPdf`, y `AdminReportsPage` con dos botones (CSV y PDF).
 - Tests: `backend/src/tests/reports-pdf.test.ts` (2 casos: header `%PDF-`, stats vacíos + emojis).
-- Pendiente: no se probó end-to-end contra la base real (el renderer sí, unit test).
+- ✅ Verificado end-to-end contra la base real (2026-11-20): el E2E exporta **cada reporte** como PDF (cabecera
+  `%PDF-`, tamaño plausible) y CSV, y comprueba que un docente recibe 403.
 
 ### 6. ✅ Branding — presets en backend + logo a storage (2026-10-17)
 La pantalla ya existía; se resolvieron los dos detalles que faltaban y se hizo el theming real:
@@ -91,10 +92,13 @@ La pantalla ya existía; se resolvieron los dos detalles que faltaban y se hizo 
 
 ## 🟡 DEUDA TÉCNICA Y RIESGOS CONOCIDOS
 
-### 7. Cobertura de tests del frontend — mejoró, sigue siendo la más baja
-`frontend` pasó de 1 archivo/3 tests a **11 archivos/56 tests** (login, branding, chat del tutor,
-servicios, enlaces de materiales). Siguen sin pruebas la mayoría de las páginas por rol. Backend:
-**28 suites/208 tests**.
+### 7. Cobertura de tests del frontend — mejoró (humo de todas las páginas agregado 2026-11-20)
+`frontend` pasó de 1 archivo/3 tests a **22 archivos/188 tests** (login, branding, chat del tutor,
+servicios, materiales, calificaciones, analytics, rúbricas, resumen y corrección de respuestas propias).
+`paginas-humo.test.tsx` monta la app real en **cada ruta de cada rol** (30 rutas, red simulada sin datos) y
+verifica que carga sin romperse, que un alumno no entra a /admin y que sin sesión se va al login. Sigue
+faltando probar el comportamiento fino de varias pantallas. Backend: **37 suites/351 tests**;
+ai-services: **161 tests**.
 
 ### 8. ✅ `mensajeIA` persiste el modo (2026-10-17)
 El `modo` ya viajaba en cada request y `sincronizarModo()` persiste el cambio a mitad de sesión.
@@ -118,13 +122,21 @@ Ahora el modo efectivo se guarda también en cada mensaje:
   `DEPLOY.md`. Tests: `ai-services/src/tests/test_retrieval_service.py`.
 - Nota: cambiar de dimensión invalida el índice de Pinecone existente (hay que recrearlo).
 
-### 10. Cambiar de vector store no migra datos
-pgvector (`ai_materials`) y Pinecone son índices independientes: al switchear hay que **reindexar
-todo el material** a mano.
+### 10. ✅ Cambiar de vector store: procedimiento y limpieza (2026-11-20)
+pgvector (`ai_materials`) y Pinecone siguen siendo índices independientes (no se migran vectores: se
+**reindexa** desde el contenido original). Ahora hay un procedimiento y herramientas:
+1. Cambiar `VECTOR_STORE` y reiniciar el ai-service.
+2. `npm run rag:reindex -- --limpiar` borra el material indexado de cada materia y lo reindexa a limpio
+   (también borra antes las materias huérfanas).
+3. `npm run rag:reindex -- --huerfanos` solo borra del almacén las materias que ya no existen en la base
+   (vectores de materias borradas o de pruebas E2E) sin reindexar.
+Nuevos endpoints del ai-service: `GET /rag/materias` y `DELETE /rag/materias/{subject_id}` (pgvector y
+Pinecone). Cubierto con tests; **falta correrlo contra el stack real** (requiere Docker).
 
-### 11. `pinecone_service.py` bloquea el event loop
-Usa el cliente **síncrono** de Pinecone dentro de métodos `async`. Aceptable para probar; revisar
-si se apuesta a Pinecone en prod.
+### 11. ✅ `pinecone_service.py` ya no bloquea el event loop (2026-11-20)
+Cada operación del cliente síncrono de Pinecone corre en un hilo (`asyncio.to_thread`) y la creación
+perezosa del cliente está protegida con un lock. Test: mientras una operación tarda 0,3 s, el loop sigue
+atendiendo otras tareas. De paso se corrigió `count_chunks` que fallaba con un índice vacío.
 
 ### 12. Gemini intermitente
 `gemini-3.6-flash` (y 3.7/3.8/3.5-flash, `flash-latest`) devuelven **503 "high demand"** en cuentas
@@ -132,6 +144,9 @@ gratuitas; `gemini-2.5-flash` da 404. Los que responden son `gemini-3.5-flash-li
 `gemini-3.1-flash-lite` (default: **`gemini-3.5-flash-lite`**). El 503 es ** intermitente, no
 permanente**, así que lo que hace confiable la app es el **retry**, no el cambio de modelo.
 Mitigado con backoff exponencial (ver más abajo); el riesgo residual sigue latente.
+**Actualización 2026-11-20:** el 503 del *streaming* llegaba al leer el primer fragmento (no al abrir), por
+eso el retry no lo cubría y ~1 de cada 10 respuestas del tutor fallaba. Ahora el reintento abarca la
+apertura y el primer fragmento de texto (después del primero no se reintenta, para no duplicar texto).
 
 ### 13. ✅ `CHROMA_URL` eliminada (2026-10-17)
 Era una variable muerta en el schema de `backend/src/config/env.ts` (no se usaba en ninguna línea).
@@ -139,10 +154,24 @@ Se decidió **borrarla**: los vector stores reales son pgvector (default) y Pine
 limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a ChromaDB en el
 `README.md`. (`IMPLEMENTATION.md` y `graphify-out/` son documentos históricos/generados: no se tocan.)
 
-### 14. Faltan algunos E2E
+### 14. ✅ E2E que faltaban (2026-11-20)
 - El **camino feliz de la corrección con Gemini** ya se verificó (ver entrada P04/A07 abajo).
-- Lo que **no** se ejecutó nunca es el **E2E del OCR de PDF escaneado** (sí está verificado el de
-  imagen, y los tests del servicio mockean tesseract, así que pasan aunque falte el binario).
+- Nuevo E2E del **OCR de PDF escaneado** (`e2e/fixtures/escaneado.pdf`, solo imagen): el ai-service real con
+  tesseract devuelve el texto. Así se verifica lo que los tests con tesseract simulado no ven.
+- Nuevo E2E de la exportación de reportes (PDF y CSV) contra la base real.
+- Probado contra el stack real: `GET /rag/materias` y `npm run rag:reindex -- --huerfanos` (borró las 71
+  fragmentos huérfanos de una materia inexistente y conservó el resto).
+
+### 15. ✅ El CI estaba en rojo y no se veía (2026-11-20)
+Al reproducir los 3 jobs de `.github/workflows/ci.yml` desde un **clon limpio** (`npm ci`, entorno virtual
+nuevo, sin el `.env` ni el cliente de Prisma que sí existen en la máquina de desarrollo) fallaban dos:
+- **backend:** Prisma 7 no genera su cliente al instalar, así que `typecheck` y casi todos los tests daban
+  `Cannot find module '.prisma/client/default'`. Se agregó el paso `npx prisma generate` (no necesita
+  `DATABASE_URL`). Con él, en limpio: tipos bien y **348 de 348** tests.
+- **ai-service:** `ruff check src` fallaba por 5 líneas largas del endpoint `extraer-texto`. Corregidas.
+- **frontend:** pasaba (lint, tipos, **154** tests y build).
+El CI no corre los E2E (necesitan el stack levantado) ni verifica que las migraciones apliquen: ver el plan
+de mejoras. Los tres `package-lock.json` (raíz, backend y frontend) están versionados.
 
 ---
 
@@ -166,7 +195,7 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 ### ✅ Material/PDF no abre ni descarga
 **Resuelto:** la URL del archivo se convierte en absoluta hacia el backend (`apiUrl()`), nginx proxea
 `/uploads/`, y **el nombre del material es un enlace** que abre el archivo (alumno y docente); los
-materiales de texto se despliegan al tocar el nombre. Sin verificar aún en navegador.
+materiales de texto se despliegan al tocar el nombre. Verificado en el navegador (2026-11-18).
 
 ### ✅ "Mis estadísticas" completamente mockeada
 **Resuelto:** el Inicio y "Mis estadísticas" del alumno usan datos reales (`dashboard.service`,
@@ -360,10 +389,10 @@ Detalle del reporte de 2026-11-17:
   - Fix: `profesor_id` agregado al DTO de usuario (la asignación usa la tabla `Profesor`, no el id de usuario)
 - **Claves de matriculación:** listado con inscriptos, generación y revocación — `GET/POST /api/admin/enrollment-keys` + `PATCH /:id/revocar`
 - **Ajustes/Branding:** `GET/PUT /api/admin/branding` — pantalla `AdminSettingsPage` + hook reales.
-  - Pendiente: presets de color estáticos de la UI (`MOCK_COLOR_PRESETS`) y logo como data URL (ver entrada 6)
+  - Resuelto: presets de color servidos por el backend y logo en storage (entrada 6)
 - **Reportes:** `GET /api/admin/reports` — 6 reportes con datos reales (asistencia, notas, tutor IA, retención, MAU, resumen ejecutivo)
-  - Exportación CSV real por reporte: `GET /api/admin/reports/:type/export` (PDF falta, entrada 5)
-- **Logo/escudo:** preview y "quitar logo" funcionan; la subida va como data URL (migración `logo_url` → TEXT)
+  - Exportación real por reporte: `GET /api/admin/reports/:type/export?format=csv|pdf` (entrada 5)
+- **Logo/escudo:** preview y "quitar logo" funcionan; la subida va al storage (local o R2) y se guarda solo la URL (entrada 6)
 
 ## Servicio de IA (ai-service) — integrado
 
@@ -564,7 +593,7 @@ probó en el navegador (crear, reabrir con sus niveles y borrar).
   explícitamente la respuesta en sí).
 - **Registro de sesiones IA** (parcial): el `modo` viaja en cada request y el backend lo prioriza
   sobre el de la sesión; `sincronizarModo()` persiste el cambio (sin escribir si no cambió), 4
-  tests. Pendiente menor: `mensajeIA` sigue sin guardar el modo de cada respuesta (ver entrada 8).
+  tests. (El modo de cada respuesta se guarda desde 2026-10-17: ver entrada 8.)
 
 ## Docker verificado (2026-09-28)
 
@@ -624,5 +653,5 @@ npm run dev:local          # backend + ai + frontend con concurrently
 
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
-**Conteo actual de tests (2026-11-17):** backend **348** en **36** suites · frontend **154** en
-**21** archivos · ai-services **139** (+1 omitido) · E2E **42**.
+**Conteo actual de tests (2026-11-20):** backend **351** en **37** suites · frontend **188** en
+**22** archivos · ai-services **161** (+1 omitido) · E2E **44**.
