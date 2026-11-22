@@ -19,12 +19,26 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
   (queda un error en el log).
 - **Dónde:** `backend/src/modules/auth/recuperacion.service.ts`, `backend/src/services/email.service.ts`,
   `.env.example`.
+- **Verificación 2026-11-22:** en este entorno `.env` no define `EMAIL_PROVIDER`, `EMAIL_FROM`, `APP_URL`,
+  `EMAIL_API_KEY` ni `EMAIL_SMTP_*`; por eso el envío real sigue sin probarse. Queda como **paso de entrega**:
+  1. Completar en `.env`: `EMAIL_PROVIDER=resend` (o `brevo`/`smtp`), `EMAIL_FROM`, `APP_URL` con la URL
+     pública del frontend y la credencial del proveedor (`EMAIL_API_KEY`, o `EMAIL_SMTP_HOST`/`PORT`/`USER`/`PASS`).
+  2. Reiniciar el backend y pedir `POST /api/auth/password/olvide` con una casilla real.
+  3. Abrir el correo recibido; el enlace debe llevar a `/restablecer?token=...`, vencer en
+     `RESET_TOKEN_MINUTES` (60 por defecto) y servir una sola vez.
 
 ### 1.2 Ver el CI corriendo en GitHub
 - **Estado:** el CI estaba en rojo sin que se viera (faltaba `npx prisma generate` y había líneas largas en
   Python). Se corrigió y se verificó en un **clon limpio**, pero no se vio correr en GitHub.
 - **Qué falta:** después del push, confirmar que los tres jobs (backend, frontend, ai-service) queden verdes.
 - **Dónde:** `.github/workflows/ci.yml`.
+- **Verificación 2026-11-22 (GitHub API):** el workflow `CI` está **`disabled_manually`** desde 2026-09-28,
+  por eso no hay runs nuevos. El último run fue #36 (2026-09-27): `frontend` y `ai-service` verdes,
+  `backend` rojo en `npm run typecheck` (los tests no llegaron a correr). Para cerrar: habilitar el workflow
+  en GitHub → Actions → CI → *Enable workflow*, correrlo y confirmar los tres jobs verdes.
+- **Local 2026-11-22:** lint y tests verdes (363 + 161 + 195); el typecheck del backend fallaba por un
+  cliente Prisma desactualizado y pasó tras `cd backend && npx prisma generate`. El workflow ya incluye
+  ese paso (verify en clon limpio), así que la causa del run #36 fue anterior a ese fix.
 
 ---
 
@@ -56,6 +70,8 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 
 ### 3.2 `graphify-out/` desactualizado
 - El grafo del código es del 30/10. Regenerarlo con `/graphify` si se va a usar para consultas.
+- **Resuelto 2026-11-22:** regenerado desde el commit `c884c2ed` (HEAD al 2026-11-22); ver
+  `graphify-out/GRAPH_REPORT.md`.
 
 ### 3.3 El CI no cubre migraciones ni E2E
 - Los E2E necesitan el stack levantado y las migraciones no se verifican en CI.
@@ -66,6 +82,7 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 
 ### 3.5 Archivo basura en la raíz
 - `tmp_icons3.txt` (lista de íconos en UTF-16, sin referencias). Se puede borrar.
+- **Resuelto 2026-11-22:** archivo borrado (pendiente de incluir en el próximo commit).
 
 ---
 
@@ -91,6 +108,11 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 - **Qué hacer:** declararlo tal cual en la defensa, o volver a medir con un plan pago.
 
 ---
+
+## 6. Bugs generales:
+- chat con tutorAI docente: no persiste el chat(poner aunque sea un warning de que al cambiar de pestaña se perderá lo no guardado), además no hay opción para seleccionar que archivo debe tener de referencia la IA en caso de que haya más de uno.
+- visuales: pantallas que se salen de sus contenedores, se puede hacer desplegable el side-menu de la izquierda además; se puede hacer que cada acción que "despliegue algo" como "editar" en "editar nota" (sección Mis estudiantes -> Calificaciones) se abra en primer plano como un popup, como una tarjeta en grande con el formulario para editar, sino es confuso que spawnee de la nada arriba sin aviso, puede pasar desapercibido y no darse cuenta que si se abrió una sección para editar; en "aula virtual" se puede scrollear hacia abajo hasta que la pagina desaparece.
+- Al darle "Editar" en la sección de clases debería llevar a planificacion para que sea más sencillo. Pero sin modificar como se muestra la distribución actual de clases, solo redirige. Lo que sí: agregar un boton de eliminar contenido para que quede más a mano y no haga falta entrar a planificación.
 
 ## Ya resuelto (para no repetirlo)
 CI y lint · reintento del 503 de Gemini en streaming · Pinecone sin bloquear el event loop · limpieza de
