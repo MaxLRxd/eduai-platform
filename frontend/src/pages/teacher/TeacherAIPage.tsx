@@ -8,6 +8,16 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
 import { apiErrorMessage } from "../../services/api";
+import type { RagStatus } from "../../types/domain";
+
+interface MaterialOption {
+  id: string;
+  label: string;
+  status: RagStatus;
+  seleccionable: boolean;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const QUICK_ACTIONS = [
   "Crear actividades diferenciadas",
@@ -50,15 +60,33 @@ export function TeacherAIPage(): React.ReactElement {
   const [aviso, setAviso] = useState<{ tipo: "success" | "error"; texto: string } | null>(null);
   const [contentIds, setContentIds] = useState<string[]>([]);
 
-  const materialOptions = (contentTree ?? []).flatMap((seccion) =>
-    seccion.materials.map((m) => ({ id: m.id, label: `${seccion.nombre}: ${m.name}` }))
-  );
+  const materialOptions: MaterialOption[] = (contentTree ?? [])
+    .flatMap((seccion) => [
+      ...seccion.materials.map((m) => ({
+        id: m.id,
+        label: `${seccion.nombre} · ${m.name}`,
+        status: m.ragStatus,
+        seleccionable: UUID.test(m.id),
+      })),
+      ...seccion.classes.flatMap((clase) =>
+        clase.materials.map((m) => ({
+          id: m.id,
+          label: `${seccion.nombre} · ${clase.title || clase.date} · ${m.name}`,
+          status: m.ragStatus,
+          seleccionable: UUID.test(m.id),
+        }))
+      ),
+    ])
+    .filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i);
+
+  const seleccionados = materialOptions.filter((m) => contentIds.includes(m.id));
+  const seleccionNoIndexada = seleccionados.some((m) => m.status !== "Indexado");
 
   useEffect(() => {
     setContentIds([]);
   }, [activeCourse]);
 
-// CU-P10 (FA1): con soluciones, la IA marca las respuestas correctas para uso interno del docente.
+  // CU-P10 (FA1): con soluciones, la IA marca las respuestas correctas para uso interno del docente.
   const pedido = (text: string): string =>
     conSoluciones
       ? `${text}\n\nIncluí la solución de cada ejercicio, marcando claramente las respuestas correctas (material de uso interno del docente).`
@@ -129,30 +157,81 @@ export function TeacherAIPage(): React.ReactElement {
                 ))}
               </select>
             </div>
-            <div>
-              <label htmlFor="teacher-ai-materiales" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Materiales de referencia
-              </label>
-              <select
-                id="teacher-ai-materiales"
-                multiple
-                size={3}
-                value={contentIds}
-                onChange={(e) =>
-                  setContentIds(Array.from(e.target.selectedOptions, (option) => option.value))
-                }
-                disabled={pending}
-                className="w-full px-3 py-1.5 border border-border rounded text-xs bg-surface"
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label id="teacher-ai-materiales" className="block text-xs font-semibold text-text-1">
+                  Materiales de referencia
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-text-3">
+                    {seleccionados.length} seleccionado{seleccionados.length === 1 ? "" : "s"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setContentIds([])}
+                    disabled={pending || contentIds.length === 0}
+                    className="text-xs text-primary hover:underline disabled:opacity-40"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              </div>
+              <div
+                role="group"
+                aria-labelledby="teacher-ai-materiales"
+                className="max-h-64 overflow-y-auto border border-border rounded-lg bg-surface p-2 space-y-1"
               >
-                {materialOptions.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-text-3 mt-1">
-                Elegí uno o más materiales para limitar el contexto de la IA. Sin selección usa toda la materia.
+                {materialOptions.length === 0 && (
+                  <p className="text-xs text-text-3 p-2">
+                    Esta materia no tiene materiales. Subilos en Contenidos o en Planificación.
+                  </p>
+                )}
+                {materialOptions.map((m) => {
+                  const checked = contentIds.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      className={`flex items-start gap-2.5 p-2 rounded-md cursor-pointer text-sm ${
+                        m.seleccionable ? "hover:bg-surface-2" : "opacity-60 cursor-not-allowed"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label={m.label}
+                        checked={checked}
+                        disabled={pending || !m.seleccionable}
+                        onChange={(e) =>
+                          setContentIds((prev) =>
+                            e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id)
+                          )
+                        }
+                        className="mt-0.5 h-4 w-4 accent-primary"
+                      />
+                      <span className="flex-1 leading-snug text-text-1">{m.label}</span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          m.status === "Indexado"
+                            ? "bg-success-light text-emerald-800"
+                            : m.status === "Indexando…"
+                              ? "bg-info-light text-blue-800"
+                              : "bg-surface-2 text-text-3"
+                        }`}
+                      >
+                        {m.status}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-text-3 mt-1.5">
+                Elegí los materiales que querés usar como contexto. Sin selección se usa toda la materia.
+                Los materiales marcados “Sin indexar” no pueden filtrarse todavía.
               </p>
+              {seleccionNoIndexada && (
+                <InfoBox variant="warning">
+                  Algunos materiales seleccionados no están indexados. Indexalos en Contenidos o quitá el filtro; si no, la IA no podrá usarlos.
+                </InfoBox>
+              )}
             </div>
           </div>
 
@@ -163,6 +242,15 @@ export function TeacherAIPage(): React.ReactElement {
                 <div key={m.id ?? `temp-${i}`} className="text-[13px]">
                   <span className="font-bold text-primary">{m.role === "user" ? "Vos" : "Asistente"}: </span>
                   <span className="whitespace-pre-wrap text-text-1">{m.content || (pending ? "Generando…" : "")}</span>
+                  {m.role === "assistant" && m.sources.length > 0 && (
+                    <div className="mt-1 text-[11px] text-text-3">
+                      Fuentes: {m.sources.map((s, si) => (
+                        <span key={`${s.material_id}-${s.chunk_index ?? si}`}>
+                          {si > 0 ? ", " : ""}{s.titulo || s.material_id}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

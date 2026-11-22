@@ -309,8 +309,8 @@ export async function generarMaterialDocente(
       body: JSON.stringify({
         subject_id: subjectId,
         prompt,
-        material_ids: contentIds ?? [],
-        material_titles: await titulosDeMateria(subjectId, contentIds),
+        ...(contentIds?.length ? { material_ids: contentIds } : {}),
+        material_titles: await titulosDeMateria(subjectId, contentIds?.length ? contentIds : undefined),
       }),
       signal: AbortSignal.timeout(120_000),
     });

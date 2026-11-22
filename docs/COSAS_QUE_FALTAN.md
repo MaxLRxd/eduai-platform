@@ -114,4 +114,4 @@ CI y lint · reintento del 503 de Gemini en streaming · Pinecone sin bloquear e
 vectores huérfanos y reindexado (`rag:reindex --huerfanos|--limpiar`) · base de demo con material real
 (`demo:reset`) · E2E del OCR de PDF escaneado y de la exportación de reportes · prueba de humo de todas las
 páginas · recuperación de contraseña por correo · chat persistente del tutor docente con selector de materiales
-y aviso al salir.
+y aviso al salir · indexación RAG desde Planificación (helper compartido + backfill `rag:reindex -- --planning`) · selector de materiales del Tutor IA con materiales de clase, estado RAG y fuentes visibles.

@@ -33,8 +33,17 @@ class GenerarMaterialUseCase:
             return {"material": depurado.respuesta_directa, "sources": []}
         prompt = depurado.texto
 
+        ids_filtrados = material_ids or None
         embedding = await self.embeddings.embed_query(prompt)
-        results = await self.retrieval.search(subject_id, embedding, settings.retrieval_top_k, material_ids=material_ids)
+        results = await self.retrieval.search(subject_id, embedding, settings.retrieval_top_k, material_ids=ids_filtrados)
+        if ids_filtrados and not results:
+            return {
+                "material": (
+                    "No encontré fragmentos indexados para los materiales seleccionados. "
+                    "Revisá que estén marcados como 'Indexado' en Contenidos o quitá el filtro."
+                ),
+                "sources": [],
+            }
         sources = build_sources(results, material_titles)
         context = format_context(results, material_titles)
 

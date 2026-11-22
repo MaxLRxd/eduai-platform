@@ -1,7 +1,9 @@
 import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
-import { eliminarArchivo, guardarArchivo, leerArchivo } from "../../config/storage";
+import { eliminarMaterialRag } from "../../config/aiClient";
+import { eliminarArchivo } from "../../config/storage";
+import { guardarMaterialIndexable } from "../contenidos/contenidos.service";
 import { obtenerInscripcion, obtenerProfesorAsignado } from "../materias/materias.service";
 import type { UpsertPlanningInput } from "./planning.schemas";
 
@@ -85,6 +87,61 @@ async function validarSeccionDeMateria(materiaId: string, seccionId: string) {
   return seccion;
 }
 
+async function seccionParaMaterial(materiaId: string, claseId?: string) {
+  if (claseId) {
+    const seccionDeLaClase = await prisma.planningClase.findUnique({
+      where: { id: claseId },
+      select: { seccion_id: true },
+    });
+    if (seccionDeLaClase?.seccion_id) return seccionDeLaClase.seccion_id;
+  }
+
+  const primera = await prisma.seccion.findFirst({
+    where: { materia_id: materiaId },
+    orderBy: { orden: "asc" },
+    select: { id: true },
+  });
+  const ultima = await prisma.seccion.findFirst({
+    where: { materia_id: materiaId },
+    orderBy: { orden: "desc" },
+    select: { orden: true },
+  });
+  const seccionId = primera?.id ?? (
+    await prisma.seccion.create({
+      data: {
+        materia_id: materiaId,
+        nombre: "Materiales de clase",
+        tipo: "TEORIA",
+        orden: (ultima?.orden ?? 0) + 1,
+      },
+      select: { id: true },
+    })
+  ).id;
+
+  if (claseId) {
+    await prisma.planningClase.update({ where: { id: claseId }, data: { seccion_id: seccionId } });
+  }
+
+  return seccionId;
+}
+
+async function contenidoDelMaterial(claseId: string, url: string | null) {
+  if (!url) return null;
+  return prisma.contenido.findFirst({
+    where: { clase_id: claseId, archivo_url: url },
+    select: { id: true },
+  });
+}
+
+async function retirarMaterialAnterior(materiaId: string, claseId: string, url: string | null) {
+  const anterior = await contenidoDelMaterial(claseId, url);
+  if (anterior) {
+    await prisma.contenido.delete({ where: { id: anterior.id } });
+    await eliminarMaterialRag(materiaId, anterior.id);
+  }
+  await eliminarArchivo(url);
+}
+
 export async function upsertPlanning(
   materiaId: string,
   fecha: string,
@@ -136,7 +193,6 @@ export async function upsertPlanning(
   return toPlanningDto(planning);
 }
 
-// Sube (o reemplaza) el material de una clase. Crea la clase si no existe.
 export async function subirMaterial(
   materiaId: string,
   fecha: string,
@@ -156,15 +212,23 @@ export async function subirMaterial(
   }
 
   const fechaClase = validarFecha(fecha);
-  const guardado = await guardarArchivo(archivo.buffer, archivo.nombreOriginal);
-
   const existente = await prisma.planningClase.findUnique({
     where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
+  });
+  const seccionId = await seccionParaMaterial(materiaId, existente?.id);
+  const { guardado } = await guardarMaterialIndexable({
+    materiaId,
+    seccionId,
+    claseId: existente?.id ?? null,
+    titulo: archivo.nombreOriginal.replace(/\.[^.]+$/, ""),
+    buffer: archivo.buffer,
+    nombreOriginal: archivo.nombreOriginal,
   });
 
   const planning = await prisma.planningClase.upsert({
     where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
     update: {
+      seccion_id: seccionId,
       material_url: guardado.url,
       material_nombre: guardado.nombre,
       material_formato: guardado.formato,
@@ -172,6 +236,7 @@ export async function subirMaterial(
     },
     create: {
       materia_id: materiaId,
+      seccion_id: seccionId,
       fecha_clase: fechaClase,
       titulo: `Clase ${fechaClase.toISOString().slice(0, 10)}`,
       estado: "PLANIFICADO",
@@ -182,9 +247,7 @@ export async function subirMaterial(
     },
   });
 
-  if (existente?.material_url && existente.material_url !== guardado.url) {
-    await eliminarArchivo(existente.material_url);
-  }
+  await retirarMaterialAnterior(materiaId, planning.id, existente?.material_url ?? null);
 
   return toPlanningDto(planning);
 }
@@ -219,15 +282,7 @@ export async function asignarMaterialDesdeContenido(
     throw new AppError(400, "El contenido seleccionado no tiene un archivo descargable");
   }
 
-  const buffer = await leerArchivo(contenido.archivo_url);
-  if (!buffer) {
-    throw new AppError(404, "No se pudo leer el archivo del material seleccionado");
-  }
-
   const fechaClase = validarFecha(fecha);
-  const nombreArchivo =
-    contenido.archivo_nombre ?? contenido.archivo_url.split("/").pop() ?? contenido.titulo;
-  const guardado = await guardarArchivo(buffer, nombreArchivo);
   const existente = await prisma.planningClase.findUnique({
     where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
   });
@@ -235,25 +290,29 @@ export async function asignarMaterialDesdeContenido(
   const planning = await prisma.planningClase.upsert({
     where: { materia_id_fecha_clase: { materia_id: materiaId, fecha_clase: fechaClase } },
     update: {
-      material_url: guardado.url,
-      material_nombre: guardado.nombre,
-      material_formato: guardado.formato,
-      material_tamano_kb: guardado.tamanoKb,
+      seccion_id: contenido.seccion_id,
+      material_url: contenido.archivo_url,
+      material_nombre: contenido.archivo_nombre ?? contenido.titulo,
+      material_formato: contenido.archivo_formato,
+      material_tamano_kb: contenido.archivo_tamano_kb,
     },
     create: {
       materia_id: materiaId,
+      seccion_id: contenido.seccion_id,
       fecha_clase: fechaClase,
       titulo: `Clase ${fechaClase.toISOString().slice(0, 10)}`,
       estado: "PLANIFICADO",
-      material_url: guardado.url,
-      material_nombre: guardado.nombre,
-      material_formato: guardado.formato,
-      material_tamano_kb: guardado.tamanoKb,
+      material_url: contenido.archivo_url,
+      material_nombre: contenido.archivo_nombre ?? contenido.titulo,
+      material_formato: contenido.archivo_formato,
+      material_tamano_kb: contenido.archivo_tamano_kb,
     },
   });
 
-  if (existente?.material_url && existente.material_url !== guardado.url) {
-    await eliminarArchivo(existente.material_url);
+  await prisma.contenido.update({ where: { id: contenido.id }, data: { clase_id: planning.id } });
+
+  if (existente?.material_url && existente.material_url !== contenido.archivo_url) {
+    await retirarMaterialAnterior(materiaId, planning.id, existente.material_url);
   }
 
   return toPlanningDto(planning);
@@ -276,9 +335,7 @@ export async function eliminarMaterial(materiaId: string, fecha: string, usuario
     throw new AppError(404, "Clase no encontrada");
   }
 
-  if (planning.material_url) {
-    await eliminarArchivo(planning.material_url);
-  }
+  await retirarMaterialAnterior(materiaId, planning.id, planning.material_url);
 
   const actualizado = await prisma.planningClase.update({
     where: { id: planning.id },

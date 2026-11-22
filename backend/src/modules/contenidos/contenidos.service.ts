@@ -4,7 +4,7 @@ import type { Rol, TipoContenido } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { eliminarMaterialRag } from "../../config/aiClient";
-import { eliminarArchivo, guardarArchivo } from "../../config/storage";
+import { eliminarArchivo, guardarArchivo, type StoredFile } from "../../config/storage";
 import { indexarEnSegundoPlano } from "./rag-indexer";
 import {
   obtenerInscripcion,
@@ -288,6 +288,41 @@ export async function crear(
   return toContenidoDto(contenido);
 }
 
+export async function guardarMaterialIndexable(params: {
+  materiaId: string;
+  seccionId: string;
+  claseId?: string | null;
+  titulo: string;
+  buffer: Buffer;
+  nombreOriginal: string;
+  guardado?: StoredFile;
+}) {
+  const tipo = inferirTipo(params.nombreOriginal);
+  const guardado = params.guardado ?? await guardarArchivo(params.buffer, params.nombreOriginal);
+  const contenido = await prisma.contenido.create({
+    data: {
+      seccion_id: params.seccionId,
+      clase_id: params.claseId ?? null,
+      tipo,
+      titulo: params.titulo,
+      archivo_url: guardado.url,
+      archivo_nombre: guardado.nombre,
+      archivo_formato: guardado.formato,
+      archivo_tamano_kb: guardado.tamanoKb,
+    },
+  });
+
+  if (tipo !== "VIDEO") {
+    indexarEnSegundoPlano(contenido.id, params.materiaId, {
+      tipo: "archivo",
+      buffer: params.buffer,
+      nombre: params.nombreOriginal,
+    });
+  }
+
+  return { contenido, guardado, tipo };
+}
+
 export async function crearArchivo(
   seccionId: string,
   usuarioId: string,
@@ -297,32 +332,14 @@ export async function crearArchivo(
   const clase = archivo.claseId
     ? await obtenerClaseDeSeccion(archivo.claseId, seccionId, seccion.materia_id)
     : null;
-  const tipo = inferirTipo(archivo.nombreOriginal);
-  const guardado = await guardarArchivo(archivo.buffer, archivo.nombreOriginal);
-
-  const contenido = await prisma.contenido.create({
-    data: {
-      seccion_id: seccionId,
-      clase_id: clase?.id ?? null,
-      tipo,
-      titulo: archivo.titulo,
-      archivo_url: guardado.url,
-      archivo_nombre: guardado.nombre,
-      archivo_formato: guardado.formato,
-      archivo_tamano_kb: guardado.tamanoKb,
-    },
+  const { contenido } = await guardarMaterialIndexable({
+    materiaId: seccion.materia_id,
+    seccionId,
+    claseId: clase?.id ?? null,
+    titulo: archivo.titulo,
+    buffer: archivo.buffer,
+    nombreOriginal: archivo.nombreOriginal,
   });
-
-  // VIDEO sigue sin indexarse: el RAG trabaja con texto. IMAGEN si se indexa
-  // desde CU-P02, porque el ai-service le pasa OCR antes de embeber.
-  // El indexado corre en segundo plano: un PDF grande tarda minutos.
-  if (tipo !== "VIDEO") {
-    indexarEnSegundoPlano(contenido.id, seccion.materia_id, {
-      tipo: "archivo",
-      buffer: archivo.buffer,
-      nombre: archivo.nombreOriginal,
-    });
-  }
 
   return toContenidoDto(contenido);
 }

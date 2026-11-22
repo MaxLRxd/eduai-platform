@@ -4,6 +4,7 @@
  * Uso:
  *   npm run rag:reindex                  -> todos los contenidos (salvo VIDEO)
  *   npm run rag:reindex -- --pendientes  -> solo los que tienen rag_indexado = false
+ *   npm run rag:reindex -- --planning    -> crea/e indexa los materiales subidos desde Planificacion
  *   npm run rag:reindex -- --huerfanos   -> solo borra del almacen vectorial las materias que ya no
  *                                           existen en la base (no reindexa nada)
  *   npm run rag:reindex -- --limpiar     -> borra el material indexado de cada materia y lo reindexa
@@ -19,7 +20,10 @@ import "dotenv/config";
 import { borrarMateriaIndexadaIA, listarMateriasIndexadasIA } from "../config/aiClient";
 import { logger } from "../config/logger";
 import { prisma } from "../config/prisma";
+import { leerArchivo } from "../config/storage";
+import { inferirTipo } from "../modules/contenidos/contenidos.service";
 import { fuenteDeContenido, indexarAhora } from "../modules/contenidos/rag-indexer";
+import type { FuenteRag } from "../modules/contenidos/rag-indexer";
 import { materiasHuerfanas } from "../modules/contenidos/rag-limpieza";
 
 /** Borra del almacen vectorial las materias que ya no existen en la base. Devuelve cuantas borro. */
@@ -42,8 +46,91 @@ async function borrarHuerfanas(): Promise<number> {
   return huerfanas.length;
 }
 
+async function backfillMaterialesDePlanning(): Promise<void> {
+  const clases = await prisma.planningClase.findMany({
+    where: { material_url: { not: null } },
+    orderBy: { fecha_clase: "asc" },
+  });
+
+  let creados = 0;
+  const fallidos: string[] = [];
+
+  for (const clase of clases) {
+    if (!clase.material_url) continue;
+    const yaIndexado = await prisma.contenido.findFirst({
+      where: { clase_id: clase.id, archivo_url: clase.material_url },
+      select: { id: true },
+    });
+    if (yaIndexado) continue;
+
+    let seccionId = clase.seccion_id;
+    if (!seccionId) {
+      const primera = await prisma.seccion.findFirst({
+        where: { materia_id: clase.materia_id },
+        orderBy: { orden: "asc" },
+        select: { id: true },
+      });
+      if (!primera) {
+        logger.warn({ claseId: clase.id }, "Planning sin unidad ni seccion en la materia; se omite");
+        fallidos.push(clase.id);
+        continue;
+      }
+      seccionId = primera.id;
+      await prisma.planningClase.update({ where: { id: clase.id }, data: { seccion_id: seccionId } });
+    }
+
+    const nombre = clase.material_nombre ?? clase.material_url.split("/").pop() ?? clase.titulo;
+    const buffer = await leerArchivo(clase.material_url);
+    if (!buffer) {
+      logger.warn(
+        { claseId: clase.id, url: clase.material_url },
+        "Material de planning sin archivo accesible; se omite"
+      );
+      fallidos.push(clase.id);
+      continue;
+    }
+    const fuente: FuenteRag = { tipo: "archivo", buffer, nombre };
+    let contenidoId: string | null = null;
+    try {
+      const contenido = await prisma.contenido.create({
+        data: {
+          seccion_id: seccionId,
+          clase_id: clase.id,
+          tipo: inferirTipo(nombre),
+          titulo: nombre.replace(/\.[^.]+$/, "").slice(0, 200),
+          archivo_url: clase.material_url,
+          archivo_nombre: nombre,
+          archivo_formato: clase.material_formato,
+          archivo_tamano_kb: clase.material_tamano_kb,
+        },
+      });
+      contenidoId = contenido.id;
+      if (!(await indexarAhora(contenido.id, clase.materia_id, fuente))) {
+        await prisma.contenido.delete({ where: { id: contenido.id } });
+        fallidos.push(contenido.id);
+        continue;
+      }
+      creados += 1;
+    } catch (err) {
+      if (contenidoId) {
+        await prisma.contenido.deleteMany({ where: { id: contenidoId } });
+      }
+      logger.warn({ err, claseId: clase.id }, "No se pudo migrar el material de planning al RAG");
+      fallidos.push(clase.id);
+    }
+  }
+
+  logger.info({ creados, fallidos: fallidos.length }, "Backfill de materiales de planning: fin");
+  process.exitCode = fallidos.length > 0 ? 1 : 0;
+}
+
 async function main(): Promise<void> {
   const soloPendientes = process.argv.includes("--pendientes");
+
+  if (process.argv.includes("--planning")) {
+    await backfillMaterialesDePlanning();
+    return;
+  }
 
   if (process.argv.includes("--huerfanos")) {
     await borrarHuerfanas();

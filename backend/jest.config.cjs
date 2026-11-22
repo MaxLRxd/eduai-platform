@@ -3,6 +3,7 @@ module.exports = {
   roots: ["<rootDir>/src/tests"],
   testMatch: ["**/*.test.ts"],
   setupFiles: ["<rootDir>/src/tests/setup-env.ts"],
+  maxWorkers: 2,
   transform: {
     "^.+\\.(t|j)sx?$": ["@swc/jest"],
   },

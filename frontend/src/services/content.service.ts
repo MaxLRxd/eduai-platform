@@ -104,7 +104,10 @@ function toUploadedMaterial(c: ContenidoApi): UploadedMaterial {
 }
 
 function toContentClass(c: ClaseArbolApi, sectionId: string): ContentClass {
-  const materialPlanificacion: UploadedMaterial | null = c.material_url
+  const contenidoPlanificacion = c.contenidos.find(
+    (x) => x.archivo_url && x.archivo_url === c.material_url
+  );
+  const materialPlanificacion: UploadedMaterial | null = c.material_url && !contenidoPlanificacion
     ? {
         id: `clase-${c.id}-material`,
         name: c.material_nombre ?? c.titulo,
