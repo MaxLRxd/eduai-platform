@@ -10,22 +10,14 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 ## 1. Para cerrar lo último que se hizo
 
 ### 1.1 Probar el envío real del correo (recuperación de contraseña)
-- **Estado:** el flujo está probado de punta a punta en el stack real, pero con `EMAIL_PROVIDER=none`: el
-  enlace sale en el log del backend (solo en desarrollo). **Nunca se mandó un correo de verdad.**
-- **Qué falta:** configurar un proveedor (`resend`, `brevo` o `smtp`) con `EMAIL_FROM` (y `EMAIL_API_KEY` o los
-  datos SMTP) y `APP_URL` (URL pública del frontend), pedir un enlace y comprobar que llega y que el enlace
-  abre `/restablecer`.
-- **Riesgo si no se hace:** en producción, sin proveedor, el pedido responde bien pero no llega nada
-  (queda un error en el log).
-- **Dónde:** `backend/src/modules/auth/recuperacion.service.ts`, `backend/src/services/email.service.ts`,
-  `.env.example`.
-- **Verificación 2026-11-22:** en este entorno `.env` no define `EMAIL_PROVIDER`, `EMAIL_FROM`, `APP_URL`,
-  `EMAIL_API_KEY` ni `EMAIL_SMTP_*`; por eso el envío real sigue sin probarse. Queda como **paso de entrega**:
-  1. Completar en `.env`: `EMAIL_PROVIDER=resend` (o `brevo`/`smtp`), `EMAIL_FROM`, `APP_URL` con la URL
-     pública del frontend y la credencial del proveedor (`EMAIL_API_KEY`, o `EMAIL_SMTP_HOST`/`PORT`/`USER`/`PASS`).
-  2. Reiniciar el backend y pedir `POST /api/auth/password/olvide` con una casilla real.
-  3. Abrir el correo recibido; el enlace debe llevar a `/restablecer?token=...`, vencer en
-     `RESET_TOKEN_MINUTES` (60 por defecto) y servir una sola vez.
+- **Estado: RESUELTO 2026-11-22.** Configurado `EMAIL_PROVIDER=smtp` con Gmail (`smtp.gmail.com:587`,
+  contraseña de aplicación de 16 caracteres) y `APP_URL=http://localhost:5173`. Probado desde el front en
+  `/recuperar`: llegó el correo, el enlace abrió `/restablecer?token=...` y permitió cambiar la contraseña.
+  El enlace vence en `RESET_TOKEN_MINUTES` (60 por defecto) y sirve una sola vez.
+- **Detalle importante:** `EMAIL_FROM` debe coincidir con `EMAIL_SMTP_USER` (o ser un alias verificado de
+  Gmail); si no, Gmail rechaza el envío.
+- **Dónde:** `backend/src/services/email.service.ts`, `backend/src/modules/auth/recuperacion.service.ts`,
+  `.env` (gitignored; la contraseña nunca se versiona).
 
 ### 1.2 Ver el CI corriendo en GitHub
 - **Estado:** el CI estaba en rojo sin que se viera (faltaba `npx prisma generate` y había líneas largas en
@@ -49,6 +41,9 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
   sigue sirviendo hasta que vence**.
 - **Idea:** que el middleware de autenticación verifique que la cuenta siga activa (con caché corta), o
   acortar la vida del token de acceso.
+- **Resuelto 2026-11-22:** dar de baja escribe el `usuario_id` en una denylist con TTL igual a la vida del
+  access token (`ACCESS_TOKEN_TTL_SECONDS`, 900 s) y `requireAuth` responde 401 «Cuenta desactivada»;
+  reactivar lo saca de la denylist. Con varias réplicas del backend habría que compartir esa caché.
 
 ### 2.2 Vulnerabilidades de `npm audit`
 - Los arreglos necesitan **upgrades mayores con cambios incompatibles**: `zod` 4 y `react-router` 7.

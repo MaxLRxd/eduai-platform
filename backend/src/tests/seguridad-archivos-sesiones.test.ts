@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { createApp } from "../app";
 import { signAccessToken } from "../middlewares/auth";
 import { prisma } from "../config/prisma";
+import { accesoRevocado, permitirAcceso, revocarAcceso } from "../config/cache";
+import { env } from "../config/env";
 
 const ADMIN_ID = "11111111-1111-4111-8111-111111111111";
 const USUARIO_ID = "22222222-2222-4222-8222-222222222222";
@@ -111,6 +113,7 @@ describe("admin: dar de baja a un usuario", () => {
       where: { usuario_id: USUARIO_ID, revocado: false },
       data: { revocado: true },
     });
+    expect(accesoRevocado(USUARIO_ID)).toBe(true);
   });
 
   it("no toca las sesiones al reactivarlo", async () => {
@@ -118,5 +121,69 @@ describe("admin: dar de baja a un usuario", () => {
 
     expect(res.status).toBe(200);
     expect(prismaMock.sesion.updateMany).not.toHaveBeenCalled();
+    expect(accesoRevocado(USUARIO_ID)).toBe(false);
+  });
+});
+
+describe("access tokens de cuentas dadas de baja", () => {
+  const REVOCADO_ID = "66666666-6666-4666-8666-666666666666";
+  const OTRO_ID = "77777777-7777-4777-8777-777777777777";
+
+  let server: ReturnType<typeof createServer>;
+
+  const pedirMe = (id: string) =>
+    request(server)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${signAccessToken({ sub: id, email: "alumno@edu.ai", rol: "ALUMNO" })}`);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    permitirAcceso(REVOCADO_ID);
+    permitirAcceso(OTRO_ID);
+    server = createServer(createApp() as unknown as import("http").RequestListener);
+    prismaMock.usuario.findUnique.mockResolvedValue({
+      id: OTRO_ID,
+      nombre: "Alumno",
+      email: "alumno@edu.ai",
+      rol: "ALUMNO",
+      activo: true,
+    });
+  });
+
+  afterEach(() => {
+    server.close();
+    permitirAcceso(REVOCADO_ID);
+    permitirAcceso(OTRO_ID);
+    jest.restoreAllMocks();
+  });
+
+  it("un token valido deja de servir al revocar el acceso", async () => {
+    revocarAcceso(REVOCADO_ID);
+
+    const res = await pedirMe(REVOCADO_ID);
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Cuenta desactivada" });
+    expect(prismaMock.usuario.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("los demas usuarios siguen pudiendo usar su token", async () => {
+    revocarAcceso(REVOCADO_ID);
+
+    const res = await pedirMe(OTRO_ID);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuario.id).toBe(OTRO_ID);
+  });
+
+  it("la denylist caduca junto con la vida del access token", () => {
+    const ahora = 1_700_000_000_000;
+    jest.spyOn(Date, "now").mockReturnValue(ahora);
+    revocarAcceso(REVOCADO_ID);
+
+    expect(accesoRevocado(REVOCADO_ID)).toBe(true);
+
+    (Date.now as jest.Mock).mockReturnValue(ahora + env.ACCESS_TOKEN_TTL_SECONDS * 1000 + 1);
+    expect(accesoRevocado(REVOCADO_ID)).toBe(false);
   });
 });

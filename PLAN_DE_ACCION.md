@@ -21,18 +21,24 @@
 ## Fase 0 — Cierre rápido (1-2 h, casi sin código) · verificada 2026-11-22
 
 - [ ] **0.1** Verificar en GitHub que los 3 jobs de CI (`backend`, `frontend`, `ai-service`) queden verdes tras el push (BOLO 1.2). **Bloqueado:** el workflow `CI` está `disabled_manually` desde 2026-09-28; el último run (#36, 2026-09-27) tiene `frontend` y `ai-service` verdes y `backend` rojo en `npm run typecheck`. Rehabilitarlo en GitHub y volver a correrlo tras el push.
-- [ ] **0.2** Probar el envío real de correo: configurar `EMAIL_PROVIDER=resend|brevo|smtp` + `EMAIL_FROM` + `APP_URL`, pedir un enlace y comprobar que abre `/restablecer` (BOLO 1.1). **Bloqueado:** `.env` no contiene ninguna variable de correo; queda documentado como paso de entrega en `docs/COSAS_QUE_FALTAN.md` §1.1. Archivos: `backend/src/services/email.service.ts`, `backend/src/modules/auth/recuperacion.service.ts`, `.env.example`.
+- [x] **0.2** Envío real de correo verificado 2026-11-22 (BOLO 1.1): `EMAIL_PROVIDER=smtp` con Gmail, `APP_URL=http://localhost:5173`, probado desde `/recuperar`; el correo llegó y el enlace abrió `/restablecer?token=...`. Requisito: `EMAIL_FROM` = `EMAIL_SMTP_USER` (o alias verificado). Credenciales solo en `.env` (gitignored). Archivos: `backend/src/services/email.service.ts`, `backend/src/modules/auth/recuperacion.service.ts`.
 - [x] **0.3** Borrar `tmp_icons3.txt` (BOLO 3.5). Ya no existe: `git status` lo marca como `D`.
 - [x] **0.4** Regenerar el grafo con `/graphify` — el actual está desactualizado (BOLO 3.2). Regenerado el 2026-11-22 desde el commit `c884c2ed` (HEAD actual): `graphify-out/GRAPH_REPORT.md`.
 - [x] **0.5** Confirmar el rename `docs/COSAS_QUE_FALTAN_BOLO.md` → `docs/COSAS_QUE_FALTAN.md` antes de commitear (hoy: viejo borrado, nuevo sin trackear). Confirmado: `git status` lo muestra como `R` (rename stageado).
 
 **Verificación local 2026-11-22:** `npm run lint` y `npm test` (backend 363, ai-services 161 + 1 omitido,
-frontend 195) pasan; los typechecks pasan después de `npx prisma generate` en `backend` (el cliente
+frontend 195) pasan; tras Fase 1.1 el backend quedó en 366. Los typechecks pasan después de `npx prisma generate` en `backend` (el cliente
 generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: requiere el stack levantado.
 
 ## Fase 1 — Seguridad (antes de la defensa)
 
-- [ ] **1.1** Revocar el acceso al desactivar un usuario (BOLO 2.1): verificar `usuario.activo` en `requireAuth()` con caché corta (~30-60 s) en Redis (`backend/src/config/cache.ts`) e invalidarla al desactivar en `backend/src/modules/admin/admin.service.ts:132`. Alternativa más simple: acortar `expiresIn` en `auth.ts:14`. Tests: `backend/src/tests/seguridad-archivos-sesiones.test.ts`.
+> **Contrato 1.1 (2026-11-22):** al dar de baja, `admin.service` escribe el `usuario_id` en una denylist
+> con TTL igual a `ACCESS_TOKEN_TTL_SECONDS` (900 s por defecto). `requireAuth` rechaza cualquier access
+> token cuyo `sub` esté en la denylist; reactivar lo saca. No se consulta la BD por request (evita tocar los
+> ~30 mocks de prisma de los tests) y el TTL cubre exactamente la vida del token. La caché es en proceso:
+> con varias réplicas del backend habría que moverla a Redis/DB (no hay cliente Redis en el backend hoy).
+
+- [x] **1.1** Revocar el acceso al desactivar un usuario (BOLO 2.1). Implementado con la denylist de caché del contrato: `backend/src/config/cache.ts` (TTL = `ACCESS_TOKEN_TTL_SECONDS`), chequeada en `backend/src/middlewares/auth.ts:36` y escrita/borrada desde `actualizarEstado()` en `backend/src/modules/admin/admin.service.ts:129`. `expiresIn` dejó de estar hardcodeado. Tests en `backend/src/tests/seguridad-archivos-sesiones.test.ts` (backend: 366). Limitación: una sola réplica del backend; con varias, mover la denylist a Redis/DB.
 - [ ] **1.2** URLs firmadas y temporales para archivos (BOLO 2.3): `backend/src/config/storage.ts` y las rutas `/uploads`. Solo si se pasa a R2/S3 real; si no, posponer.
 
 ## Fase 2 — Bugs visibles en demo (mayor retorno)

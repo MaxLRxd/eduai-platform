@@ -22,6 +22,7 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default("data/uploads"),
   MAX_FILE_SIZE_MB: z.coerce.number().default(50),
   JWT_SECRET: z.string().min(16),
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   PORT: z.coerce.number().default(3000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   // URL pública del frontend, para armar los enlaces de los correos. Si falta, se usa el primer CORS_ORIGIN.

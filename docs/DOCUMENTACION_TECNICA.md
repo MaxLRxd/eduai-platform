@@ -303,6 +303,7 @@ Calidad estática: TypeScript estricto en backend y frontend, ESLint sin adverte
 | Variable | Para qué |
 | --- | --- |
 | `JWT_SECRET` | Firma de tokens (≥ 16 caracteres; en la práctica, 48 bytes aleatorios) |
+| `ACCESS_TOKEN_TTL_SECONDS` | Vida del access token (900 por defecto) y TTL de la denylist de cuentas dadas de baja |
 | `GEMINI_API_KEY` | Habilita el LLM y los *embeddings* |
 | `AI_SERVICE_TOKEN` | Secreto compartido backend ↔ ai-service (obligatorio fuera de desarrollo) |
 | `VECTOR_STORE` | `pgvector` (por defecto) o `pinecone` (requiere `PINECONE_API_KEY`) |
@@ -311,7 +312,8 @@ Calidad estática: TypeScript estricto en backend y frontend, ESLint sin adverte
 | `EMAIL_PROVIDER` | `none` (por defecto), `resend`, `brevo` o `smtp`: copia por email de las notificaciones y **correos de recuperación de contraseña** |
 | `APP_URL` | URL pública del frontend para los enlaces de los correos (por defecto, el primer `CORS_ORIGIN`) |
 
-Nunca se versionan valores reales: `.env` está en `.gitignore`.
+Nunca se versionan valores reales: `.env` está en `.gitignore`. Con Gmail SMTP, `EMAIL_FROM` debe coincidir
+con `EMAIL_SMTP_USER` (o ser un alias verificado) y `EMAIL_SMTP_PASS` es una contraseña de aplicación.
 
 ## 14. Desvíos respecto del plan original
 

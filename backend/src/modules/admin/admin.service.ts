@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { TipoProfesor } from "@prisma/client";
 import { renderReportePdf } from "./reportsPdf";
 import { prisma } from "../../config/prisma";
+import { permitirAcceso, revocarAcceso } from "../../config/cache";
 import { logger } from "../../config/logger";
 import { AppError } from "../../middlewares/error";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
@@ -144,12 +145,16 @@ export async function actualizarEstado(usuarioId: string, input: ActualizarEstad
   });
 
   // Dar de baja corta tambien las sesiones abiertas: sin esto el refresh token seguiria
-  // vivo hasta su vencimiento (el token de acceso dura 15 minutos).
+  // vivo hasta su vencimiento. Las sesiones revocadas no impiden que un access token ya
+  // emitido siga sirviendo, asi que tambien se inhabilita al usuario en la cache de acceso.
   if (!input.activo) {
     await prisma.sesion.updateMany({
       where: { usuario_id: usuarioId, revocado: false },
       data: { revocado: true },
     });
+    revocarAcceso(usuarioId);
+  } else {
+    permitirAcceso(usuarioId);
   }
 
   return toUsuarioDto(actualizado);

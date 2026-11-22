@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { Rol } from "@prisma/client";
 import { env } from "../config/env";
+import { accesoRevocado } from "../config/cache";
 import { AppError } from "./error";
 
 export interface AccessTokenPayload {
@@ -11,7 +12,10 @@ export interface AccessTokenPayload {
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "15m" } as jwt.SignOptions);
+  return jwt.sign(payload, env.JWT_SECRET, {
+    algorithm: "HS256",
+    expiresIn: env.ACCESS_TOKEN_TTL_SECONDS,
+  } as jwt.SignOptions);
 }
 
 export function requireAuth(
@@ -29,6 +33,9 @@ export function requireAuth(
     const payload = jwt.verify(header.slice(7), env.JWT_SECRET, {
       algorithms: ["HS256"],
     }) as AccessTokenPayload;
+    if (accesoRevocado(payload.sub)) {
+      return next(new AppError(401, "Cuenta desactivada"));
+    }
     req.user = { id: payload.sub, email: payload.email, rol: payload.rol };
     next();
   } catch {
