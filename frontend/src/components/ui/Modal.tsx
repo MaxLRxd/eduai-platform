@@ -5,11 +5,13 @@ export function Modal({
   onClose,
   title,
   children,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  wide?: boolean;
 }): React.ReactElement | null {
   if (!open) return null;
 
@@ -21,7 +23,7 @@ export function Modal({
       aria-label={title}
       onClick={onClose}
     >
-      <div className="bg-surface rounded-lg shadow-lg max-w-md w-full max-h-[80vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+      <div className={`bg-surface rounded-lg shadow-lg w-full max-h-[85vh] overflow-y-auto relative ${wide ? "max-w-3xl" : "max-w-md"}`} onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
           aria-label="Cerrar"
