@@ -25,10 +25,13 @@ function aiDisponible(): boolean {
  * id -> titulo de los contenidos de la materia. El ai-service rotula con esto
  * los fragmentos del RAG; sin el mapa, el LLM citaba el UUID del material.
  */
-async function titulosDeMateria(materiaId: string): Promise<Record<string, string>> {
+async function titulosDeMateria(materiaId: string, contentIds?: string[]): Promise<Record<string, string>> {
   try {
     const contenidos = await prisma.contenido.findMany({
-      where: { seccion: { materia_id: materiaId } },
+      where: {
+        seccion: { materia_id: materiaId },
+        ...(contentIds ? { id: { in: contentIds } } : {}),
+      },
       select: { id: true, titulo: true },
     });
     return Object.fromEntries(contenidos.map((c) => [c.id, c.titulo]));
@@ -291,7 +294,8 @@ export interface MaterialDocenteResult {
 
 export async function generarMaterialDocente(
   subjectId: string,
-  prompt: string
+  prompt: string,
+  contentIds?: string[]
 ): Promise<MaterialDocenteResult | null> {
   if (!aiDisponible()) {
     logger.warn("AI_SERVICE_URL no configurado; no se pudo generar material docente");
@@ -305,7 +309,8 @@ export async function generarMaterialDocente(
       body: JSON.stringify({
         subject_id: subjectId,
         prompt,
-        material_titles: await titulosDeMateria(subjectId),
+        material_ids: contentIds ?? [],
+        material_titles: await titulosDeMateria(subjectId, contentIds),
       }),
       signal: AbortSignal.timeout(120_000),
     });

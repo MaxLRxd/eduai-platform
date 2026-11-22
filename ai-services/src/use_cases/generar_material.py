@@ -22,7 +22,11 @@ class GenerarMaterialUseCase:
         self.retrieval = retrieval
 
     async def execute(
-        self, subject_id: str, prompt: str, material_titles: dict[str, str] | None = None
+        self,
+        subject_id: str,
+        prompt: str,
+        material_titles: dict[str, str] | None = None,
+        material_ids: list[str] | None = None,
     ) -> dict:
         depurado = depurar(prompt)
         if depurado.estado != "ok":
@@ -30,7 +34,7 @@ class GenerarMaterialUseCase:
         prompt = depurado.texto
 
         embedding = await self.embeddings.embed_query(prompt)
-        results = await self.retrieval.search(subject_id, embedding, settings.retrieval_top_k)
+        results = await self.retrieval.search(subject_id, embedding, settings.retrieval_top_k, material_ids=material_ids)
         sources = build_sources(results, material_titles)
         context = format_context(results, material_titles)
 

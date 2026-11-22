@@ -109,6 +109,7 @@ model Usuario {
   inscripciones  Inscripcion[]
   entregas       Entrega[]
   sesionesIa     SesionIA[]
+  sesionesAsistenteDocente SesionAsistenteDocente[]
   notas          Nota[]
   asistencias    Asistencia[]
   alertasRiesgo  AlertaRiesgoAcademico[]
@@ -183,6 +184,7 @@ model Materia {
   secciones           Seccion[]
   rubricas            Rubrica[]
   sesionesIa          SesionIA[]
+  sesionesAsistenteDocente SesionAsistenteDocente[]
   preguntasFrecuentes PreguntaFrecuente[]
   notas               Nota[]
   categorias_nota     CategoriaNota[]
@@ -449,6 +451,36 @@ model MensajeIA {
 
   @@index([sesion_id])
   @@map("mensajes_ia")
+}
+
+model SesionAsistenteDocente {
+  id          String      @id @default(uuid()) @db.Uuid
+  profesor_id String      @db.Uuid
+  materia_id  String      @db.Uuid
+  titulo      String?     @db.VarChar(200)
+  iniciada_en DateTime    @default(now())
+  cerrada_en  DateTime?
+
+  profesor Usuario                    @relation(fields: [profesor_id], references: [id])
+  materia  Materia                    @relation(fields: [materia_id], references: [id])
+  mensajes MensajeAsistenteDocente[]
+
+  @@index([profesor_id, materia_id])
+  @@map("sesiones_asistente_docente")
+}
+
+model MensajeAsistenteDocente {
+  id         String      @id @default(uuid()) @db.Uuid
+  sesion_id  String      @db.Uuid
+  rol        RolMensajeIA
+  contenido  String
+  sources    Json?
+  creado_en  DateTime    @default(now())
+
+  sesion SesionAsistenteDocente @relation(fields: [sesion_id], references: [id], onDelete: Cascade)
+
+  @@index([sesion_id])
+  @@map("mensajes_asistente_docente")
 }
 
 model PreguntaFrecuente {

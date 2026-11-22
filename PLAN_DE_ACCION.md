@@ -49,7 +49,17 @@ generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: r
 > componente es puro: no lee contextos ni hace requests. Se usa en Login, Sidebar y Ajustes de administrador.
 
 - [x] **2.1** Fallback de logo resuelto 2026-11-22 (BOLO 3.1). `frontend/src/components/ui/BrandLogo.tsx` resuelve la URL con `apiUrl` y cae a una marca por defecto (`role="img"`, mismo `alt`) cuando no hay `src` o falla `onError`. Usado en Login, Sidebar y Ajustes. Tests en `frontend/src/tests/branding-context.test.tsx` (4 nuevos; frontend: 199).
-- [ ] **2.2** Chat del tutor docente (BOLO 6): persistir la conversación siguiendo `frontend/src/hooks/useTutorChat.ts:23-128`, avisar al cambiar de pestaña y agregar selector de material (`content_ids`). Cadena a tocar: `frontend/src/services/teacherAI.service.ts` → `backend/src/modules/asistente/asistente.service.ts:14-47` → `ai-services/src/use_cases/generar_material.py:24-41`. Reutilizar el selector de `frontend/src/components/teacher/ClassMaterialModal.tsx:13-113`.
+> **Contrato 2.2 (2026-11-22):** el asistente docente pasa a conversaciones persistentes. Nuevas rutas
+> `POST /api/asistente/sesiones` (`{materia_id}`), `GET /api/asistente/sesiones?materia_id=...`,
+> `GET /api/asistente/sesiones/:id/mensajes` y `POST /api/asistente/sesiones/:id/mensajes`
+> (`{prompt, class_date?, content_ids?}`). Cada mensaje devuelve `{id, rol, contenido, sources, creado_en}`.
+> `content_ids` son UUIDs de `Contenido` de la materia (máx. 10), se validan contra la BD y se convierten en
+> `material_titles`; el ai-service recibe `material_ids` y filtra el RAG por ellos. `POST /api/asistente/generar`
+> sigue funcionando y también acepta `content_ids`. Persistencia en `sesiones_asistente_docente` y
+> `mensajes_asistente_docente` (profesor + materia, dueño verificado con `obtenerProfesorAsignado`). El front
+> guarda cada intercambio, permite retomar conversaciones y avisa si hay una generación en curso al salir.
+
+- [x] **2.2** Chat del tutor docente resuelto 2026-11-22 (BOLO 6). Conversaciones persistidas en `sesiones_asistente_docente` / `mensajes_asistente_docente` con migración manual (`20261122160000_sesiones_asistente_docente`); `content_ids` validados y propagados al RAG. Front con selector múltiple de materiales, retoma de sesión y aviso `beforeunload`. Tests: backend 369 (3 nuevos), IA 162 + 1 skipped (1 nuevo), frontend 202 (3 nuevos).
 - [ ] **2.3** Editor de nota en popup (BOLO 6): reemplazar el formulario en línea de `frontend/src/pages/teacher/TeacherGradesPage.tsx:176-289` por `frontend/src/components/ui/Modal.tsx`.
 - [ ] **2.4** «Editar» en clases → Planificación (BOLO 6): redirigir a `/teacher/planning?course=...` desde `frontend/src/pages/teacher/TeacherContentPage.tsx:389-429` (patrón existente en `:237-245`), sin cambiar la distribución actual.
 - [ ] **2.5** Botón de eliminar contenido a mano (BOLO 6): agregarlo en `frontend/src/components/teacher/MaterialRow.tsx:9-59`; el endpoint ya existe en `backend/src/modules/contenidos/contenidos.routes.ts:78-83`, falta el cliente en `frontend/src/services/content.service.ts` y el hook en `frontend/src/hooks/useContent.ts:65`.

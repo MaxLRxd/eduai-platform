@@ -106,7 +106,6 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 ---
 
 ## 6. Bugs generales:
-- chat con tutorAI docente: no persiste el chat(poner aunque sea un warning de que al cambiar de pestaña se perderá lo no guardado), además no hay opción para seleccionar que archivo debe tener de referencia la IA en caso de que haya más de uno.
 - visuales: pantallas que se salen de sus contenedores, se puede hacer desplegable el side-menu de la izquierda además; se puede hacer que cada acción que "despliegue algo" como "editar" en "editar nota" (sección Mis estudiantes -> Calificaciones) se abra en primer plano como un popup, como una tarjeta en grande con el formulario para editar, sino es confuso que spawnee de la nada arriba sin aviso, puede pasar desapercibido y no darse cuenta que si se abrió una sección para editar; en "aula virtual" se puede scrollear hacia abajo hasta que la pagina desaparece.
 - Al darle "Editar" en la sección de clases debería llevar a planificacion para que sea más sencillo. Pero sin modificar como se muestra la distribución actual de clases, solo redirige. Lo que sí: agregar un boton de eliminar contenido para que quede más a mano y no haga falta entrar a planificación.
 
@@ -114,4 +113,5 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 CI y lint · reintento del 503 de Gemini en streaming · Pinecone sin bloquear el event loop · limpieza de
 vectores huérfanos y reindexado (`rag:reindex --huerfanos|--limpiar`) · base de demo con material real
 (`demo:reset`) · E2E del OCR de PDF escaneado y de la exportación de reportes · prueba de humo de todas las
-páginas · recuperación de contraseña por correo.
+páginas · recuperación de contraseña por correo · chat persistente del tutor docente con selector de materiales
+y aviso al salir.

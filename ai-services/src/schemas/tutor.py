@@ -120,6 +120,7 @@ class IndexMaterialResponse(BaseModel):
 class MaterialRequest(BaseModel):
     subject_id: str = Field(..., min_length=1)
     prompt: str = Field(..., min_length=1, max_length=4000)
+    material_ids: list[str] = Field(default_factory=list)
     material_titles: dict[str, str] = Field(default_factory=dict)
 
 

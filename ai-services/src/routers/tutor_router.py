@@ -128,7 +128,7 @@ async def corregir_examen(req: CorrectExamRequest, request: Request) -> CorrectE
 async def generar_material(req: MaterialRequest, request: Request) -> MaterialResponse:
     try:
         result = await request.app.state.generar_material_use_case.execute(
-            req.subject_id, req.prompt, req.material_titles
+            req.subject_id, req.prompt, req.material_titles, req.material_ids
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

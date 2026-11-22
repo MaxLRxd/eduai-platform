@@ -21,7 +21,7 @@ class FakeEmbeddings:
 
 
 class FakeRetrieval:
-    async def search(self, subject_id, embedding, top_k=5, min_score=None):
+    async def search(self, subject_id, embedding, top_k=5, min_score=None, material_ids=None):
         return [
             {
                 "material_id": "mat-1",

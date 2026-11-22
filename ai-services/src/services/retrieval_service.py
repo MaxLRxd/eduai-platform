@@ -233,6 +233,7 @@ class RetrievalService:
         embedding: list[float],
         top_k: int = 5,
         min_score: float | None = None,
+        material_ids: list[str] | None = None,
     ) -> list[dict]:
         pool = await self._get_pool()
         async with pool.acquire() as conn:
@@ -242,12 +243,14 @@ class RetrievalService:
                        1 - (embedding <=> $2::vector) AS score
                 FROM ai_materials
                 WHERE subject_id = $1
+                  AND ($4::text[] IS NULL OR material_id = ANY($4::text[]))
                 ORDER BY embedding <=> $2::vector
                 LIMIT $3
                 """,
                 subject_id,
                 embedding,
                 top_k,
+                material_ids or None,
             )
             results = [dict(row) for row in rows]
             if min_score is None or min_score <= 0.0:

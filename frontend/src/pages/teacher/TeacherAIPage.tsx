@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
 import { usePlanning } from "../../hooks/usePlanning";
 import { useTeacherAssistant } from "../../hooks/useTeacherAssistant";
-import { useCourseSections, useUploadMaterial } from "../../hooks/useContent";
+import { useCourseContentTree, useCourseSections, useUploadMaterial } from "../../hooks/useContent";
 import { TutorLatencyCard } from "../../components/teacher/TutorLatencyCard";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -23,8 +23,22 @@ export function TeacherAIPage(): React.ReactElement {
   const courseLabel = courses?.find((c) => c.id === activeCourse)?.label ?? "la materia seleccionada";
 
   const { data: planning } = usePlanning(activeCourse, courseLabel);
-  const { output, setOutput, pending, pdfPending, ask, downloadPdf } = useTeacherAssistant();
+  const {
+    output,
+    setOutput,
+    pending,
+    pdfPending,
+    messages,
+    sesiones,
+    sesionActivaId,
+    cargandoHistorial,
+    ask,
+    seleccionarConversacion,
+    nuevaConversacion,
+    downloadPdf,
+  } = useTeacherAssistant(activeCourse);
   const { data: sections } = useCourseSections(activeCourse);
+  const { data: contentTree } = useCourseContentTree(activeCourse);
   const publicar = useUploadMaterial();
 
   const [classDate, setClassDate] = useState(planning?.[0]?.date ?? "");
@@ -34,6 +48,15 @@ export function TeacherAIPage(): React.ReactElement {
   const [seccionDestino, setSeccionDestino] = useState("");
   const [tituloPublicacion, setTituloPublicacion] = useState("");
   const [aviso, setAviso] = useState<{ tipo: "success" | "error"; texto: string } | null>(null);
+  const [contentIds, setContentIds] = useState<string[]>([]);
+
+  const materialOptions = (contentTree ?? []).flatMap((seccion) =>
+    seccion.materials.map((m) => ({ id: m.id, label: `${seccion.nombre}: ${m.name}` }))
+  );
+
+  useEffect(() => {
+    setContentIds([]);
+  }, [activeCourse]);
 
 // CU-P10 (FA1): con soluciones, la IA marca las respuestas correctas para uso interno del docente.
   const pedido = (text: string): string =>
@@ -43,7 +66,7 @@ export function TeacherAIPage(): React.ReactElement {
 
   const runPrompt = (text: string): void => {
     setPrompt(text);
-    void ask(pedido(text), activeCourse, classDate || undefined);
+    void ask(pedido(text), activeCourse, classDate || undefined, contentIds);
   };
 
   const destino = seccionDestino || sections?.[0]?.id || "";
@@ -82,6 +105,68 @@ export function TeacherAIPage(): React.ReactElement {
         <Card>
           <CardHeader title="Consultá usando la planificación cargada" />
           <InfoBox variant="info">🤖 La IA puede tomar como contexto las planificaciones por día, los materiales publicados y las consignas visibles para estudiantes.</InfoBox>
+          <InfoBox variant="info">💬 La conversación se guarda automáticamente. Si cerrás la pestaña mientras se genera, el navegador te avisará.</InfoBox>
+
+          <div className="grid md:grid-cols-2 gap-2.5 mb-3.5">
+            <div>
+              <label htmlFor="teacher-ai-sesion" className="block text-xs font-semibold text-text-1 mb-1.5">
+                Conversación
+              </label>
+              <select
+                id="teacher-ai-sesion"
+                value={sesionActivaId ?? ""}
+                onChange={(e) =>
+                  e.target.value ? void seleccionarConversacion(e.target.value) : nuevaConversacion()
+                }
+                disabled={pending}
+                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+              >
+                <option value="">Nueva conversación</option>
+                {sesiones.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.titulo || new Date(s.iniciada_en).toLocaleString("es-AR")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="teacher-ai-materiales" className="block text-xs font-semibold text-text-1 mb-1.5">
+                Materiales de referencia
+              </label>
+              <select
+                id="teacher-ai-materiales"
+                multiple
+                size={3}
+                value={contentIds}
+                onChange={(e) =>
+                  setContentIds(Array.from(e.target.selectedOptions, (option) => option.value))
+                }
+                disabled={pending}
+                className="w-full px-3 py-1.5 border border-border rounded text-xs bg-surface"
+              >
+                {materialOptions.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-text-3 mt-1">
+                Elegí uno o más materiales para limitar el contexto de la IA. Sin selección usa toda la materia.
+              </p>
+            </div>
+          </div>
+
+          {cargandoHistorial && <p className="text-xs text-text-2 mb-2">Cargando conversación…</p>}
+          {messages.length > 0 && (
+            <div className="max-h-52 overflow-y-auto border border-border rounded bg-surface-2 p-3 mb-4 space-y-2">
+              {messages.map((m, i) => (
+                <div key={m.id ?? `temp-${i}`} className="text-[13px]">
+                  <span className="font-bold text-primary">{m.role === "user" ? "Vos" : "Asistente"}: </span>
+                  <span className="whitespace-pre-wrap text-text-1">{m.content || (pending ? "Generando…" : "")}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mb-3.5">
             <label htmlFor="teacher-ai-course" className="block text-xs font-semibold text-text-1 mb-1.5">
@@ -134,7 +219,7 @@ export function TeacherAIPage(): React.ReactElement {
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => void ask(pedido(prompt), activeCourse, classDate || undefined)} disabled={!prompt.trim() || pending}>
+            <Button onClick={() => void ask(pedido(prompt), activeCourse, classDate || undefined, contentIds)} disabled={!prompt.trim() || pending}>
               {pending ? "Generando…" : "Generar respuesta"}
             </Button>
             <Button
