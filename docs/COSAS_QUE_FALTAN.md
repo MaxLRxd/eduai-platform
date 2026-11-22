@@ -60,8 +60,9 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 ## 3. Pulido
 
 ### 3.1 Logo roto
-- La base tiene una URL de logo de ejemplo que no carga. Falta un **fallback** en el frontend (mostrar el
-  logo por defecto si la imagen falla).
+- **Resuelto 2026-11-22:** `BrandLogo` (`frontend/src/components/ui/BrandLogo.tsx`) resuelve la URL con
+  `apiUrl` y muestra la marca por defecto si no hay logo o si la imagen falla (`onError`). Se usa en login,
+  sidebar y ajustes de administrador; cubierto por tests en `frontend/src/tests/branding-context.test.tsx`.
 
 ### 3.2 `graphify-out/` desactualizado
 - El grafo del código es del 30/10. Regenerarlo con `/graphify` si se va a usar para consultas.

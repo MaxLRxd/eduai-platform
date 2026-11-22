@@ -27,7 +27,7 @@
 - [x] **0.5** Confirmar el rename `docs/COSAS_QUE_FALTAN_BOLO.md` → `docs/COSAS_QUE_FALTAN.md` antes de commitear (hoy: viejo borrado, nuevo sin trackear). Confirmado: `git status` lo muestra como `R` (rename stageado).
 
 **Verificación local 2026-11-22:** `npm run lint` y `npm test` (backend 363, ai-services 161 + 1 omitido,
-frontend 195) pasan; tras Fase 1.1 el backend quedó en 366. Los typechecks pasan después de `npx prisma generate` en `backend` (el cliente
+frontend 195) pasan; tras Fase 1.1 el backend quedó en 366 y tras Fase 2.1 el frontend en 199. Los typechecks pasan después de `npx prisma generate` en `backend` (el cliente
 generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: requiere el stack levantado.
 
 ## Fase 1 — Seguridad (antes de la defensa)
@@ -43,7 +43,12 @@ generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: r
 
 ## Fase 2 — Bugs visibles en demo (mayor retorno)
 
-- [ ] **2.1** Fallback de logo (BOLO 3.1): extraer componente `BrandLogo` con `onError` y usarlo en `frontend/src/pages/LoginPage.tsx:35`, `frontend/src/components/layout/Sidebar.tsx:32` y `frontend/src/pages/admin/AdminSettingsPage.tsx:98`. Test: `frontend/src/tests/branding-context.test.tsx`.
+> **Contrato 2.1 (2026-11-22):** `BrandLogo` recibe `src` (URL absoluta o ruta `/uploads/...`, resuelta con
+> `apiUrl`), `alt`, `className` (solo tamaño/espaciado/borde) y `fallback?`. Sin `src`, o si la imagen falla
+> (`onError`), muestra una marca por defecto con `role="img"` y el mismo `alt`, sin romper el layout. El
+> componente es puro: no lee contextos ni hace requests. Se usa en Login, Sidebar y Ajustes de administrador.
+
+- [x] **2.1** Fallback de logo resuelto 2026-11-22 (BOLO 3.1). `frontend/src/components/ui/BrandLogo.tsx` resuelve la URL con `apiUrl` y cae a una marca por defecto (`role="img"`, mismo `alt`) cuando no hay `src` o falla `onError`. Usado en Login, Sidebar y Ajustes. Tests en `frontend/src/tests/branding-context.test.tsx` (4 nuevos; frontend: 199).
 - [ ] **2.2** Chat del tutor docente (BOLO 6): persistir la conversación siguiendo `frontend/src/hooks/useTutorChat.ts:23-128`, avisar al cambiar de pestaña y agregar selector de material (`content_ids`). Cadena a tocar: `frontend/src/services/teacherAI.service.ts` → `backend/src/modules/asistente/asistente.service.ts:14-47` → `ai-services/src/use_cases/generar_material.py:24-41`. Reutilizar el selector de `frontend/src/components/teacher/ClassMaterialModal.tsx:13-113`.
 - [ ] **2.3** Editor de nota en popup (BOLO 6): reemplazar el formulario en línea de `frontend/src/pages/teacher/TeacherGradesPage.tsx:176-289` por `frontend/src/components/ui/Modal.tsx`.
 - [ ] **2.4** «Editar» en clases → Planificación (BOLO 6): redirigir a `/teacher/planning?course=...` desde `frontend/src/pages/teacher/TeacherContentPage.tsx:389-429` (patrón existente en `:237-245`), sin cambiar la distribución actual.

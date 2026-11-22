@@ -656,6 +656,8 @@ docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 # 5. Para limpiar (OJO: destruye volúmenes y la base local)
 docker compose down -v --rmi all --remove-orphans
 docker builder prune -a -f
+#6. Para recrear servicio
+docker compose up -d --force-recreate backend ai-service frontend #todos juntos o uno solo o como quieras crack
 ```
 
 Credenciales de prueba (`seed.ts`): `admin@ies.edu` (ADMIN) · `profe1@ies.edu` (PROFESOR) ·

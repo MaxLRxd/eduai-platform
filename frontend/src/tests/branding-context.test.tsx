@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../services/config.service", () => ({ getConfigBranding: vi.fn() }));
 
 import { getConfigBranding } from "../services/config.service";
 import { BrandingProvider, useBranding } from "../contexts/BrandingContext";
+import { BrandLogo } from "../components/ui/BrandLogo";
 
 const mockGetBranding = vi.mocked(getConfigBranding);
 
@@ -87,5 +88,36 @@ describe("BrandingProvider", () => {
     const root = document.documentElement;
     expect(root.style.getPropertyValue("--color-primary")).toBe("#003d7a");
     expect(root.style.getPropertyValue("--color-primary-light")).toBe("#dbeafe");
+  });
+});
+
+describe("BrandLogo", () => {
+  it("muestra la imagen cuando la URL carga", () => {
+    render(<BrandLogo src="https://cdn.edu/logo.png" alt="IES Santa Fe" className="w-8 h-8" />);
+
+    const logo = screen.getByAltText("IES Santa Fe");
+    expect(logo).toHaveAttribute("src", "https://cdn.edu/logo.png");
+    expect(logo).toHaveClass("w-8", "h-8");
+  });
+
+  it("resuelve rutas relativas contra la API", () => {
+    render(<BrandLogo src="/uploads/logo.png" alt="Logo subido" />);
+
+    expect(screen.getByAltText("Logo subido")).toHaveAttribute("src", "http://localhost:3000/uploads/logo.png");
+  });
+
+  it("muestra la marca por defecto si no hay logo", () => {
+    render(<BrandLogo alt="EduAI" />);
+
+    expect(screen.getByRole("img", { name: "EduAI" })).toBeInTheDocument();
+  });
+
+  it("cae a la marca por defecto cuando la imagen falla", () => {
+    render(<BrandLogo src="https://cdn.edu/logo-roto.png" alt="Logo roto" />);
+
+    fireEvent.error(screen.getByAltText("Logo roto"));
+
+    expect(screen.getByRole("img", { name: "Logo roto" })).toBeInTheDocument();
+    expect(screen.queryByAltText("Logo roto")).not.toBeInTheDocument();
   });
 });

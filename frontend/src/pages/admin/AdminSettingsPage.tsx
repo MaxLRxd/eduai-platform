@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useAdminSettings, useSaveBranding } from "../../hooks/useAdminSettings";
 import { uploadBrandingLogo } from "../../services/adminSettings.service";
-import { apiErrorMessage, apiUrl } from "../../services/api";
+import { apiErrorMessage } from "../../services/api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { BrandLogo } from "../../components/ui/BrandLogo";
 
 export function AdminSettingsPage(): React.ReactElement {
   const { presets, branding } = useAdminSettings();
@@ -74,13 +75,7 @@ export function AdminSettingsPage(): React.ReactElement {
       <Card className="mb-5">
         <CardHeader title="🏫 Identidad institucional" />
         <div className="flex gap-5 items-start flex-wrap">
-          {logo ? (
-            <img src={apiUrl(logo) ?? ""} alt="Logo de la institución" className="w-[72px] h-[72px] rounded-lg border border-border object-contain bg-surface-2 shrink-0" />
-          ) : (
-            <div className="w-[72px] h-[72px] rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center text-2xl bg-surface-2 shrink-0">
-              🏫
-            </div>
-          )}
+          <BrandLogo src={logo} alt="Logo de la institución" className="w-[72px] h-[72px] rounded-lg border border-border object-contain shrink-0" />
           <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
             <div>
               <label htmlFor="inst-name" className="block text-xs font-semibold text-text-1 mb-1.5">
