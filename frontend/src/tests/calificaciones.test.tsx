@@ -135,6 +135,7 @@ describe("pantalla de Calificaciones del docente", () => {
       if (ruta.startsWith("/api/materias/m1/calificaciones")) return resumen;
       if (ruta === "/api/materias/m1/actividades") return { actividades: [] };
       if (ruta === "/api/materias/m1/notas" && init?.method === "POST") return { nota: {} };
+      if (ruta === "/api/notas/n1" && init?.method === "PUT") return { nota: {} };
       throw new Error(`ruta inesperada ${ruta}`);
     });
   });
@@ -214,6 +215,36 @@ describe("pantalla de Calificaciones del docente", () => {
       evaluacion: "Parcial 2",
       categoria_id: "c2",
       calificacion: 8,
+    });
+  });
+
+  it("editar una nota abre un popup y conserva los datos de una nota de actividad", async () => {
+    montar();
+    await screen.findByText("Beto");
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver notas (3)" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+
+    const dialog = screen.getByRole("dialog", { name: "Editar nota" });
+    expect(within(dialog).getByLabelText("Evaluación")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Evaluación")).toHaveValue("TP 1");
+    expect(within(dialog).getByLabelText("Período")).toBeDisabled();
+
+    fireEvent.change(within(dialog).getByLabelText("Categoría"), { target: { value: "c2" } });
+    fireEvent.change(within(dialog).getByLabelText("Nota (0-10)"), { target: { value: "9" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar nota" }));
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        "/api/notas/n1",
+        expect.objectContaining({ method: "PUT" }),
+      ),
+    );
+    const llamada = apiMock.mock.calls.find((c) => c[0] === "/api/notas/n1");
+    expect(JSON.parse(llamada![1].body)).toMatchObject({
+      evaluacion: "TP 1",
+      categoria_id: "c2",
+      calificacion: 9,
     });
   });
 });

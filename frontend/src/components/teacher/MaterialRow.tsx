@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { UploadedMaterial } from "../../types/domain";
+import { Button } from "../ui/Button";
 import { Tag, type TagColor } from "../ui/Tag";
 
 /**
@@ -10,10 +11,14 @@ export function MaterialRow({
   material,
   icon,
   rag,
+  onDelete,
+  deleting = false,
 }: {
   material: UploadedMaterial;
   icon: string;
   rag: { color: TagColor; label: string };
+  onDelete?: () => void;
+  deleting?: boolean;
 }): React.ReactElement {
   const [abierto, setAbierto] = useState(false);
 
@@ -48,6 +53,18 @@ export function MaterialRow({
           </div>
         </div>
         <Tag color={rag.color}>{rag.label}</Tag>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDelete}
+            disabled={deleting}
+            aria-label={`Eliminar ${material.name}`}
+            title="Eliminar material"
+          >
+            {deleting ? "Eliminando…" : "Eliminar"}
+          </Button>
+        )}
       </div>
       {abierto && material.text && (
         <div className="mt-2 ml-[42px] bg-surface-2 border border-border rounded px-3 py-2.5 text-xs text-text-1 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">

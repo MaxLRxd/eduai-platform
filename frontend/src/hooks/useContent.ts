@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createSection,
+  deleteMaterial,
   deleteSection,
   getCourseContentTree,
   getCourseSections,
@@ -68,6 +69,17 @@ export function useDeleteSection() {
     mutationFn: deleteSection,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content"] });
+    },
+  });
+}
+
+export function useDeleteMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteMaterial,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content"] });
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
     },
   });
 }

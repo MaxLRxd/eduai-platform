@@ -5,6 +5,7 @@ import {
   useCourseContentTree,
   useCourseSections,
   useCreateSection,
+  useDeleteMaterial,
   useDeleteSection,
   useReorderSections,
   useUpdateSection,
@@ -41,6 +42,10 @@ export function TeacherContentPage(): React.ReactElement {
   // Solo se respeta si es una materia del docente: un id ajeno o viejo cae a la primera.
   const activeCourse = resolverMateriaActiva(courseId, courses);
 
+  const irAPlanificacion = (): void => {
+    navigate(activeCourse ? `/teacher/planning?course=${activeCourse}` : "/teacher/planning");
+  };
+
   const { data: sections } = useCourseSections(activeCourse);
   const { data: tree, isLoading: treeLoading } = useCourseContentTree(activeCourse);
   const { data: activities } = useTeacherActivities(activeCourse);
@@ -63,6 +68,7 @@ export function TeacherContentPage(): React.ReactElement {
 
   const createSection = useCreateSection();
   const deleteSection = useDeleteSection();
+  const deleteMaterial = useDeleteMaterial();
   const updateSection = useUpdateSection();
   const reorderSections = useReorderSections();
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
@@ -213,6 +219,20 @@ export function TeacherContentPage(): React.ReactElement {
     );
   };
 
+  const handleDeleteMaterial = (id: string, name: string): void => {
+    setSavedMsg("");
+    setSectionError(null);
+    deleteMaterial.mutate(id, {
+      onSuccess: () => setSavedMsg(`Material "${name}" eliminado.`),
+      onError: (err) => setSectionError(apiErrorMessage(err, "No se pudo eliminar el material")),
+    });
+  };
+
+  const materialDeleteProps = (m: UploadedMaterial) => ({
+    onDelete: m.id.startsWith("clase-") ? undefined : () => handleDeleteMaterial(m.id, m.name),
+    deleting: deleteMaterial.isPending && deleteMaterial.variables === m.id,
+  });
+
   const materialesDestino = activeClass ? activeClass.materials : (activeTreeSection?.materials ?? []);
 
   const contentOptions = (tree ?? []).flatMap((s) => [
@@ -234,12 +254,7 @@ export function TeacherContentPage(): React.ReactElement {
           <p className="text-[13px] text-text-2">Organizá la materia en unidades y clases. Los archivos de cada clase quedan disponibles para el Tutor IA.</p>
         </div>
         <Tag color="green">RAG Pipeline activo</Tag>
-        <Button
-          variant="secondary"
-          onClick={() =>
-            navigate(activeCourse ? `/teacher/planning?course=${activeCourse}` : "/teacher/planning")
-          }
-        >
+        <Button variant="secondary" onClick={irAPlanificacion}>
           Ir a Planificación
         </Button>
       </div>
@@ -366,6 +381,7 @@ export function TeacherContentPage(): React.ReactElement {
                               material={m}
                               icon={FILE_ICON[m.fileType]}
                               rag={{ color: RAG_COLOR[m.ragStatus], label: RAG_LABEL[m.ragStatus] }}
+                              {...materialDeleteProps(m)}
                             />
                           ))}
                         </div>
@@ -418,6 +434,14 @@ export function TeacherContentPage(): React.ReactElement {
                                     <Button
                                       variant="ghost"
                                       size="sm"
+                                      onClick={irAPlanificacion}
+                                      aria-label={`Editar la clase ${c.title}`}
+                                    >
+                                      Editar
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => openClassMaterial(s.id, c.id, c.title, c.date)}
                                     >
                                       Elegir de Contenidos
@@ -435,6 +459,7 @@ export function TeacherContentPage(): React.ReactElement {
                                         material={m}
                                         icon={FILE_ICON[m.fileType]}
                                         rag={{ color: RAG_COLOR[m.ragStatus], label: RAG_LABEL[m.ragStatus] }}
+                                        {...materialDeleteProps(m)}
                                       />
                                     ))}
                                   </div>
@@ -562,6 +587,7 @@ export function TeacherContentPage(): React.ReactElement {
                   material={f}
                   icon={FILE_ICON[f.fileType]}
                   rag={{ color: RAG_COLOR[f.ragStatus], label: RAG_LABEL[f.ragStatus] }}
+                  {...materialDeleteProps(f)}
                 />
               ))}
               {materialesDestino.length === 0 && (

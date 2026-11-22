@@ -5,6 +5,7 @@ import { CourseFilter } from "../../components/ui/CourseFilter";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
+import { Modal } from "../../components/ui/Modal";
 import { apiErrorMessage } from "../../services/api";
 import { STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 import { CategoriasNotaEditor } from "../../components/teacher/CategoriasNotaEditor";
@@ -173,120 +174,126 @@ export function TeacherGradesPage(): React.ReactElement {
         </Button>
       </div>
 
-      {form && (
-        <div className="border border-border rounded bg-surface p-4 mb-4">
-          <div className="font-display text-sm font-bold mb-3">{form.notaId ? "Editar nota" : "Cargar nota"}</div>
-          <div className="grid md:grid-cols-3 gap-3 mb-3">
-            <div>
-              <label htmlFor="nota-alumno" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Estudiante
-              </label>
-              <select
-                id="nota-alumno"
-                value={form.alumnoId}
-                disabled={form.notaId !== null}
-                onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface disabled:opacity-60"
-              >
-                {alumnos.map((a) => (
-                  <option key={a.alumno_id} value={a.alumno_id}>
-                    {a.nombre}
-                  </option>
-                ))}
-              </select>
+      <Modal
+        open={form !== null}
+        onClose={() => { if (!guardando) setForm(null); }}
+        title={form?.notaId ? "Editar nota" : "Cargar nota"}
+        wide
+      >
+        {form && (
+          <div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+              <div>
+                <label htmlFor="nota-alumno" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Estudiante
+                </label>
+                <select
+                  id="nota-alumno"
+                  value={form.alumnoId}
+                  disabled={form.notaId !== null}
+                  onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded text-sm bg-surface disabled:opacity-60"
+                >
+                  {alumnos.map((a) => (
+                    <option key={a.alumno_id} value={a.alumno_id}>
+                      {a.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="nota-evaluacion" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Evaluación
+                </label>
+                <input
+                  id="nota-evaluacion"
+                  value={form.evaluacion}
+                  disabled={form.ligadaAActividad}
+                  onChange={(e) => setForm({ ...form, evaluacion: e.target.value })}
+                  placeholder="Ej: Parcial 1, TP 2"
+                  maxLength={200}
+                  className="w-full px-3 py-2 border border-border rounded text-sm disabled:opacity-60"
+                />
+                {form.ligadaAActividad && (
+                  <p className="text-[11px] text-text-3 mt-1">Viene de una actividad: conserva su nombre.</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="nota-categoria" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Categoría
+                </label>
+                <select
+                  id="nota-categoria"
+                  value={form.categoriaId}
+                  onChange={(e) => setForm({ ...form, categoriaId: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
+                >
+                  <option value="">Sin categoría</option>
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre} ({c.peso}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="nota-periodo" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Período
+                </label>
+                <input
+                  id="nota-periodo"
+                  list="periodos-disponibles"
+                  value={form.periodo}
+                  disabled={form.notaId !== null}
+                  onChange={(e) => setForm({ ...form, periodo: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded text-sm disabled:opacity-60"
+                />
+                <datalist id="periodos-disponibles">
+                  {periodos.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                </datalist>
+              </div>
+              <div>
+                <label htmlFor="nota-valor" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Nota (0-10)
+                </label>
+                <input
+                  id="nota-valor"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.01}
+                  value={form.calificacion}
+                  onChange={(e) => setForm({ ...form, calificacion: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="nota-obs" className="block text-xs font-semibold text-text-1 mb-1.5">
+                  Observaciones
+                </label>
+                <input
+                  id="nota-obs"
+                  value={form.observaciones}
+                  onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+                  placeholder="Opcional"
+                  className="w-full px-3 py-2 border border-border rounded text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="nota-evaluacion" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Evaluación
-              </label>
-              <input
-                id="nota-evaluacion"
-                value={form.evaluacion}
-                disabled={form.ligadaAActividad}
-                onChange={(e) => setForm({ ...form, evaluacion: e.target.value })}
-                placeholder="Ej: Parcial 1, TP 2"
-                maxLength={200}
-                className="w-full px-3 py-2 border border-border rounded text-sm disabled:opacity-60"
-              />
-              {form.ligadaAActividad && (
-                <p className="text-[11px] text-text-3 mt-1">Viene de una actividad: conserva su nombre.</p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="nota-categoria" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Categoría
-              </label>
-              <select
-                id="nota-categoria"
-                value={form.categoriaId}
-                onChange={(e) => setForm({ ...form, categoriaId: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded text-sm bg-surface"
-              >
-                <option value="">Sin categoría</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre} ({c.peso}%)
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="nota-periodo" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Período
-              </label>
-              <input
-                id="nota-periodo"
-                list="periodos-disponibles"
-                value={form.periodo}
-                disabled={form.notaId !== null}
-                onChange={(e) => setForm({ ...form, periodo: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded text-sm disabled:opacity-60"
-              />
-              <datalist id="periodos-disponibles">
-                {periodos.map((p) => (
-                  <option key={p} value={p} />
-                ))}
-              </datalist>
-            </div>
-            <div>
-              <label htmlFor="nota-valor" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Nota (0-10)
-              </label>
-              <input
-                id="nota-valor"
-                type="number"
-                min={0}
-                max={10}
-                step={0.01}
-                value={form.calificacion}
-                onChange={(e) => setForm({ ...form, calificacion: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded text-sm"
-              />
-            </div>
-            <div>
-              <label htmlFor="nota-obs" className="block text-xs font-semibold text-text-1 mb-1.5">
-                Observaciones
-              </label>
-              <input
-                id="nota-obs"
-                value={form.observaciones}
-                onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
-                placeholder="Opcional"
-                className="w-full px-3 py-2 border border-border rounded text-sm"
-              />
+            <div className="flex items-center gap-2 border-t border-border pt-3">
+              <Button size="sm" onClick={guardar} disabled={guardando || !form.alumnoId || !form.periodo.trim() || form.calificacion === ""}>
+                {guardando ? "Guardando…" : "Guardar nota"}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setForm(null)} disabled={guardando}>
+                Cancelar
+              </Button>
+              {errorForm != null && <span className="text-xs text-danger">{apiErrorMessage(errorForm, "No se pudo guardar la nota")}</span>}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={guardar} disabled={guardando || !form.alumnoId || !form.periodo.trim() || form.calificacion === ""}>
-              {guardando ? "Guardando…" : "Guardar nota"}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setForm(null)}>
-              Cancelar
-            </Button>
-            {errorForm != null && <span className="text-xs text-danger">{apiErrorMessage(errorForm, "No se pudo guardar la nota")}</span>}
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {okMsg && <p className="text-xs text-success mb-2">{okMsg}</p>}
       {isLoading && <p className="text-sm text-text-2">Cargando calificaciones…</p>}

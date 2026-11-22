@@ -193,6 +193,10 @@ export async function deleteSection(sectionId: string): Promise<void> {
   await api(`/api/secciones/${sectionId}`, { method: "DELETE" });
 }
 
+export async function deleteMaterial(contenidoId: string): Promise<void> {
+  await api(`/api/contenidos/${contenidoId}`, { method: "DELETE" });
+}
+
 export async function getUploadedMaterials(sectionId: string): Promise<UploadedMaterial[]> {
   const data = await api<{ contenidos: ContenidoApi[] }>(`/api/secciones/${sectionId}/contenidos`);
   return (data.contenidos ?? []).map(toUploadedMaterial);
