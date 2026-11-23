@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { useChangeAdminUserRole, useCreateAdminUser, useAdminUsers, useSetAdminUserActive } from "../../hooks/useAdminUsers";
+import {
+  useChangeAdminUserRole,
+  useCreateAdminUser,
+  useEmitirTokenRecuperacionAdmin,
+  useAdminUsers,
+  useSetAdminUserActive,
+} from "../../hooks/useAdminUsers";
 import { ApiError } from "../../services/api";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag, type TagColor } from "../../components/ui/Tag";
@@ -31,6 +37,7 @@ export function AdminUsuariosPage(): React.ReactElement {
   const create = useCreateAdminUser();
   const setActive = useSetAdminUserActive();
   const changeRole = useChangeAdminUserRole();
+  const recovery = useEmitirTokenRecuperacionAdmin();
 
   const [modal, setModal] = useState<{ mode: "create" } | { mode: "edit"; user: AdminUser } | null>(null);
   const [nombre, setNombre] = useState("");
@@ -39,6 +46,9 @@ export function AdminUsuariosPage(): React.ReactElement {
   const [rol, setRol] = useState<AdminRolInput>("ALUMNO");
   const [tipoProfesor, setTipoProfesor] = useState("TITULAR");
   const [modalMsg, setModalMsg] = useState("");
+  const [recoveryLink, setRecoveryLink] = useState<{ enlace: string; expira_en: string } | null>(null);
+  const [recoveryMsg, setRecoveryMsg] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   const openCreate = (): void => {
     setNombre("");
@@ -91,6 +101,33 @@ export function AdminUsuariosPage(): React.ReactElement {
     setActive.mutate({ usuarioId: u.id, activo: u.status !== "Activo" });
   };
 
+  const cerrarRecuperacion = (): void => {
+    setRecoveryLink(null);
+    setRecoveryMsg("");
+    setCopiado(false);
+  };
+
+  const emitirRecuperacion = (u: AdminUser): void => {
+    setRecoveryMsg("");
+    setCopiado(false);
+    recovery.mutate(u.id, {
+      onSuccess: (link) => setRecoveryLink(link),
+      onError: (e) => setRecoveryMsg(messageFromError(e, "No se pudo generar el enlace de recuperación.")),
+    });
+  };
+
+  const copiarRecuperacion = async (): Promise<void> => {
+    if (!recoveryLink) return;
+    setRecoveryMsg("");
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard no disponible");
+      await navigator.clipboard.writeText(recoveryLink.enlace);
+      setCopiado(true);
+    } catch {
+      setRecoveryMsg("No se pudo copiar automáticamente. Copiá el enlace manualmente.");
+    }
+  };
+
   return (
     <div>
       <div className="mb-6">
@@ -140,6 +177,15 @@ export function AdminUsuariosPage(): React.ReactElement {
                       disabled={setActive.isPending}
                     >
                       {u.status === "Activo" ? "Desactivar" : "Activar"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => emitirRecuperacion(u)}
+                      disabled={u.status !== "Activo" || recovery.isPending}
+                      aria-label={`Generar enlace de recuperación para ${u.name}`}
+                    >
+                      Recuperar
                     </Button>
                   </div>
                 </Td>
@@ -245,6 +291,44 @@ export function AdminUsuariosPage(): React.ReactElement {
           </div>
         </div>
       </Modal>
+
+      {(recoveryLink || recoveryMsg) && (
+        <Modal open onClose={cerrarRecuperacion} title="Enlace de recuperación">
+          {recoveryLink ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-[13px] text-text-2">
+                Este enlace sirve una sola vez y vence el {new Date(recoveryLink.expira_en).toLocaleString("es-AR")}. Se muestra
+                una sola vez: pasalo por un canal seguro.
+              </p>
+              <input
+                readOnly
+                aria-label="Enlace de recuperación generado"
+                value={recoveryLink.enlace}
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-full px-3 py-2 border border-border rounded text-xs font-mono bg-surface-2"
+              />
+              {recoveryMsg && <p className="text-xs text-danger">{recoveryMsg}</p>}
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" onClick={() => void copiarRecuperacion()}>
+                  {copiado ? "Copiado" : "Copiar enlace"}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={cerrarRecuperacion}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-[13px] text-danger">{recoveryMsg}</p>
+              <div className="flex justify-end">
+                <Button size="sm" onClick={cerrarRecuperacion}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

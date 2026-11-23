@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { validateBody } from "../../middlewares/validate";
 import { requireAuth, requireRole } from "../../middlewares/auth";
+import { rateLimit } from "../../middlewares/security";
 import {
   actualizarEstadoSchema,
   actualizarMateriaAdminSchema,
@@ -13,6 +14,7 @@ import {
 import * as adminController from "./admin.controller";
 
 const router = Router();
+const limiteRecuperacionAdmin = rateLimit({ max: 10, ventanaMs: 15 * 60 * 1000 });
 
 router.get("/admin/users", requireAuth, requireRole("ADMIN"), adminController.listarUsuarios);
 router.post(
@@ -35,6 +37,13 @@ router.patch(
   requireRole("ADMIN"),
   validateBody(cambiarRolSchema),
   adminController.cambiarRol
+);
+router.post(
+  "/admin/users/:usuarioId/recuperacion-token",
+  requireAuth,
+  requireRole("ADMIN"),
+  limiteRecuperacionAdmin,
+  adminController.emitirTokenRecuperacion
 );
 
 router.get("/admin/materias", requireAuth, requireRole("ADMIN"), adminController.listarMaterias);

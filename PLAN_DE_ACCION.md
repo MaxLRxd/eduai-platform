@@ -70,16 +70,16 @@ generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: r
 
 ## Fase 3 — Calidad
 
-- [ ] **3.1** CI con migraciones y E2E (BOLO 3.3): job con Postgres + pgvector que corra `prisma migrate deploy` y, si se puede, un E2E sin IA.
-- [ ] **3.2** Cobertura fina del frontend (BOLO 3.4): hoy hay prueba de humo de las 30 rutas; agregar tests de comportamiento a las pantallas sin ellos.
+- [ ] **3.1** CI con migraciones y E2E (BOLO 3.3): job con Postgres + pgvector que corra `prisma migrate deploy` y, si se puede, un E2E sin IA. **Omitido a pedido del usuario**; se retoma más adelante.
+- [x] **3.2** Cobertura fina del frontend (BOLO 3.4): primera tanda de comportamiento sobre pantallas críticas sin tests: inscripción por clave, claves de matriculación, entrega del alumno y registro de asistencia. 11 tests nuevos en 4 archivos; frontend: 228.
 
 ## Fase 4 — Post-defensa / opcional
 
-- [ ] **4.1** `npm audit`: upgrades mayores `zod` 4 y `react-router` 7 en rama aparte; revisar el aviso `prisma → @prisma/config → effect` (BOLO 2.2). No hacerlo justo antes de una demo.
+- [x] **4.1** `npm audit`: **cerrado 2026-11-23 con 0 vulnerabilidades.** Se actualizaron `zod` 4.6.7, `react-router-dom` 7.18.6, `vitest` 5.1.1, `vite` 8.3.8 y `@vitejs/plugin-react` 6.3.0. `effect` (3.22.5) y `glob` (14.0.6) quedan como `overrides` porque `@prisma/config` y Jest 30 fijan versiones con avisos; `npm ls` puede marcarlos como `invalid`, pero `npm ci`, Prisma, lint, typechecks, builds y las suites pasan. Verificado con suite completa y build de frontend/backend. Sin commits.
 - [ ] **4.2** Deploy cloud solo si se presenta online (`docs/DEPLOY.md`); sigue sin definir Postgres + pgvector y la región del `ai-service` (BOLO 4.1).
 - [ ] **4.3** Prueba de integración contra un bucket R2 real (BOLO 4.2).
-- [ ] **4.4** Recuperación para quien no tiene acceso a su correo (BOLO 4.3).
-- [ ] **4.5** Latencia del tutor: declarar la mediana de 6,84 s (objetivo <3 s, no cumple) o volver a medir con plan pago. La causa es la variabilidad de Gemini free, no un bug del sistema (BOLO 5).
+- [x] **4.4** Recuperación para quien no tiene acceso a su correo (BOLO 4.3). El administrador puede emitir un enlace de restablecimiento de un solo uso desde **Usuarios**, sin enviar correo ni mostrar contraseñas: `POST /api/admin/users/:usuarioId/recuperacion-token`, ADMIN, límite 10/15 min, usa el mismo token hasheado de `/api/auth/password/restablecer`. Respuesta `201 { enlace, expira_en }` con `Cache-Control: no-store`. El enlace se muestra una sola vez en el modal y se puede copiar. 8 tests nuevos (4 backend + 4 frontend); backend: 380, frontend: 232.
+- [x] **4.5** Latencia del tutor declarada 2026-11-22 (BOLO 5): mediana 6,84 s hasta la primera respuesta (objetivo <3 s, no cumple). Ya estaba documentada en `DOCUMENTACION_TECNICA.md` §12, `MATRIZ_CASOS_DE_USO.md`, `IA_MODELOS_Y_PROMPTS.md` y `COSAS_QUE_FALTAN.md` §5; se formula texto único de defensa. Causa: capacidad compartida de Gemini con clave gratuita, no un bug del sistema.
 
 ---
 

@@ -68,14 +68,14 @@ Decisiones de diseño:
 
 | Capa | Tecnología |
 | --- | --- |
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Query, React Router |
-| Backend | Node.js 22, Express 5, TypeScript, Prisma 7, Zod, JWT, bcrypt, pdfkit, pino |
+| Frontend | React 18, TypeScript, Vite 8, Tailwind CSS, React Query, React Router 7 |
+| Backend | Node.js 22, Express 5, TypeScript, Prisma 7, Zod 4, JWT, bcrypt, pdfkit, pino |
 | Servicio de IA | Python 3.12, FastAPI, google-genai (Gemini), structlog |
 | Datos | PostgreSQL 16 con **pgvector** (también soporta Pinecone), Redis 7 |
 | Almacenamiento de archivos | Disco local (por defecto) o Cloudflare R2 (S3) |
 | OCR | Tesseract + Poppler (imágenes y PDF escaneados) |
 | Infraestructura | Docker + Docker Compose, GitHub Actions (CI) |
-| Pruebas | Jest + Supertest, Vitest + Testing Library, pytest, `node:test` (E2E) |
+| Pruebas | Jest 30 + Supertest, Vitest 5 + Testing Library, pytest, `node:test` (E2E) |
 
 ## 4. Cómo ejecutarlo localmente
 
@@ -244,15 +244,15 @@ Casos de uso (`ai-services/src/use_cases`):
 | Servicio de IA | No expuesto; solo accesible con el secreto compartido desde el backend |
 | Errores | Los 500 devuelven un mensaje genérico; el detalle queda en el log del servidor |
 | Privacidad | Un alumno no puede ver los datos de sus compañeros; el docente solo ve a los alumnos de sus materias |
-| Dependencias | Vulnerabilidades altas y críticas de producción resueltas; quedan documentadas las que requieren un salto de versión mayor (sección 15) |
+| Dependencias | `npm audit` en 0 vulnerabilidades al 2026-11-23; los overrides necesarios están documentados en la sección 15 |
 
 ## 11. Pruebas y calidad
 
 | Nivel | Herramienta | Cantidad | Qué cubre |
 | --- | --- | --- | --- |
-| Backend | Jest + Supertest | 363 pruebas en 38 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
-| Servicio de IA | pytest | 161 pruebas | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
-| Frontend | Vitest + Testing Library | 195 pruebas en 23 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
+| Backend | Jest + Supertest | 380 pruebas en 42 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
+| Servicio de IA | pytest | 164 pruebas (+1 omitida) | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
+| Frontend | Vitest + Testing Library | 233 pruebas en 33 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
 | **E2E** | `node:test` | **44 pruebas** | Los tres roles encadenados contra el stack real |
 
 La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
@@ -330,12 +330,12 @@ El plan de proyecto (Anexo, sección 3.5) planteaba algunas tecnologías que, al
 
 ## 15. Limitaciones conocidas
 
-- **Dependencias con salto de versión mayor pendiente:** `zod` 3 → 4 (riesgo de agotar memoria con colecciones enormes; mitigado por el límite de 1 MB del cuerpo) y `react-router` 6 → 7 (afecta redirecciones y renderizado en servidor, que no se usa). Las herramientas de prueba (`vitest`) tienen una advertencia crítica que solo aplica a desarrollo.
+- **Dependencias actualizadas 2026-11-23:** `zod` 4, `react-router-dom` 7, `vitest` 5, `vite` 8 y `@vitejs/plugin-react` 6; `npm audit` queda en 0. Se usan `overrides` para `effect` 3.22.5 y `glob` 14.0.6 porque `@prisma/config` y Jest 30 fijan versiones con avisos. `npm ls` puede marcarlos como `invalid` al no cumplir el rango exacto, pero `npm ci`, Prisma, lint, typechecks, builds y las suites pasan.
 - **La latencia del tutor no cumple el objetivo** de la primera respuesta en menos de 3 s: se midió con la IA real (mediana de 6,84 s) y depende de la capacidad de Gemini con clave gratuita (ver sección 12).
 - **Los tokens de acceso no se invalidan al instante** al dar de baja a un usuario: siguen válidos hasta 15 minutos; la renovación sí queda bloqueada.
 - **Los archivos subidos se sirven por URL no adivinable** (sufijo aleatorio de 128 bits) pero sin control de sesión; en producción real conviene un bucket privado con URLs firmadas.
 - **Contraseña temporal:** el aviso de alta no incluye la contraseña (no se guarda ni se envía en claro); el administrador se la entrega al usuario por otro medio.
-- **Recuperación de contraseña por correo.** `POST /api/auth/password/olvide` y `POST /api/auth/password/restablecer`; pantallas `/recuperar` y `/restablecer`. El enlace lleva un token aleatorio de 256 bits del que en la base solo se guarda el hash; vence a los 60 minutos (`RESET_TOKEN_MINUTES`), sirve una sola vez, y pedir otro invalida el anterior. La respuesta del pedido es idéntica exista o no la cuenta (no permite averiguar quién tiene cuenta). Al restablecer se cierran **todas** las sesiones de la cuenta y se avisa por correo. Límites: 3 pedidos por cuenta y 20 por IP cada 15 minutos. Requiere `EMAIL_PROVIDER` configurado y `APP_URL` (URL pública del frontend); sin correo, en desarrollo el enlace se escribe en el log del backend y en producción se registra un error. Si un usuario no tiene acceso a su correo, el administrador sigue pudiendo asignarle una contraseña temporal.
+- **Recuperación de contraseña por correo.** `POST /api/auth/password/olvide` y `POST /api/auth/password/restablecer`; pantallas `/recuperar` y `/restablecer`. El enlace lleva un token aleatorio de 256 bits del que en la base solo se guarda el hash; vence a los 60 minutos (`RESET_TOKEN_MINUTES`), sirve una sola vez, y pedir otro invalida el anterior. La respuesta del pedido es idéntica exista o no la cuenta (no permite averiguar quién tiene cuenta). Al restablecer se cierran **todas** las sesiones de la cuenta y se avisa por correo. Límites: 3 pedidos por cuenta y 20 por IP cada 15 minutos. Requiere `EMAIL_PROVIDER` configurado y `APP_URL` (URL pública del frontend); sin correo, en desarrollo el enlace se escribe en el log del backend y en producción se registra un error. Si un usuario no tiene acceso a su correo, el administrador puede usar **Usuarios → Recuperar** (`POST /api/admin/users/:usuarioId/recuperacion-token`): genera el mismo enlace de un solo uso, no envía correo y lo muestra una sola vez con `Cache-Control: no-store`; el token viaja en claro solo en esa respuesta y en la base solo queda su hash.
 - **Visibilidad de entregas por archivo:** la IA corrige el texto o código de una entrega; de un archivo adjunto solo registra el nombre.
 
 ---

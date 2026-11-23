@@ -321,5 +321,5 @@ Lógica de elección de temperatura: **chat** y **material** buscan creatividad/
 
 ## 9. Estado actual y próximos pasos
 
-- **Hecho:** chat tutor (3 modos) con RAG/caché/streaming · resumen de documentos (material, texto o archivo propio) · simulacro de examen y su corrección (incluidas respuestas propias y aviso de material insuficiente) · indexación de material · asistente docente · Auto-correction Engine con rúbricas y niveles de desempeño · depuración de prompts · tests (161 pasan) y lint (ruff).
-- **Pendiente:** la latencia del tutor con la IA real mide una mediana de 6,84 s contra el objetivo de 3 s, por la capacidad de Gemini con clave gratuita (detalle y opciones en `DOCUMENTACION_TECNICA.md` §12). El resto de los pendientes del proyecto está en `AVANCE.md` y `MATRIZ_CASOS_DE_USO.md`.
+- **Hecho:** chat tutor (3 modos) con RAG/caché/streaming · resumen de documentos (material, texto o archivo propio) · simulacro de examen y su corrección (incluidas respuestas propias y aviso de material insuficiente) · indexación de material · asistente docente · Auto-correction Engine con rúbricas y niveles de desempeño · depuración de prompts · tests (164 pasan, 1 omitido) y lint (ruff).
+- **Limitación declarada:** la latencia del tutor con la IA real mide una mediana de 6,84 s contra el objetivo de 3 s, por la capacidad de Gemini con clave gratuita (detalle y opciones en `DOCUMENTACION_TECNICA.md` §12). El resto de los pendientes del proyecto está en `AVANCE.md` y `MATRIZ_CASOS_DE_USO.md`.

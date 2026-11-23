@@ -50,7 +50,7 @@ Leyenda: ✅ completo · 🟡 parcial
 | --- | --- | --- | --- | --- | --- |
 | AD01 | Gestionar materias | ✅ | `admin.service` · `AdminMateriasPage`, `EnrolledStudentsPanel` | `materia-baja`, `admin-matricula-avisos`, `reglas-casos-de-uso`, E2E | Rechaza nombres duplicados (E1). La baja con alumnos inscriptos se bloquea (A3.1) y se resuelve **desmatriculando** uno por uno o a todos, con aviso al alumno y conservando su historial. |
 | AD02 | Asignar profesores | ✅ | `admin.service.asignarProfesor` | `admin-matricula-avisos`, E2E | Un docente puede tener varias materias; rechaza duplicados (E1); desasignar quita el acceso; el docente recibe un aviso en ambos casos. |
-| AD03 | Gestionar usuarios | ✅ | `admin.service` · `AdminUsuariosPage` | `admin-matricula-avisos`, `seguridad-archivos-sesiones`, E2E | Alta, cambio de rol y de tipo de docente, baja (cierra sus sesiones), correo duplicado (E1). El aviso de alta llega dentro de la plataforma **sin la contraseña** (por seguridad se entrega aparte). |
+| AD03 | Gestionar usuarios | ✅ | `admin.service` · `AdminUsuariosPage` | `admin-matricula-avisos`, `seguridad-archivos-sesiones`, `recuperacion-admin`, E2E | Alta, cambio de rol y de tipo de docente, baja (cierra sus sesiones), correo duplicado (E1). El aviso de alta llega dentro de la plataforma **sin la contraseña** (por seguridad se entrega aparte). **Recuperar** emite un enlace de un solo uso sin correo ni contraseña en claro. |
 | AD04 | Claves de matriculación | ✅ | `admin.service` · `AdminClavesPage` | `clave-usos`, `reglas-casos-de-uso`, E2E | Vencimiento y cupo opcionales (E5: no admite vencimiento pasado), revocación, listado de inscriptos por clave; clave de una materia donde ya está inscripto (E6). |
 
 ## Módulo Sistema

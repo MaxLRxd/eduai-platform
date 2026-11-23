@@ -9,6 +9,11 @@ export interface AdminProfessor {
 
 export type AdminRolInput = "ALUMNO" | "PROFESOR" | "ADMIN";
 
+export interface AdminRecoveryLink {
+  enlace: string;
+  expira_en: string;
+}
+
 interface AdminUserApi {
   id: string;
   nombre: string;
@@ -74,6 +79,10 @@ export async function setAdminUserActive(usuarioId: string, activo: boolean): Pr
     body: JSON.stringify({ activo }),
   });
   return toAdminUser(data.usuario);
+}
+
+export async function emitirTokenRecuperacionAdmin(usuarioId: string): Promise<AdminRecoveryLink> {
+  return api<AdminRecoveryLink>(`/api/admin/users/${usuarioId}/recuperacion-token`, { method: "POST" });
 }
 
 // PATCH /api/admin/users/:id/rol — cambio de rol.

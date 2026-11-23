@@ -20,6 +20,27 @@ export function enlaceDeRecuperacion(token: string): string {
   return `${urlDeLaApp()}/restablecer?token=${encodeURIComponent(token)}`;
 }
 
+export async function crearTokenRecuperacion(usuarioId: string): Promise<{ token: string; vence: Date }> {
+  const token = randomBytes(32).toString("hex");
+  const vence = new Date(Date.now() + env.RESET_TOKEN_MINUTES * 60 * 1000);
+
+  await prisma.$transaction([
+    prisma.tokenRecuperacion.deleteMany({ where: { usuario_id: usuarioId, usado_at: null } }),
+    prisma.tokenRecuperacion.create({
+      data: { usuario_id: usuarioId, token_hash: hashToken(token), expires_at: vence },
+    }),
+  ]);
+
+  return { token, vence };
+}
+
+export async function emitirTokenRecuperacionAdmin(
+  usuarioId: string
+): Promise<{ enlace: string; expira_en: Date }> {
+  const { token, vence } = await crearTokenRecuperacion(usuarioId);
+  return { enlace: enlaceDeRecuperacion(token), expira_en: vence };
+}
+
 /**
  * Pide un enlace de recuperación. NUNCA revela si el email existe: la respuesta es la misma
  * para una cuenta real, una inexistente o una desactivada (no se puede usar para listar cuentas).
@@ -32,16 +53,7 @@ export async function solicitarRecuperacion(email: string): Promise<void> {
     return;
   }
 
-  const token = randomBytes(32).toString("hex");
-  const vence = new Date(Date.now() + env.RESET_TOKEN_MINUTES * 60 * 1000);
-
-  // Un solo enlace vigente por cuenta: pedir otro invalida el anterior.
-  await prisma.$transaction([
-    prisma.tokenRecuperacion.deleteMany({ where: { usuario_id: usuario.id, usado_at: null } }),
-    prisma.tokenRecuperacion.create({
-      data: { usuario_id: usuario.id, token_hash: hashToken(token), expires_at: vence },
-    }),
-  ]);
+  const { token } = await crearTokenRecuperacion(usuario.id);
 
   const enlace = enlaceDeRecuperacion(token);
   if (!isEmailEnabled() && process.env.NODE_ENV !== "production") {

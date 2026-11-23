@@ -46,10 +46,11 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
   reactivar lo saca de la denylist. Con varias réplicas del backend habría que compartir esa caché.
 
 ### 2.2 Vulnerabilidades de `npm audit`
-- Los arreglos necesitan **upgrades mayores con cambios incompatibles**: `zod` 4 y `react-router` 7.
-- Hay además un aviso por `prisma → @prisma/config → effect` cuyo único «arreglo» propuesto es bajar de
-  versión.
-- **Recomendación:** hacerlo después de la defensa, con una rama aparte, no justo antes de una demo.
+- **Resuelto 2026-11-23:** `zod` 4, `react-router-dom` 7, `vitest` 5, `vite` 8 y `@vitejs/plugin-react` 6.
+- `npm audit` queda en **0 vulnerabilidades**. Para `prisma → @prisma/config → effect` y para `glob` de Jest 30
+  se usan `overrides` (`effect` 3.22.5, `glob` 14.0.6) porque sus dependencias fijan versiones con avisos.
+- `npm ls` puede marcar esos overrides como `invalid` al no cumplir el rango exacto; `npm ci`, Prisma,
+  lint, typechecks, builds y las suites pasan.
 
 ### 2.3 URLs firmadas para los archivos
 - Hoy los archivos se sirven por rutas que dependen de la sesión. Con almacenamiento tipo R2/S3 convendría
@@ -72,9 +73,11 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 ### 3.3 El CI no cubre migraciones ni E2E
 - Los E2E necesitan el stack levantado y las migraciones no se verifican en CI.
 - **Idea:** un job con Postgres (pgvector) que corra `prisma migrate deploy` y, si se puede, un E2E sin IA.
+- **Pendiente:** omitido a pedido del usuario el 2026-11-22; el workflow sigue deshabilitado en GitHub (`disabled_manually` desde 2026-09-28).
 
 ### 3.4 Cobertura fina del frontend
 - Hay una prueba de humo de las 30 rutas, pero varias pantallas no tienen tests de comportamiento.
+- **Avance 2026-11-22:** añadidos tests de comportamiento de inscripción por clave, claves de matriculación, entrega del alumno y asistencia docente (`inscripcion.test.tsx`, `claves-matriculacion.test.tsx`, `entrega-alumno.test.tsx`, `asistencia-docente.test.tsx`). Quedan pendientes pantallas de menor prioridad (correcciones, mensajería, perfiles).
 
 ### 3.5 Archivo basura en la raíz
 - `tmp_icons3.txt` (lista de íconos en UTF-16, sin referencias). Se puede borrar.
@@ -91,7 +94,9 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 - El cliente S3 está integrado y probado con simulaciones; falta una prueba contra un bucket real.
 
 ### 4.3 Recuperación para quien no tiene acceso a su correo
-- Hoy el administrador le asigna una contraseña temporal. No hay otro canal.
+- Resuelto: en **Usuarios**, el botón **Recuperar** genera un enlace de restablecimiento de un solo uso.
+- No se envía correo, no se exponen contraseñas y el enlace se muestra una sola vez al administrador; pasalo por un canal seguro.
+- Comparte la tabla `TokenRecuperacion`: hash SHA-256, vencimiento de `RESET_TOKEN_MINUTES`, un solo enlace vigente por cuenta, y al usarlo se cierran las sesiones y se avisa por correo si `EMAIL_PROVIDER` está configurado.
 
 ---
 
@@ -102,6 +107,7 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 - **Causa:** variabilidad del plan gratuito de Gemini (no es un bug del sistema; la cadena de medición se
   verificó con un servicio simulado). El reintento del 503 ya cubre el primer fragmento del stream.
 - **Qué hacer:** declararlo tal cual en la defensa, o volver a medir con un plan pago.
+- **Declaración para la defensa (2026-11-22):** el tutor no cumple el objetivo de primera respuesta en menos de 3 s: la medición real dio 6,84 s (1 de 9 respuestas por debajo de 3 s) con `gemini-3.5-flash-lite` y clave gratuita. La plataforma aporta ~0,6 s; el resto es la variabilidad de Gemini (0,7–22 s llamando al modelo directamente). La cadena de medición se validó con un servicio simulado (0,64 s medidos, 637 ms registrados). Detalle en `DOCUMENTACION_TECNICA.md` §12 y `MATRIZ_CASOS_DE_USO.md`.
 
 ---
 
@@ -113,4 +119,4 @@ CI y lint · reintento del 503 de Gemini en streaming · Pinecone sin bloquear e
 vectores huérfanos y reindexado (`rag:reindex --huerfanos|--limpiar`) · base de demo con material real
 (`demo:reset`) · E2E del OCR de PDF escaneado y de la exportación de reportes · prueba de humo de todas las
 páginas · recuperación de contraseña por correo · chat persistente del tutor docente con selector de materiales
-y aviso al salir · indexación RAG desde Planificación (helper compartido + backfill `rag:reindex -- --planning`) · selector de materiales del Tutor IA rediseñado como modal amplio y clickeable (contenidos de sección/clase y adjuntos de Planificación, búsqueda, chips, estado RAG, apertura de archivo y fuentes visibles) · editor de nota en popup (Mis estudiantes → Calificaciones) · «Editar» de cada clase en Contenidos redirige a Planificación con la materia activa · botón «Eliminar» en cada fila de material (borra archivo y vector RAG) · contención horizontal/alto del shell, sidebar colapsable desde el Header y chat ampliado de Aula virtual sin scroll heredado.
+y aviso al salir · indexación RAG desde Planificación (helper compartido + backfill `rag:reindex -- --planning`) · selector de materiales del Tutor IA rediseñado como modal amplio y clickeable (contenidos de sección/clase y adjuntos de Planificación, búsqueda, chips, estado RAG, apertura de archivo y fuentes visibles) · editor de nota en popup (Mis estudiantes → Calificaciones) · «Editar» de cada clase en Contenidos redirige a Planificación con la materia activa · botón «Eliminar» en cada fila de material (borra archivo y vector RAG) · contención horizontal/alto del shell, sidebar colapsable desde el Header y chat ampliado de Aula virtual sin scroll heredado

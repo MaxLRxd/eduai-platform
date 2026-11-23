@@ -2,7 +2,7 @@
 
 > Generado automáticamente desde `backend/src/**/*.routes.ts` con `npm run docs:api`. No editar a mano.
 
-Total: **124 endpoints** en 18 módulos.
+Total: **131 endpoints** en 18 módulos.
 
 **Acceso:** *Público* no pide sesión; *Autenticado* cualquier rol con sesión; los demás exigen ese rol.
 **Validación:** esquema Zod que valida el cuerpo antes de llegar al controlador. **Límite:** limitador de intentos.
@@ -15,7 +15,9 @@ Total: **124 endpoints** en 18 módulos.
 | POST | `/api/auth/login` | Público | `loginSchema` | sí |
 | POST | `/api/auth/refresh` | Público |  |  |
 | POST | `/api/auth/logout` | Público |  |  |
-| GET | `/api/auth/me` | Autenticado |  |  |
+| GET | `/api/auth/me` | Autenticado |  | sí |
+| POST | `/api/auth/password/olvide` | Público | `olvidePasswordSchema` | sí |
+| POST | `/api/auth/password/restablecer` | Público | `restablecerPasswordSchema` | sí |
 | POST | `/api/auth/password` | Autenticado | `cambiarPasswordSchema` | sí |
 
 ## Materias e inscripción
@@ -150,6 +152,7 @@ Total: **124 endpoints** en 18 módulos.
 | POST | `/api/admin/users` | ADMIN | `crearUsuarioSchema` |  |
 | PATCH | `/api/admin/users/:usuarioId/estado` | ADMIN | `actualizarEstadoSchema` |  |
 | PATCH | `/api/admin/users/:usuarioId/rol` | ADMIN | `cambiarRolSchema` |  |
+| POST | `/api/admin/users/:usuarioId/recuperacion-token` | ADMIN |  | sí |
 | GET | `/api/admin/materias` | ADMIN |  |  |
 | POST | `/api/admin/materias` | ADMIN | `crearMateriaAdminSchema` |  |
 | PUT | `/api/admin/materias/:materiaId` | ADMIN | `actualizarMateriaAdminSchema` |  |
@@ -176,6 +179,10 @@ Total: **124 endpoints** en 18 módulos.
 | --- | --- | --- | --- | --- |
 | POST | `/api/asistente/generar` | PROFESOR | `generarMaterialSchema` |  |
 | POST | `/api/asistente/pdf` | PROFESOR | `materialPdfSchema` |  |
+| POST | `/api/asistente/sesiones` | PROFESOR | `crearSesionDocenteSchema` |  |
+| GET | `/api/asistente/sesiones` | PROFESOR |  |  |
+| GET | `/api/asistente/sesiones/:id/mensajes` | PROFESOR |  |  |
+| POST | `/api/asistente/sesiones/:id/mensajes` | PROFESOR | `mensajeDocenteSchema` |  |
 
 ## Dashboards
 

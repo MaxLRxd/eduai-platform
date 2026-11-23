@@ -294,6 +294,8 @@ Vista general de la institución: materias activas, docentes, alumnos totales, e
 
 Desde la misma pantalla podés cambiar el rol, el tipo de docente y **dar de baja** a un usuario: pierde el acceso y se cierran sus sesiones, pero se conserva su historial. No podés dar de baja tu propia cuenta.
 
+Si alguien no tiene acceso a su correo, tocá **Recuperar** en su fila: se genera un enlace de restablecimiento de un solo uso que aparece una sola vez en el modal. Copialo y pasalo por un canal seguro. Sirve una sola vez, vence en 60 minutos y no requiere que el sistema envíe correo.
+
 ### 4.3 Materias
 
 - **Crear**: completá nombre, nivel educativo y descripción (**Crear / Guardar**). El nombre no puede coincidir con el de otra materia. Podés elegir el docente en el mismo formulario.
@@ -322,7 +324,7 @@ Podés ver quiénes se inscribieron con cada clave y **Revocar** una clave: los 
 
 ## 5. Preguntas frecuentes y problemas comunes
 
-**No puedo ingresar.** Revisá el email y la contraseña. Si te bloqueó por demasiados intentos, esperá unos minutos. Si olvidaste la contraseña, pedile al administrador que te dé una temporal.
+**No puedo ingresar.** Revisá el email y la contraseña. Si te bloqueó por demasiados intentos, esperá unos minutos. Si olvidaste la contraseña, usá **¿Olvidaste tu contraseña?** o pedile al administrador un enlace de recuperación desde **Usuarios → Recuperar**.
 
 **El tutor me dice que no tiene información.** Significa que ese tema no está en el material cargado. Consultá a tu docente o revisá el material de la materia.
 

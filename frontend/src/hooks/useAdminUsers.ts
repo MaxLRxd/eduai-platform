@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   changeAdminUserRole,
   createAdminUser,
+  emitirTokenRecuperacionAdmin,
   getAdminProfessors,
   getAdminUsers,
   setAdminUserActive,
@@ -33,6 +34,12 @@ export function useSetAdminUserActive() {
   return useMutation({
     mutationFn: ({ usuarioId, activo }: { usuarioId: string; activo: boolean }) => setAdminUserActive(usuarioId, activo),
     onSuccess: () => invalidateUsers(queryClient),
+  });
+}
+
+export function useEmitirTokenRecuperacionAdmin() {
+  return useMutation({
+    mutationFn: (usuarioId: string) => emitirTokenRecuperacionAdmin(usuarioId),
   });
 }
 

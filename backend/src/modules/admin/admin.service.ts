@@ -6,6 +6,7 @@ import { permitirAcceso, revocarAcceso } from "../../config/cache";
 import { logger } from "../../config/logger";
 import { AppError } from "../../middlewares/error";
 import { crearNoLeidas } from "../notificaciones/notificaciones.service";
+import { emitirTokenRecuperacionAdmin } from "../auth/recuperacion.service";
 import type { CrearNotificacionInput } from "../notificaciones/notificaciones.schemas";
 import type {
   ActualizarEstadoInput,
@@ -124,6 +125,18 @@ export async function crearUsuario(input: CrearUsuarioInput) {
   });
 
   return toUsuarioDto(usuario);
+}
+
+export async function emitirTokenRecuperacion(usuarioId: string) {
+  assertUuid(usuarioId, "Usuario no encontrado");
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, activo: true },
+  });
+  if (!usuario || !usuario.activo) {
+    throw new AppError(404, "Usuario no encontrado");
+  }
+  return emitirTokenRecuperacionAdmin(usuario.id);
 }
 
 export async function actualizarEstado(usuarioId: string, input: ActualizarEstadoInput, solicitanteId: string) {

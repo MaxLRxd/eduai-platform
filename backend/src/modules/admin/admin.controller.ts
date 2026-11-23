@@ -45,6 +45,15 @@ export async function crearUsuario(
   res.status(201).json({ usuario });
 }
 
+export async function emitirTokenRecuperacion(
+  req: Request<{ usuarioId: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  const resultado = await adminService.emitirTokenRecuperacion(req.params.usuarioId);
+  res.set("Cache-Control", "no-store").status(201).json(resultado);
+}
+
 export async function actualizarEstado(
   req: Request<{ usuarioId: string }, unknown, ActualizarEstadoInput>,
   res: Response
