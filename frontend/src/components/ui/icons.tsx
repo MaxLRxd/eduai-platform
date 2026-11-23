@@ -24,7 +24,8 @@ export type IconKey =
   | "search"
   | "corrections"
   | "analytics"
-  | "content";
+  | "content"
+  | "sidebarToggle";
 
 const PATHS: Record<IconKey, React.ReactNode> = {
   dashboard: (
@@ -187,6 +188,12 @@ const PATHS: Record<IconKey, React.ReactNode> = {
       <polyline points="14 2 14 8 20 8" />
       <line x1="12" y1="18" x2="12" y2="12" />
       <line x1="9" y1="15" x2="15" y2="15" />
+    </>
+  ),
+  sidebarToggle: (
+    <>
+      <polyline points="11 17 6 12 11 7" />
+      <polyline points="18 17 13 12 18 7" />
     </>
   ),
 };

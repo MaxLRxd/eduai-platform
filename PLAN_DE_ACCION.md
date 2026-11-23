@@ -43,6 +43,8 @@ generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: r
 
 ## Fase 2 — Bugs visibles en demo (mayor retorno)
 
+> Estado: completada 2026-11-22 (2.1, 2.2, 2.2b, 2.3, 2.4, 2.5 y 2.6). Siguiente: Fase 3.
+
 > **Contrato 2.1 (2026-11-22):** `BrandLogo` recibe `src` (URL absoluta o ruta `/uploads/...`, resuelta con
 > `apiUrl`), `alt`, `className` (solo tamaño/espaciado/borde) y `fallback?`. Sin `src`, o si la imagen falla
 > (`onError`), muestra una marca por defecto con `role="img"` y el mismo `alt`, sin romper el layout. El
@@ -64,7 +66,7 @@ generado estaba desactualizado y tiraba ~50 errores de tipos). E2E no corrido: r
 - [x] **2.3** Editor de nota en popup resuelto 2026-11-22 (BOLO 6). El formulario de carga/edición de `frontend/src/pages/teacher/TeacherGradesPage.tsx:177` se abre en `Modal` ancho, conserva la validación, los campos deshabilitados de notas ligadas a actividad y el flujo POST/PUT. Test nuevo en `frontend/src/tests/calificaciones.test.tsx` (frontend: 207).
 - [x] **2.4** «Editar» en clases → Planificación resuelto 2026-11-22 (BOLO 6). `TeacherContentPage.tsx` comparte `irAPlanificacion()` con el botón general y agrega «Editar» en cada clase; navega a `/teacher/planning?course=<materia activa>` sin tocar el armado de clases. Tests nuevos en `frontend/src/tests/clases-editar-planificacion.test.tsx` (frontend: 209).
 - [x] **2.5** Botón de eliminar contenido a mano resuelto 2026-11-22 (BOLO 6). `MaterialRow` acepta `onDelete`/`deleting`; `TeacherContentPage` conecta cada fila (unidad, clase y destino) con `useDeleteMaterial()` → `DELETE /api/contenidos/:id`, que ya borra archivo y vector RAG. Los adjuntos sintéticos de Planificación (`clase-…`) no muestran el botón. Tests en `eliminar-material.test.tsx` y extensión de `clases-editar-planificacion.test.tsx` (frontend: 214).
-- [ ] **2.6** Problemas visuales (BOLO 6): contención horizontal/alto en `frontend/src/components/layout/AppShell.tsx:7-13`; scroll anidado de «Aula virtual» en `frontend/src/pages/student/StudentCourseDetailPage.tsx:138-212`; sidebar colapsable (`Sidebar.tsx:29`) con botón en `frontend/src/components/layout/Header.tsx:19-41`.
+- [x] **2.6** Problemas visuales resueltos 2026-11-22 (BOLO 6). `AppShell` contiene ancho/alto (`min-w-0`, `min-h-0`, `overflow-x-hidden`, `id="main-content"`); el chat ampliado de Aula virtual bloquea el scroll del main con `useScrollLock` y usa `overscroll-contain`; el sidebar se contrae a 72 px desde el botón del Header (icono `sidebarToggle` y token `sidebarCollapsed`). Tests en `layout-visual.test.tsx` (frontend: 217).
 
 ## Fase 3 — Calidad
 

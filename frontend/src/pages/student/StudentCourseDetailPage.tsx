@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCourse } from "../../hooks/useCourses";
 import { useTutorChat } from "../../hooks/useTutorChat";
+import { useScrollLock } from "../../hooks/useScrollLock";
 import type { ModoTutor } from "../../services/tutor.service";
 import type { CourseUnit } from "../../types/domain";
 import { limpiarMarkdown } from "../../utils/markdown";
@@ -98,6 +99,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
   const [question, setQuestion] = useState("");
   const [activeModo, setActiveModo] = useState<ModoTutor>("NORMAL");
   const [chatExpandido, setChatExpandido] = useState(false);
+  useScrollLock(chatExpandido);
 
   if (isLoading) return <p className="text-sm text-text-2">Cargando materia…</p>;
   if (!course) return <p className="text-sm text-text-2">No se encontró la materia.</p>;
@@ -209,7 +211,13 @@ export function StudentCourseDetailPage(): React.ReactElement {
               onClick={() => setChatExpandido(false)}
             />
           )}
-          <Card className={chatExpandido ? "fixed inset-3 md:inset-8 z-50 overflow-y-auto shadow-2xl" : ""}>
+          <Card
+            className={
+              chatExpandido
+                ? "fixed inset-3 md:inset-8 z-50 overflow-y-auto overscroll-contain shadow-2xl"
+                : ""
+            }
+          >
             <CardHeader
               title="Tutor IA de la materia"
               action={
@@ -261,7 +269,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
                 <div className="text-[11px] font-semibold text-text-3 uppercase tracking-wide mb-1.5">
                   Conversaciones guardadas
                 </div>
-                <div className={`flex flex-col gap-1 overflow-y-auto ${chatExpandido ? "max-h-48" : "max-h-28"}`}>
+                <div className={`flex flex-col gap-1 overflow-y-auto overscroll-contain ${chatExpandido ? "max-h-48" : "max-h-28"}`}>
                   {sesiones.map((s) => (
                     <button
                       key={s.id}
@@ -297,7 +305,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
             </div>
 
             <div
-              className={`flex flex-col gap-2 overflow-y-auto mb-2.5 ${
+              className={`flex flex-col gap-2 overflow-y-auto overscroll-contain mb-2.5 ${
                 chatExpandido ? "max-h-[60vh]" : "max-h-72"
               }`}
             >

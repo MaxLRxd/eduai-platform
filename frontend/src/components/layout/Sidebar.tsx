@@ -18,7 +18,7 @@ const BADGE_CLASSES: Record<string, string> = {
   green: "bg-success text-white",
 };
 
-export function Sidebar(): React.ReactElement {
+export function Sidebar({ collapsed = false }: { collapsed?: boolean }): React.ReactElement {
   const { user, logout } = useAuth();
   const { nombre, logoUrl } = useBranding();
   if (!user) return <></>;
@@ -27,38 +27,45 @@ export function Sidebar(): React.ReactElement {
   const initials = `${user.name[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase();
 
   return (
-    <aside className="w-sidebar shrink-0 bg-primary text-white flex flex-col overflow-hidden relative">
-      <div className="px-4 pt-5 pb-4 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2.5">
+    <aside
+      className={`${collapsed ? "w-sidebar-collapsed" : "w-sidebar"} shrink-0 bg-primary text-white flex flex-col overflow-hidden relative transition-[width] duration-200`}
+    >
+      <div className={`pt-5 pb-4 border-b border-white/10 shrink-0 ${collapsed ? "px-2" : "px-4"}`}>
+        <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
           <BrandLogo
             src={logoUrl}
             alt={nombre ?? "Logo institucional"}
             className="w-8 h-8 rounded-lg object-contain border border-white/15 shrink-0"
           />
-          <div>
-            <div className="font-display text-base font-bold tracking-tight">EduAI</div>
-            {nombre && (
-              <div className="text-[10px] text-white/50 uppercase tracking-wide font-medium">{nombre}</div>
-            )}
-          </div>
+          {!collapsed && (
+            <div>
+              <div className="font-display text-base font-bold tracking-tight">EduAI</div>
+              {nombre && (
+                <div className="text-[10px] text-white/50 uppercase tracking-wide font-medium">{nombre}</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2.5 py-3" aria-label="Secciones del sistema">
         {sections.map((section) => (
           <div key={section.section}>
-            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-white/35 px-2.5 pt-3.5 pb-1">
-              {section.section}
-            </span>
+            {!collapsed && (
+              <span className="block text-[9.5px] font-bold uppercase tracking-wider text-white/35 px-2.5 pt-3.5 pb-1">
+                {section.section}
+              </span>
+            )}
             {section.items.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 end={item.path.split("/").length <= 2}
+                title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-2.5 px-2.5 py-2 rounded text-[13px] font-medium mb-px transition-colors ${
-                    isActive ? "bg-white/15 text-white font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"
-                  }`
+                  `relative flex items-center py-2 rounded text-[13px] font-medium mb-px transition-colors ${
+                    collapsed ? "justify-center px-2" : "gap-2.5 px-2.5"
+                  } ${isActive ? "bg-white/15 text-white font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"}`
                 }
               >
                 {({ isActive }) => (
@@ -67,8 +74,8 @@ export function Sidebar(): React.ReactElement {
                     <span className="w-5 flex justify-center shrink-0">
                       <Icon name={item.icon} className="w-4 h-4" />
                     </span>
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge && (
+                    {!collapsed && <span className="flex-1">{item.label}</span>}
+                    {!collapsed && item.badge && (
                       <span
                         className={`text-[10px] font-bold font-mono px-1.5 py-px rounded-full min-w-[20px] text-center ${
                           BADGE_CLASSES[item.badgeColor ?? "danger"]
@@ -86,16 +93,25 @@ export function Sidebar(): React.ReactElement {
       </nav>
 
       <div className="px-2.5 py-3 border-t border-white/10 shrink-0">
-        <div className="flex items-center gap-2.5 p-2.5 rounded hover:bg-white/10 transition-colors">
-          <div className="w-[34px] h-[34px] rounded-full bg-white/20 border-[1.5px] border-white/25 flex items-center justify-center text-xs font-bold shrink-0">
+        <div
+          className={`flex items-center p-2.5 rounded hover:bg-white/10 transition-colors ${
+            collapsed ? "flex-col gap-2" : "gap-2.5"
+          }`}
+        >
+          <div
+            title={`${user.name} ${user.lastName}`}
+            className="w-[34px] h-[34px] rounded-full bg-white/20 border-[1.5px] border-white/25 flex items-center justify-center text-xs font-bold shrink-0"
+          >
             {initials}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold truncate">
-              {user.name} {user.lastName}
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold truncate">
+                {user.name} {user.lastName}
+              </div>
+              <div className="text-[10.5px] text-white/55">{ROLE_LABEL[user.role]}</div>
             </div>
-            <div className="text-[10.5px] text-white/55">{ROLE_LABEL[user.role]}</div>
-          </div>
+          )}
           <button
             onClick={logout}
             title="Cerrar sesión"

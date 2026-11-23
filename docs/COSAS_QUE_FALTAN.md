@@ -106,11 +106,11 @@ Tests al cierre: backend 363 · frontend 195 · ai-services 161 (+1 omitido) · 
 ---
 
 ## 6. Bugs generales:
-- visuales: pantallas que se salen de sus contenedores, se puede hacer desplegable el side-menu de la izquierda además; en "aula virtual" se puede scrollear hacia abajo hasta que la pagina desaparece.
+Sin pendientes.
 
 ## Ya resuelto (para no repetirlo)
 CI y lint · reintento del 503 de Gemini en streaming · Pinecone sin bloquear el event loop · limpieza de
 vectores huérfanos y reindexado (`rag:reindex --huerfanos|--limpiar`) · base de demo con material real
 (`demo:reset`) · E2E del OCR de PDF escaneado y de la exportación de reportes · prueba de humo de todas las
 páginas · recuperación de contraseña por correo · chat persistente del tutor docente con selector de materiales
-y aviso al salir · indexación RAG desde Planificación (helper compartido + backfill `rag:reindex -- --planning`) · selector de materiales del Tutor IA rediseñado como modal amplio y clickeable (contenidos de sección/clase y adjuntos de Planificación, búsqueda, chips, estado RAG, apertura de archivo y fuentes visibles) · editor de nota en popup (Mis estudiantes → Calificaciones) · «Editar» de cada clase en Contenidos redirige a Planificación con la materia activa · botón «Eliminar» en cada fila de material (borra archivo y vector RAG).
+y aviso al salir · indexación RAG desde Planificación (helper compartido + backfill `rag:reindex -- --planning`) · selector de materiales del Tutor IA rediseñado como modal amplio y clickeable (contenidos de sección/clase y adjuntos de Planificación, búsqueda, chips, estado RAG, apertura de archivo y fuentes visibles) · editor de nota en popup (Mis estudiantes → Calificaciones) · «Editar» de cada clase en Contenidos redirige a Planificación con la materia activa · botón «Eliminar» en cada fila de material (borra archivo y vector RAG) · contención horizontal/alto del shell, sidebar colapsable desde el Header y chat ampliado de Aula virtual sin scroll heredado.

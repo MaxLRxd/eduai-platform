@@ -10,15 +10,36 @@ const PROFILE_PATH_BY_ROLE: Record<string, string> = {
   ADMIN: "/admin/settings",
 };
 
-export function Header({ title }: { title: string }): React.ReactElement {
+export function Header({
+  title,
+  sidebarCollapsed,
+  onToggleSidebar,
+}: {
+  title: string;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+}): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: noLeidas = 0 } = useNoLeidasCount();
 
   return (
-    <header className="h-header shrink-0 bg-surface border-b border-border flex items-center justify-between px-7 shadow-xs">
-      <h1 className="font-display text-[17px] font-bold text-text-1 tracking-tight">{title}</h1>
-      <div className="flex items-center gap-3">
+    <header className="h-header shrink-0 bg-surface border-b border-border flex items-center justify-between gap-3 px-7 shadow-xs">
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          aria-label={sidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+          title={sidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+          onClick={onToggleSidebar}
+          className="w-9 h-9 shrink-0 bg-surface-2 border-[1.5px] border-border rounded flex items-center justify-center text-text-2 hover:bg-primary-light hover:border-primary hover:text-primary transition-colors"
+        >
+          <Icon
+            name="sidebarToggle"
+            className={`w-4 h-4 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`}
+          />
+        </button>
+        <h1 className="font-display text-[17px] font-bold text-text-1 tracking-tight truncate">{title}</h1>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
         <button
           aria-label="Notificaciones"
           onClick={() => navigate('/notificaciones')}

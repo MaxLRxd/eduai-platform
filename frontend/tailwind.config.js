@@ -39,6 +39,7 @@ export default {
       },
       spacing: {
         sidebar: "256px",
+        sidebarCollapsed: "72px",
         header: "60px",
       },
     },
