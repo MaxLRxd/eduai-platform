@@ -6,10 +6,12 @@
  *   E2E_PASSWORD   contraseña de los usuarios del seed (default Clave1234)
  *   E2E_AI=1       además prueba lo que pasa por el ai-service (saludo, corrección de opción
  *                  múltiple). No consume tokens del LLM, pero el ai-service tiene que estar arriba.
+ *   E2E_LLM=1      además hace UNA consulta real al asistente docente (llama a Gemini y consume
+ *                  tokens). Requiere E2E_AI=1 y una GEMINI_API_KEY válida en el ai-service.
  *
  * Uso: npm run e2e
  *
- * Cada corrida deja 1 materia dada de baja y 3 usuarios nuevos (no se pueden borrar por API):
+ * Cada corrida deja 1 materia dada de baja y 4 usuarios nuevos (no se pueden borrar por API):
  * `npm run demo:reset --workspace backend` restaura la base de demo.
  * Cada corrida crea su propia materia y sus propios usuarios (sufijo único): se puede repetir
  * sin limpiar la base.
@@ -22,6 +24,7 @@ const BASE = (process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/+$
 const PASSWORD = process.env.E2E_PASSWORD ?? "Clave1234";
 const AI_URL = (process.env.E2E_AI_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 const CON_IA = process.env.E2E_AI === "1";
+const CON_LLM = CON_IA && process.env.E2E_LLM === "1";
 const SUFIJO = Math.random().toString(36).slice(2, 8);
 const CLAVE_NUEVA = "OtraClave2026";
 
@@ -529,6 +532,146 @@ describe(`EduAI E2E (${BASE})${CON_IA ? " + IA" : ""}`, { concurrency: false }, 
       const vieja = await llamar("POST", "/api/auth/login", { cuerpo: { email: ctx.alumnoB.email, password: PASSWORD } });
       assert.equal(vieja.status, 401);
       assert.ok(await login(ctx.alumnoB.email, CLAVE_NUEVA));
+    });
+  });
+
+  describe("Recuperación de contraseña y enlace del administrador (CU-AD03)", () => {
+    it("el pedido de recuperación responde igual exista o no la cuenta", async () => {
+      const email = `e2e-alumno-C-${SUFIJO}@ies.edu`;
+      const alta = await llamar("POST", "/api/admin/users", {
+        token: ctx.admin,
+        cuerpo: { nombre: "E2E AlumnoC", email, password: PASSWORD, rol: "ALUMNO" },
+      });
+      assert.equal(alta.status, 201, JSON.stringify(alta.body));
+      ctx.alumnoC = { id: alta.body.usuario.id, email };
+
+      const real = await llamar("POST", "/api/auth/password/olvide", { cuerpo: { email } });
+      const falsa = await llamar("POST", "/api/auth/password/olvide", { cuerpo: { email: `nadie-${SUFIJO}@ies.edu` } });
+      assert.equal(real.status, 200, JSON.stringify(real.body));
+      assert.equal(falsa.status, 200);
+      assert.deepEqual(real.body, falsa.body, "no debe revelar si el correo existe");
+    });
+
+    it("solo el administrador puede emitir un enlace de recuperación", async () => {
+      assert.equal((await llamar("POST", `/api/admin/users/${ctx.alumnoC.id}/recuperacion-token`, { token: ctx.tokA })).status, 403);
+      assert.equal((await llamar("POST", `/api/admin/users/${ctx.alumnoC.id}/recuperacion-token`, { token: ctx.tokDocente })).status, 403);
+      assert.equal((await llamar("POST", `/api/admin/users/${ctx.alumnoC.id}/recuperacion-token`)).status, 401);
+    });
+
+    it("el administrador emite un enlace de un solo uso y el usuario cambia su contraseña con él", async () => {
+      // Una sesión abierta antes del cambio: tiene que quedar cerrada.
+      const antes = await fetch(`${BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: ctx.alumnoC.email, password: PASSWORD }),
+      });
+      assert.equal(antes.status, 200);
+      const cookieVieja = (antes.headers.get("set-cookie") ?? "").split(";")[0];
+      assert.match(cookieVieja, /^eduai_refresh=/);
+
+      const emitido = await llamar("POST", `/api/admin/users/${ctx.alumnoC.id}/recuperacion-token`, { token: ctx.admin });
+      assert.equal(emitido.status, 201, JSON.stringify(emitido.body));
+      assert.match(emitido.headers.get("cache-control") ?? "", /no-store/);
+      assert.ok(new Date(emitido.body.expira_en).getTime() > Date.now(), "el enlace vence en el futuro");
+      const token = new URL(emitido.body.enlace).searchParams.get("token");
+      assert.match(token ?? "", /^[0-9a-f]{64}$/, "el enlace lleva un token de 256 bits");
+      assert.equal(new URL(emitido.body.enlace).pathname, "/restablecer");
+
+      const nueva = "ClaveRecuperada2026";
+      const corta = await llamar("POST", "/api/auth/password/restablecer", { cuerpo: { token, password_nueva: "corta" } });
+      assert.equal(corta.status, 400, "una contraseña corta no consume el enlace");
+
+      const ok = await llamar("POST", "/api/auth/password/restablecer", { cuerpo: { token, password_nueva: nueva } });
+      assert.equal(ok.status, 200, JSON.stringify(ok.body));
+
+      assert.equal((await llamar("POST", "/api/auth/login", { cuerpo: { email: ctx.alumnoC.email, password: PASSWORD } })).status, 401);
+      assert.ok(await login(ctx.alumnoC.email, nueva), "entra con la contraseña nueva");
+
+      const refresco = await fetch(`${BASE}/api/auth/refresh`, { method: "POST", headers: { Cookie: cookieVieja } });
+      assert.equal(refresco.status, 401, "la sesión anterior al cambio quedó cerrada");
+
+      const reuso = await llamar("POST", "/api/auth/password/restablecer", { cuerpo: { token, password_nueva: "OtraMas2026Clave" } });
+      assert.equal(reuso.status, 400, "el enlace sirve una sola vez");
+    });
+
+    it("un token inventado se rechaza", async () => {
+      const r = await llamar("POST", "/api/auth/password/restablecer", {
+        cuerpo: { token: "a".repeat(64), password_nueva: "ClaveInventada2026" },
+      });
+      assert.equal(r.status, 400);
+    });
+
+    it("no emite enlaces para un usuario inexistente", async () => {
+      const r = await llamar("POST", "/api/admin/users/00000000-0000-4000-8000-000000000000/recuperacion-token", { token: ctx.admin });
+      assert.equal(r.status, 404);
+    });
+  });
+
+  describe("Docente: asistente con conversaciones persistentes (CU-P10)", () => {
+    it("crea una conversación y aparece en el listado de la materia", async () => {
+      const r = await llamar("POST", "/api/asistente/sesiones", { token: ctx.tokDocente, cuerpo: { materia_id: ctx.materiaId } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.materia_id, ctx.materiaId);
+      assert.equal(r.body.mensajes, 0);
+      ctx.sesionAsistente = r.body.id;
+
+      const lista = await llamar("GET", `/api/asistente/sesiones?materia_id=${ctx.materiaId}`, { token: ctx.tokDocente });
+      assert.equal(lista.status, 200);
+      assert.ok(lista.body.some((s) => s.id === ctx.sesionAsistente), "la conversación figura en la lista");
+
+      const mensajes = await llamar("GET", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, { token: ctx.tokDocente });
+      assert.equal(mensajes.status, 200);
+      assert.deepEqual(mensajes.body, [], "una conversación nueva no tiene mensajes");
+    });
+
+    it("las conversaciones son del docente: otro docente y los alumnos no entran", async () => {
+      // profe1 (del seed) no está asignado a esta materia.
+      const ajena = await llamar("POST", "/api/asistente/sesiones", { token: ctx.profeSeed, cuerpo: { materia_id: ctx.materiaId } });
+      assert.equal(ajena.status, 403, "un docente no asignado no puede abrir conversaciones en la materia");
+      assert.equal((await llamar("GET", `/api/asistente/sesiones?materia_id=${ctx.materiaId}`, { token: ctx.profeSeed })).status, 403);
+      assert.equal((await llamar("GET", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, { token: ctx.profeSeed })).status, 404);
+      assert.equal(
+        (await llamar("POST", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, { token: ctx.profeSeed, cuerpo: { prompt: "Hola, armame una clase" } })).status,
+        404
+      );
+
+      assert.equal((await llamar("POST", "/api/asistente/sesiones", { token: ctx.tokA, cuerpo: { materia_id: ctx.materiaId } })).status, 403);
+      assert.equal((await llamar("GET", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, { token: ctx.tokA })).status, 403);
+    });
+
+    it("rechaza materiales que no son de la materia, sin llamar a la IA", async () => {
+      const r = await llamar("POST", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, {
+        token: ctx.tokDocente,
+        cuerpo: { prompt: "Armame una clase sobre este material", content_ids: ["00000000-0000-4000-8000-000000000000"] },
+      });
+      assert.equal(r.status, 400, JSON.stringify(r.body));
+
+      const sinEstructura = await llamar("POST", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, {
+        token: ctx.tokDocente,
+        cuerpo: { prompt: "Armame una clase", content_ids: ["no-es-un-uuid"] },
+      });
+      assert.equal(sinEstructura.status, 400);
+
+      const mensajes = await llamar("GET", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, { token: ctx.tokDocente });
+      assert.deepEqual(mensajes.body, [], "un pedido rechazado no deja mensajes guardados");
+    });
+
+    it(CON_LLM ? "una consulta real queda guardada en la conversación (consume tokens)" : "una consulta real queda guardada (omitido: definí E2E_AI=1 y E2E_LLM=1)", { skip: !CON_LLM }, async () => {
+      const r = await llamar("POST", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, {
+        token: ctx.tokDocente,
+        cuerpo: { prompt: "Armame una actividad breve de repaso de dos preguntas" },
+      });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.rol, "ASSISTANT");
+      assert.ok(r.body.contenido.length > 20, "el asistente respondió");
+
+      const mensajes = await llamar("GET", `/api/asistente/sesiones/${ctx.sesionAsistente}/mensajes`, { token: ctx.tokDocente });
+      assert.deepEqual(mensajes.body.map((m) => m.rol), ["USER", "ASSISTANT"]);
+
+      const lista = await llamar("GET", `/api/asistente/sesiones?materia_id=${ctx.materiaId}`, { token: ctx.tokDocente });
+      const sesion = lista.body.find((s) => s.id === ctx.sesionAsistente);
+      assert.equal(sesion.mensajes, 2);
+      assert.match(sesion.titulo ?? "", /actividad breve/i, "el título sale de la primera consulta");
     });
   });
 

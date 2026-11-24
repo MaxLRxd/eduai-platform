@@ -2,8 +2,9 @@
 
 > Snapshot original: **2026-09-30** (bugs y casos de uso actualizados hasta el 2026-11-20) · Reemplaza a `AVANCE.txt` (última actualización 2026-09-06).
 >
-> **Este documento es un traspaso.** Lo que importa para seguir trabajando está en
-> [QUÉ FALTA](#qué-falta). Abajo queda el detalle técnico de lo ya hecho y por qué.
+> **Este documento es la bitácora de lo ya hecho** y por qué. **Los pendientes viven en un solo lugar:**
+> [`PLAN_DE_ACCION.md`](../PLAN_DE_ACCION.md). Regla: una tarea abierta se anota solo en el plan; al cerrarla se
+> marca ahí y se deja una entrada con fecha en este documento. No se copia el estado a otros archivos.
 >
 > **Mapa de arquitectura para el equipo:** `graphify-out/README.md` (arquitectura real, god nodes,
 > puntos de extensión e inventario de pendientes verificado contra el código).
@@ -13,25 +14,14 @@
 
 ---
 
-# QUÉ FALTA
+# HISTORIAL DE PENDIENTES CERRADOS
 
-Todo lo que está ticked (✅) en este documento **ya está implementado y verificado**. Esta sección
-es la lista real de trabajo abierto, ordenada por prioridad. Nada de acá está empezado salvo lo
-indicado.
+Todo lo que está ticked (✅) en este documento **ya está implementado y verificado**. Lo que sigue abierto
+(pendiente, pausado o pospuesto) está **solo** en [`PLAN_DE_ACCION.md`](../PLAN_DE_ACCION.md).
 
-## 🟢 DEPLOY — NO BLOQUEA LA ENTREGA
-
-### 1. Deploy a cloud — opcional
-La cátedra aceptó que alcanza con **correr el proyecto en local con Docker Compose** (ver
-`DOCUMENTACION_TECNICA.md` §14), así que el deploy ya no bloquea la entrega. Queda como
-mejora si se quiere una demo pública (por ejemplo, para que otras personas lo prueben).
-Todo está analizado y escrito en **`DEPLOY.md`**:
-- Comparativa de proveedores (Fly.io / Railway / Render+Vercel / VM propia).
-- La trampa de los **3 cold starts** (3 servicios arrancando en cadena; el molesto es el del
-  `ai-service`, que ya tarda 26 s con el modelo caliente).
-- Requisito de que **la DB y el `ai-service` estén en la misma región**.
-- 7 preguntas abiertas + checklist de lo que falta antes de deployar.
-- **Postgres + `pgvector` sigue sin definir.** Sin esto no hay dónde correr la app en prod.
+> **Fuera de alcance:** el despliegue en la nube. La cátedra aceptó que alcanza con **correr el proyecto en local
+> con Docker Compose** (ver `DOCUMENTACION_TECNICA.md` §14). El análisis que se había hecho quedó archivado en
+> `docs/archivo/DEPLOY.md` y no es un pendiente.
 
 ## 🟠 FUNCIONALIDAD (2–6 ✅ hechas; 6 cerrada 2026-10-17)
 
@@ -119,7 +109,7 @@ Ahora el modo efectivo se guarda también en cada mensaje:
   y **reindexa el material** con el embedder inyectado desde `build_retrieval_service(embeddings)`
   (si no hay embedder, loguea `reindex_pendiente`). Con ≤2000 el `CREATE INDEX ... hnsw` ya no falla.
 - `EMBEDDING_DIMENSIONS=1536` en `.env.example` (raíz y ai-services); número actualizado en
-  `DEPLOY.md`. Tests: `ai-services/src/tests/test_retrieval_service.py`.
+  `docs/archivo/DEPLOY.md`. Tests: `ai-services/src/tests/test_retrieval_service.py`.
 - Nota: cambiar de dimensión invalida el índice de Pinecone existente (hay que recrearlo).
 
 ### 10. ✅ Cambiar de vector store: procedimiento y limpieza (2026-11-20)
@@ -162,6 +152,20 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 - Probado contra el stack real: `GET /rag/materias` y `npm run rag:reindex -- --huerfanos` (borró las 71
   fragmentos huérfanos de una materia inexistente y conservó el resto).
 
+### 19. ✅ E2E de las funciones nuevas (2026-11-24)
+La suite punta a punta pasó de 44 a **53** pruebas, todas verdes contra el stack real: recuperación de contraseña (pedido sin enumeración de cuentas, enlace emitido por el administrador, un solo uso, sesiones previas cerradas) y asistente docente persistente (conversaciones, permisos, materiales inválidos y, con `E2E_AI=1 E2E_LLM=1`, una consulta real a Gemini). Al correrla se vio además que el contenedor del frontend entraba en bucle (`npm install` fallaba con ENOTEMPTY sobre el volumen con dependencias viejas, tras subir vite 8 y vitest 5): se recreó el volumen `eduai_frontend_modules` y se reconstruyó la imagen. Detalle y estado en `PLAN_DE_ACCION.md`, tarea 5.1.
+
+### 18. ✅ Cierre de pendientes (2026-11-20 a 2026-11-23)
+Resumen de lo resuelto en esta etapa, traído del antiguo documento de pendientes (`COSAS_QUE_FALTAN.md`, ya eliminado: el plan único es `PLAN_DE_ACCION.md`). El detalle de cada ítem con sus archivos y pruebas está en las entradas 10 a 17 y en el plan.
+
+CI y lint · reintento del 503 de Gemini en streaming · Pinecone sin bloquear el event loop · limpieza de
+vectores huérfanos y reindexado (`rag:reindex --huerfanos|--limpiar`) · base de demo con material real
+(`demo:reset`) · E2E del OCR de PDF escaneado y de la exportación de reportes · prueba de humo de todas las
+páginas · recuperación de contraseña por correo · chat persistente del tutor docente con selector de materiales
+y aviso al salir · indexación RAG desde Planificación (helper compartido + backfill `rag:reindex -- --planning`) · selector de materiales del Tutor IA rediseñado como modal amplio y clickeable (contenidos de sección/clase y adjuntos de Planificación, búsqueda, chips, estado RAG, apertura de archivo y fuentes visibles) · editor de nota en popup (Mis estudiantes → Calificaciones) · «Editar» de cada clase en Contenidos redirige a Planificación con la materia activa · botón «Eliminar» en cada fila de material (borra archivo y vector RAG) · contención horizontal/alto del shell, sidebar colapsable desde el Header y chat ampliado de Aula virtual sin scroll heredado
+
+Además: `npm audit` en 0 vulnerabilidades (zod 4, react-router 7, vitest 5, vite 8), enlace de recuperación de contraseña emitido por el administrador, envío real de correo verificado por SMTP, revocación del acceso al dar de baja a un usuario y prueba de integración contra R2 escrita (se salta sin credenciales).
+
 ### 17. ✅ Recuperación de contraseña por correo (2026-11-20)
 - Backend: tabla `tokens_recuperacion` (migración `20261120180000`), `auth/recuperacion.service.ts`, rutas
   `POST /api/auth/password/olvide` y `/restablecer`. Token de 256 bits, **solo se guarda su hash**, vence en
@@ -200,14 +204,11 @@ de mejoras. Los tres `package-lock.json` (raíz, backend y frontend) están vers
 
 ---
 
-## PRÓXIMOS PASOS SUGERIDOS (resumen accionable)
+## CIERRE DE LA PRIMERA TANDA (histórico)
 
-1. 🟢 **Deploy cloud**: opcional (la entrega se hace en local). Ver `DEPLOY.md`.
-2. ✅ **Branding** (entrada 6): presets en backend, logo a storage y theming en runtime — hecho 2026-10-17.
-3. ✅ Cablear **email** a notificaciones (entrada 3) — hecho 2026-10-17.
-4. ✅ Migración de `modo` en `mensajeIA` (entrada 8) — hecho 2026-10-17. 5. ✅ Rebajar `EMBEDDING_DIMENSIONS` a ≤1536 y reindexar HNSW (entrada 9) — hecho 2026-10-17.
-6. ✅ Limpiar `CHROMA_URL` (entrada 13) y presets de branding (entrada 6) — hechos 2026-10-17.
-7. ✅ Parte F — tests de frontend agregados: `config.service`, `BrandingContext`, `notificaciones.service`, `adminSettings.service` (3 existentes + 15 nuevos, 18 totales) — hechos 2026-10-17.
+Los pasos que se habían sugerido al 2026-10-17 están **todos hechos** (branding, email, migración de `modo`,
+embeddings a 1536, limpieza de `CHROMA_URL`, tests del frontend). Lo que queda por hacer está en
+[`PLAN_DE_ACCION.md`](../PLAN_DE_ACCION.md).
 
 ---
 
@@ -681,4 +682,4 @@ npm run dev:local          # backend + ai + frontend con concurrently
 - `npm run typecheck` (backend y frontend) · `npm run lint` · `npm test` (corre las tres suites)
 
 **Conteo actual de tests (2026-11-20):** backend **363** en **38** suites · frontend **195** en
-**23** archivos · ai-services **161** (+1 omitido) · E2E **44**.
+**23** archivos · ai-services **161** (+1 omitido) · E2E **53**.

@@ -147,7 +147,7 @@ docker-compose.yml    entorno local completo
 
 ## 6. Modelo de datos
 
-31 tablas en PostgreSQL, definidas en `backend/prisma/schema.prisma` y versionadas con migraciones.
+34 tablas en PostgreSQL, definidas en `backend/prisma/schema.prisma` y versionadas con migraciones.
 
 | Dominio | Tablas |
 | --- | --- |
@@ -172,7 +172,7 @@ Reglas relevantes:
 
 ## 7. Backend: módulos y API
 
-La API completa (124 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
+La API completa (131 endpoints, con rol requerido y esquema de validación de cada uno) está en [`API_ENDPOINTS.md`](./API_ENDPOINTS.md), generada del código.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -235,7 +235,7 @@ Casos de uso (`ai-services/src/use_cases`):
 | --- | --- |
 | Contraseñas | bcrypt; mínimo 8 caracteres; cambio con verificación de la actual |
 | Sesiones | Token de acceso JWT (HS256, 15 min) + refresh token opaco en cookie `httpOnly`, `SameSite=Lax`, `Secure` en producción; se guarda solo su hash |
-| Revocación | Cerrar sesión, dar de baja a un usuario o cambiar su contraseña revoca las sesiones correspondientes |
+| Revocación | Cerrar sesión, dar de baja a un usuario o cambiar su contraseña revoca las sesiones correspondientes. Al dar de baja, además, el token de acceso vigente se rechaza al instante (lista de revocados en memoria; ver sección 15) |
 | Autorización | Rol verificado en cada ruta y, además, pertenencia a la materia (docente asignado / alumno inscripto) en cada operación |
 | Fuerza bruta | Limitador por cuenta e IP que cuenta solo intentos fallidos: un aula entera detrás de la misma IP puede ingresar, pero una cuenta no se puede forzar |
 | Validación | Zod en todas las entradas; límite de 1 MB en JSON y 50 MB en archivos |
@@ -253,9 +253,9 @@ Casos de uso (`ai-services/src/use_cases`):
 | Backend | Jest + Supertest | 380 pruebas en 42 suites | Permisos por rol, validaciones, reglas de negocio, transacciones, métricas |
 | Servicio de IA | pytest | 164 pruebas (+1 omitida) | Depurador, tutor, corrección, indexado, recuperación, reintentos, OCR |
 | Frontend | Vitest + Testing Library | 233 pruebas en 33 archivos | Login, branding, chat del tutor (incluido el aviso de demora y el reintento), servicios, enlaces a materiales, calificaciones, limpieza de sesión |
-| **E2E** | `node:test` | **44 pruebas** | Los tres roles encadenados contra el stack real |
+| **E2E** | `node:test` | **53 pruebas** | Los tres roles encadenados contra el stack real |
 
-La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
+La suite E2E (`e2e/flujo-completo.e2e.mjs`) recorre: alta de usuarios y materia, asignación de docente, claves con límite de usos, inscripción, secciones y material, rúbrica y actividades, entrega dentro y fuera de plazo, nombres y fechas inválidos, subida de un archivo malicioso, corrección automática de opción múltiple, corrección y publicación, notas y asistencia, dashboards, permisos cruzados, cambio de contraseña, recuperación de contraseña con el enlace del administrador, conversaciones persistentes del asistente docente, desmatriculación y baja de materia. Con `E2E_AI=1` suma el saludo al tutor, la corrección de un simulacro y la métrica de latencia (sin consumir tokens del LLM). Cada corrida crea sus propios datos, así que se puede repetir sin limpiar la base.
 
 Calidad estática: TypeScript estricto en backend y frontend, ESLint sin advertencias, `ruff` en Python. El pipeline de CI (`.github/workflows/ci.yml`) corre lint, tipos y pruebas de los tres servicios en cada *push* y *pull request* (el backend genera antes el cliente de Prisma con `npx prisma generate`). No ejecuta la suite E2E, que necesita el stack levantado.
 
@@ -330,12 +330,14 @@ El plan de proyecto (Anexo, sección 3.5) planteaba algunas tecnologías que, al
 
 ## 15. Limitaciones conocidas
 
+Esta sección resume las limitaciones para quien lee la documentación. **Los pendientes y su estado están solo en [`PLAN_DE_ACCION.md`](../PLAN_DE_ACCION.md).**
+
 - **Dependencias actualizadas 2026-11-23:** `zod` 4, `react-router-dom` 7, `vitest` 5, `vite` 8 y `@vitejs/plugin-react` 6; `npm audit` queda en 0. Se usan `overrides` para `effect` 3.22.5 y `glob` 14.0.6 porque `@prisma/config` y Jest 30 fijan versiones con avisos. `npm ls` puede marcarlos como `invalid` al no cumplir el rango exacto, pero `npm ci`, Prisma, lint, typechecks, builds y las suites pasan.
 - **La latencia del tutor no cumple el objetivo** de la primera respuesta en menos de 3 s: se midió con la IA real (mediana de 6,84 s) y depende de la capacidad de Gemini con clave gratuita (ver sección 12).
-- **Los tokens de acceso no se invalidan al instante** al dar de baja a un usuario: siguen válidos hasta 15 minutos; la renovación sí queda bloqueada.
-- **Los archivos subidos se sirven por URL no adivinable** (sufijo aleatorio de 128 bits) pero sin control de sesión; en producción real conviene un bucket privado con URLs firmadas.
+- **Revocación del acceso al dar de baja a un usuario:** el token de acceso se rechaza al instante con una lista de revocados (`backend/src/config/cache.ts`) cuya duración es la del propio token (15 minutos). Esa lista vive en la memoria del backend: **se pierde si el backend se reinicia** (el token volvería a servir hasta que venza) y no se comparte entre réplicas. Con una sola instancia, como en esta entrega, alcanza.
+- **Los archivos subidos se sirven por URL no adivinable** (sufijo aleatorio de 128 bits) pero sin control de sesión. Las URLs firmadas y temporales se evaluaron y se **pospusieron** (cambian todos los enlaces a archivos y vencen; riesgo para la demo): se retoman si se pasa a un bucket privado. El cliente de R2 está cubierto por una prueba de integración escrita que se salta sin credenciales (`backend/src/tests/storage-r2.integration.test.ts`); falta correrla una vez con un bucket de pruebas.
 - **Contraseña temporal:** el aviso de alta no incluye la contraseña (no se guarda ni se envía en claro); el administrador se la entrega al usuario por otro medio.
-- **Recuperación de contraseña por correo.** `POST /api/auth/password/olvide` y `POST /api/auth/password/restablecer`; pantallas `/recuperar` y `/restablecer`. El enlace lleva un token aleatorio de 256 bits del que en la base solo se guarda el hash; vence a los 60 minutos (`RESET_TOKEN_MINUTES`), sirve una sola vez, y pedir otro invalida el anterior. La respuesta del pedido es idéntica exista o no la cuenta (no permite averiguar quién tiene cuenta). Al restablecer se cierran **todas** las sesiones de la cuenta y se avisa por correo. Límites: 3 pedidos por cuenta y 20 por IP cada 15 minutos. Requiere `EMAIL_PROVIDER` configurado y `APP_URL` (URL pública del frontend); sin correo, en desarrollo el enlace se escribe en el log del backend y en producción se registra un error. Si un usuario no tiene acceso a su correo, el administrador puede usar **Usuarios → Recuperar** (`POST /api/admin/users/:usuarioId/recuperacion-token`): genera el mismo enlace de un solo uso, no envía correo y lo muestra una sola vez con `Cache-Control: no-store`; el token viaja en claro solo en esa respuesta y en la base solo queda su hash.
+- **Recuperación de contraseña por correo.** `POST /api/auth/password/olvide` y `POST /api/auth/password/restablecer`; pantallas `/recuperar` y `/restablecer`. El enlace lleva un token aleatorio de 256 bits del que en la base solo se guarda el hash; vence a los 60 minutos (`RESET_TOKEN_MINUTES`), sirve una sola vez, y pedir otro invalida el anterior. La respuesta del pedido es idéntica exista o no la cuenta (no permite averiguar quién tiene cuenta). Al restablecer se cierran **todas** las sesiones de la cuenta y se avisa por correo. Límites: 3 pedidos por cuenta y 20 por IP cada 15 minutos. Requiere `EMAIL_PROVIDER` configurado y `APP_URL` (URL pública del frontend); sin correo, en desarrollo el enlace se escribe en el log del backend y en producción se registra un error. Si un usuario no tiene acceso a su correo, el administrador puede usar **Usuarios → Recuperar** (`POST /api/admin/users/:usuarioId/recuperacion-token`): genera el mismo enlace de un solo uso, no envía correo y lo muestra una sola vez con `Cache-Control: no-store`; el token viaja en claro solo en esa respuesta y en la base solo queda su hash. **Salvedad:** un administrador puede emitir un enlace para cualquier cuenta (incluida otra de administrador) y quedarse con ella; hoy no se registra quién lo emite ni se avisa al usuario.
 - **Visibilidad de entregas por archivo:** la IA corrige el texto o código de una entrega; de un archivo adjunto solo registra el nombre.
 
 ---

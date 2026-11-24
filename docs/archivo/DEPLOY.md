@@ -1,3 +1,7 @@
+> **Fuera del alcance de esta entrega.** El proyecto se presenta y ejecuta **en local con Docker Compose**
+> (acordado con la cátedra). Este análisis de despliegue en la nube se conserva como referencia por si se
+> retoma, pero **no es un pendiente**. Archivado el 2026-11-23.
+
 # Deploy cloud — documento de decisión
 
 > **Estado: OPCIONAL, no implementado.** La cátedra aceptó que la entrega se haga **ejecutando el
