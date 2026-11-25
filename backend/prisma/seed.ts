@@ -19,6 +19,8 @@ async function limpiar(): Promise<void> {
     prisma.intentoSimulacro.deleteMany(),
     prisma.accesoContenido.deleteMany(),
     prisma.planningClase.deleteMany(),
+    // Conversaciones del asistente docente (sus mensajes se borran en cascada).
+    prisma.sesionAsistenteDocente.deleteMany(),
     prisma.institution.deleteMany(),
     prisma.notificacion.deleteMany(),
     prisma.alertaRiesgoAcademico.deleteMany(),
