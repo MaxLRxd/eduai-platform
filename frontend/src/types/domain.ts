@@ -273,6 +273,8 @@ export interface AdminSubject {
   descripcion: string | null;
   nivelEducativo: string;
   profesor: string;
+  /** Docentes asignados; `profesorId` es el id del perfil docente (el que pide la API para quitarlo). */
+  profesores: { profesorId: string; nombre: string }[];
   alumnos: number;
   estado: SubjectStatus;
 }
@@ -300,11 +302,11 @@ export interface EnrollmentKeyAdmin {
   inscriptos: string[];
 }
 
-export interface LicensePlan {
-  name: string;
-  range: string;
-  features: string;
-  current: boolean;
+/** Licencia unica de la institucion: el mismo producto completo para todos, sin importar la cantidad de alumnos. */
+export interface Licencia {
+  licencia: { nombre: string; tipo: "UNICA"; estado: "ACTIVA"; incluye: string[] };
+  /** Informativo: no hay topes ni cobro por alumno. */
+  uso: { alumnos: number; docentes: number; materias: number };
 }
 
 export interface ReportStat {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -66,6 +66,53 @@ describe("layout: sidebar colapsable", () => {
     expect(main).toHaveAttribute("id", "main-content");
     expect(main.className).toContain("min-w-0");
     expect(main.className).toContain("min-h-0");
+  });
+});
+
+describe("layout: el único scroll es el de main (6.5) y el menú es responsive (6.6)", () => {
+  const montar = () =>
+    render(
+      <MemoryRouter>
+        <AppShell title="Inicio">
+          <p>Contenido de prueba</p>
+        </AppShell>
+      </MemoryRouter>,
+    );
+
+  it("el shell ocupa exactamente el alto visible y no deja que el documento desborde", () => {
+    const { container } = montar();
+    const shell = container.firstElementChild as HTMLElement;
+
+    expect(shell.className).toContain("h-dvh");
+    expect(shell.className).toContain("overflow-hidden");
+    expect(screen.getByRole("main").className).toContain("overflow-y-auto");
+  });
+
+  it("en pantalla angosta el menú arranca contraído y reacciona al cambiar el ancho", () => {
+    let alCambiar: ((e: { matches: boolean }) => void) | undefined;
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: (_: string, fn: (e: { matches: boolean }) => void) => {
+        alCambiar = fn;
+      },
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      montar();
+      const aside = screen.getByRole("complementary");
+      expect(aside.className).toContain("w-sidebar-collapsed");
+
+      act(() => alCambiar?.({ matches: false }));
+      expect(aside.className).toContain("w-sidebar ");
+      expect(aside.className).not.toContain("w-sidebar-collapsed");
+
+      act(() => alCambiar?.({ matches: true }));
+      expect(aside.className).toContain("w-sidebar-collapsed");
+    } finally {
+      window.matchMedia = original;
+    }
   });
 });
 

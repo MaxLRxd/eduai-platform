@@ -7,6 +7,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { Tag } from "../../components/ui/Tag";
+import type { DashboardAlumnoMateria } from "../../services/dashboard.service";
 import { tasaAsistencia } from "../../utils/asistencia";
 
 function formatDue(iso: string): string {
@@ -97,16 +98,6 @@ export function StudentDashboardPage(): React.ReactElement {
                 </div>
               );
             })}
-            {d && d.materias.length > 0 && (
-              <div className="mt-1 pt-3.5 border-t border-border flex flex-col gap-2">
-                {d.materias.map((m) => (
-                  <div key={m.id} className="flex justify-between text-[12.5px]">
-                    <span className="text-text-2">{m.nombre}</span>
-                    <strong className="text-text-1">{m.promedio ?? "—"}</strong>
-                  </div>
-                ))}
-              </div>
-            )}
             {(courses ?? []).length === 0 && (
               <div className="py-4 text-[12px] text-text-3 text-center">Todavía no tenés materias asignadas.</div>
             )}
@@ -133,6 +124,70 @@ export function StudentDashboardPage(): React.ReactElement {
           </div>
         </Card>
       </div>
+
+      <MisNotas materias={d?.materias ?? []} onVerTodas={() => navigate("/student/progress")} />
     </div>
+  );
+}
+
+function MisNotas({
+  materias,
+  onVerTodas,
+}: {
+  materias: DashboardAlumnoMateria[];
+  onVerTodas: () => void;
+}): React.ReactElement | null {
+  if (materias.length === 0) return null;
+
+  return (
+    <section aria-label="Mis notas" className="mt-5">
+      <Card>
+        <CardHeader
+          title="Mis notas"
+          action={
+            <button className="text-xs font-semibold text-primary hover:text-primary-hover" onClick={onVerTodas}>
+              Ver todas →
+            </button>
+          }
+        />
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {materias.map((m) => (
+            <div key={m.id} className="border border-border rounded-lg p-3.5">
+              <div className="flex justify-between items-baseline gap-2 mb-2">
+                <h3 className="font-semibold text-[13px] text-text-1">{m.nombre}</h3>
+                <span className="text-[11px] text-text-3">
+                  Promedio <strong className="text-text-1 text-[13px]">{m.promedio ?? "—"}</strong>
+                </span>
+              </div>
+              {m.notas.length === 0 ? (
+                <p className="text-[12px] text-text-3 py-2">Todavía no tenés notas en esta materia.</p>
+              ) : (
+                <ul>
+                  {m.notas.map((n) => (
+                    <li key={n.id} className="flex justify-between items-center gap-2 py-1.5 border-b border-border last:border-0">
+                      <div className="min-w-0">
+                        <div className="text-[12.5px] text-text-1 truncate">{n.evaluacion}</div>
+                        <div className="text-[11px] text-text-3">
+                          {n.categoria ? `${n.categoria} · ` : ""}
+                          {formatDue(n.fecha)}
+                        </div>
+                      </div>
+                      <strong className={`text-[14px] ${n.calificacion >= 6 ? "text-success" : "text-danger"}`}>
+                        {n.calificacion}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {m.total_notas > m.notas.length && (
+                <p className="text-[11px] text-text-3 mt-2">
+                  Mostrando las {m.notas.length} más recientes de {m.total_notas}.
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </section>
   );
 }

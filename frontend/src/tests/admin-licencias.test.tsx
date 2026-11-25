@@ -10,13 +10,14 @@ vi.mock("../services/api", async () => {
 
 import { AdminLicenciasPage } from "../pages/admin/AdminLicenciasPage";
 
-const estado = (current: number, plan: string, range: string) => ({
-  uso: { current, limit: 500 },
-  planes: [
-    { name: "Starter", range: "≤ 100 MAU", features: "a", current: plan === "Starter" },
-    { name: "Scale", range: "501 – 2K MAU", features: "b", current: plan === "Scale" },
-    { name: plan, range, features: "c", current: true },
-  ].filter((p, i, a) => a.findIndex((x) => x.name === p.name) === i),
+const estado = (alumnos: number) => ({
+  licencia: {
+    nombre: "EduAI — Licencia institucional",
+    tipo: "UNICA",
+    estado: "ACTIVA",
+    incluye: ["Campus virtual", "Tutor IA"],
+  },
+  uso: { alumnos, docentes: 5, materias: 4 },
 });
 
 function montar() {
@@ -28,17 +29,29 @@ function montar() {
   );
 }
 
-describe("Licencias del admin", () => {
+describe("Licencia del admin (única, sin importar la cantidad de alumnos)", () => {
   beforeEach(() => {
     apiMock.mockReset();
   });
 
-  it("muestra el plan que informa el servidor, no uno fijo", async () => {
-    apiMock.mockResolvedValue(estado(50, "Starter", "≤ 100 MAU"));
+  it("muestra la licencia única, que incluye y el uso informativo", async () => {
+    apiMock.mockResolvedValue(estado(16));
     montar();
 
-    await waitFor(() => expect(screen.getByText(/Plan actual:/).textContent).toContain("Starter"));
-    expect(screen.getByText(/Plan actual:/).textContent).not.toContain("Growth");
+    expect(await screen.findByText("EduAI — Licencia institucional")).toBeInTheDocument();
+    expect(screen.getByText("Campus virtual")).toBeInTheDocument();
+    expect(screen.getByText("Tutor IA")).toBeInTheDocument();
+    expect(screen.getByText("Alumnos activos").nextSibling).toHaveTextContent("16");
+    expect(apiMock).toHaveBeenCalledWith("/api/admin/license");
+  });
+
+  it("con 12.000 alumnos es la misma licencia: sin planes, topes ni barra de capacidad", async () => {
+    apiMock.mockResolvedValue(estado(12000));
+    montar();
+
+    await waitFor(() => expect(screen.getByText("Alumnos activos").nextSibling).toHaveTextContent("12000"));
+    expect(screen.queryByText(/MAU|Starter|Growth|Enterprise|de capacidad|Planes disponibles/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/no hay topes ni cobro por alumno/i)).toBeInTheDocument();
   });
 
   it("si falla la carga lo avisa y no inventa datos", async () => {
@@ -47,15 +60,6 @@ describe("Licencias del admin", () => {
 
     expect(await screen.findByText(/boom/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
-    expect(screen.queryByText(/de capacidad/)).not.toBeInTheDocument();
     expect(screen.getByText("Sin datos")).toBeInTheDocument();
-  });
-
-  it("nunca muestra disponibles negativos ni más de 100%", async () => {
-    apiMock.mockResolvedValue({ uso: { current: 600, limit: 500 }, planes: [] });
-    montar();
-
-    await waitFor(() => expect(screen.getByText(/^0\s*disponibles$/)).toBeInTheDocument());
-    expect(screen.getByText(/100\.0% de capacidad/)).toBeInTheDocument();
   });
 });

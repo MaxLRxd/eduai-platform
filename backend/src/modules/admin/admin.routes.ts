@@ -68,6 +68,12 @@ router.post(
   validateBody(asignarProfesorSchema),
   adminController.asignarProfesor
 );
+router.delete(
+  "/admin/materias/:materiaId/profesores/:profesorId",
+  requireAuth,
+  requireRole("ADMIN"),
+  adminController.desasignarProfesor
+);
 
 router.delete(
   "/admin/materias/:materiaId/inscripciones/:alumnoId",

@@ -19,7 +19,6 @@ vi.mock("../services/api", async () => {
 
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { queryClient } from "../queryClient";
-import { getLicenseUsage } from "../services/adminLicensing.service";
 
 const ana = { id: "a", username: "ana@edu.ai", name: "Ana", lastName: "A", role: "ALUMNO" as const };
 const beto = { id: "b", username: "beto@edu.ai", name: "Beto", lastName: "B", role: "ALUMNO" as const };
@@ -87,25 +86,5 @@ describe("cambio de usuario en el mismo navegador", () => {
 
     expect(queryClient.getQueryData(["dashboard"])).toEqual({ promedio: 9 });
     expect(screen.getByText("listo")).toBeInTheDocument();
-  });
-});
-
-describe("licencias del admin: no se guarda el resultado entre pedidos", () => {
-  beforeEach(() => {
-    apiMock.mockReset();
-  });
-
-  it("dos pedidos simultáneos comparten una sola llamada", async () => {
-    apiMock.mockResolvedValue({ uso: { current: 1, limit: 5 }, planes: [] });
-    await Promise.all([getLicenseUsage(), getLicenseUsage()]);
-    expect(apiMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("un pedido posterior vuelve a consultar al servidor (no devuelve datos viejos)", async () => {
-    apiMock.mockResolvedValueOnce({ uso: { current: 1, limit: 5 }, planes: [] });
-    apiMock.mockResolvedValueOnce({ uso: { current: 2, limit: 5 }, planes: [] });
-
-    expect((await getLicenseUsage()).current).toBe(1);
-    expect((await getLicenseUsage()).current).toBe(2);
   });
 });

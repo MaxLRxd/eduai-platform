@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { useAdminProfessors } from "../../hooks/useAdminUsers";
-import { useAdminSubjects, useAssignAdminProfessor, useSaveAdminSubject } from "../../hooks/useAdminSubjects";
+import {
+  useAdminSubjects,
+  useAssignAdminProfessor,
+  useSaveAdminSubject,
+  useUnassignAdminProfessor,
+} from "../../hooks/useAdminSubjects";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { TableWrap, Table, Thead, Th, Td } from "../../components/ui/Table";
 import { Tag, type TagColor } from "../../components/ui/Tag";
@@ -25,6 +30,7 @@ export function AdminMateriasPage(): React.ReactElement {
   const { data: professors } = useAdminProfessors();
   const save = useSaveAdminSubject();
   const assign = useAssignAdminProfessor();
+  const unassign = useUnassignAdminProfessor();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [message, setMessage] = useState("");
@@ -68,6 +74,23 @@ export function AdminMateriasPage(): React.ReactElement {
     );
   };
 
+  const handleUnassign = (materiaId: string, materiaNombre: string, profesorId: string, profesorNombre: string): void => {
+    if (
+      !window.confirm(
+        `¿Quitar a ${profesorNombre} de ${materiaNombre}? Pierde el acceso a la materia; su usuario y su historial se conservan y se le avisa.`
+      )
+    ) {
+      return;
+    }
+    unassign.mutate(
+      { materiaId, profesorId },
+      {
+        onSuccess: () => setMessage(`${profesorNombre} ya no está asignado a "${materiaNombre}".`),
+        onError: (e) => setMessage(apiErrorMessage(e, "No se pudo quitar al docente de la materia.")),
+      }
+    );
+  };
+
   const loadForEdit = (id: string, nombre: string, estado: SubjectStatus): void => {
     const existing = subjects?.find((s) => s.id === id);
     setForm({
@@ -105,7 +128,28 @@ export function AdminMateriasPage(): React.ReactElement {
                 {(subjects ?? []).map((s) => (
                   <tr key={s.id} className="hover:bg-surface-2">
                     <Td className="font-semibold text-text-1">{s.nombre}</Td>
-                    <Td className="text-xs">{s.profesor || "— Sin asignar —"}</Td>
+                    <Td className="text-xs">
+                      {s.profesores.length === 0 ? (
+                        "— Sin asignar —"
+                      ) : (
+                        <ul className="flex flex-col gap-1">
+                          {s.profesores.map((p) => (
+                            <li key={p.profesorId} className="flex items-center gap-2">
+                              <span>{p.nombre}</span>
+                              <button
+                                type="button"
+                                aria-label={`Quitar a ${p.nombre} de ${s.nombre}`}
+                                disabled={unassign.isPending}
+                                onClick={() => handleUnassign(s.id, s.nombre, p.profesorId, p.nombre)}
+                                className="text-[11px] font-semibold text-red-600 hover:underline disabled:opacity-50"
+                              >
+                                Quitar
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </Td>
                     <Td className="text-xs">{s.alumnos}</Td>
                     <Td>
                       <Tag color={STATUS_COLOR[s.estado]}>{s.estado}</Tag>

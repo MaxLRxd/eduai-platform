@@ -109,6 +109,15 @@ export async function asignarProfesor(
   res.status(201).json({ asignacion });
 }
 
+export async function desasignarProfesor(
+  req: Request<{ materiaId: string; profesorId: string }>,
+  res: Response
+): Promise<void> {
+  requireUser(req);
+  const asignacion = await adminService.desasignarProfesor(req.params.materiaId, req.params.profesorId);
+  res.json({ asignacion });
+}
+
 export async function listarClaves(
   req: Request<unknown, unknown, unknown, { materiaId?: string }>,
   res: Response
@@ -136,9 +145,15 @@ export async function revocarClave(
   res.json({ clave });
 }
 
+/** Filtros opcionales ?periodo=AAAA-1|AAAA-2 y ?materia_id=<uuid> (se validan al consultar). */
+function filtrosDeReporte(req: { query: Record<string, unknown> }): { periodo?: string; materia_id?: string } {
+  const texto = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+  return { periodo: texto(req.query.periodo), materia_id: texto(req.query.materia_id) };
+}
+
 export async function listarReportes(req: Request, res: Response): Promise<void> {
   requireUser(req);
-  const reports = await adminService.reportesAdmin();
+  const reports = await adminService.reportesAdmin(filtrosDeReporte(req));
   res.json({ reports });
 }
 
@@ -148,7 +163,7 @@ export async function exportarReporte(
 ): Promise<void> {
   requireUser(req);
   const formato = req.query.format === "pdf" ? "pdf" : "csv";
-  const resultado = await adminService.exportarReporte(req.params.type, formato);
+  const resultado = await adminService.exportarReporte(req.params.type, formato, filtrosDeReporte(req));
   res.json(resultado);
 }
 

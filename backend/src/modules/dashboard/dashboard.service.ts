@@ -3,6 +3,9 @@ import type { Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 
+/** Cuantas notas recientes por materia muestra el panel del alumno (el resto esta en «Mi progreso»). */
+const NOTAS_POR_MATERIA = 5;
+
 /** Período académico (YYYY-1 / YYYY-2) al que pertenece una fecha de clase. */
 function periodoDeFecha(fecha: Date): string {
   const anio = fecha.getUTCFullYear();
@@ -22,7 +25,16 @@ export async function dashboardAlumno(alumnoId: string, periodo?: string) {
     }),
     prisma.nota.findMany({
       where: { alumno_id: alumnoId },
-      select: { materia_id: true, calificacion: true, periodo: true, categoria_id: true },
+      select: {
+        id: true,
+        materia_id: true,
+        calificacion: true,
+        periodo: true,
+        categoria_id: true,
+        evaluacion: true,
+        registrado_en: true,
+        categoria: { select: { nombre: true } },
+      },
     }),
     prisma.asistencia.findMany({
       where: { alumno_id: alumnoId },
@@ -92,7 +104,14 @@ export async function dashboardAlumno(alumnoId: string, periodo?: string) {
   let promedioGlobal = 0;
   let promPeriodoActual: number | null = null;
 
+  // Notas propias agrupadas por materia (las mas recientes primero), respetando el filtro de periodo.
+  const notasPorMateria = new Map<string, typeof notasFiltradas>();
+  for (const n of [...notasFiltradas].sort((a, b) => b.registrado_en.getTime() - a.registrado_en.getTime())) {
+    notasPorMateria.set(n.materia_id, [...(notasPorMateria.get(n.materia_id) ?? []), n]);
+  }
+
   const materiasResumen = materias.map((insc) => {
+    const propias = notasPorMateria.get(insc.materia_id) ?? [];
     const promedio = promedioPorMateria.get(insc.materia_id)?.promedio ?? null;
     if (promedio !== null) {
       promedioGlobal += promedio;
@@ -102,6 +121,14 @@ export async function dashboardAlumno(alumnoId: string, periodo?: string) {
       nombre: insc.materia.nombre,
       promedio: promedio !== null ? Math.round(promedio * 100) / 100 : null,
       progreso: progresoDe(insc.materia.id),
+      total_notas: propias.length,
+      notas: propias.slice(0, NOTAS_POR_MATERIA).map((n) => ({
+        id: n.id,
+        evaluacion: n.evaluacion || "Calificación del período",
+        categoria: n.categoria?.nombre ?? null,
+        calificacion: n.calificacion.toNumber(),
+        fecha: n.registrado_en,
+      })),
     };
   });
 

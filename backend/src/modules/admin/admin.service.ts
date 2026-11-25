@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { TipoProfesor } from "@prisma/client";
 import { renderReportePdf } from "./reportsPdf";
+import { reportesAdmin as consultarReportes, type FiltrosReporte, type Reporte } from "./admin.reportes";
 import { prisma } from "../../config/prisma";
 import { permitirAcceso, revocarAcceso } from "../../config/cache";
 import { logger } from "../../config/logger";
@@ -220,7 +221,9 @@ export async function listarMaterias(page: number, pageSize: number) {
         _count: { select: { inscripciones: true, secciones: true } },
         profesores: {
           where: { activo: true },
-          select: { profesor: { select: { usuario: { select: { id: true, nombre: true, email: true } } } } },
+          select: {
+            profesor: { select: { id: true, usuario: { select: { id: true, nombre: true, email: true } } } },
+          },
         },
       },
       orderBy: { created_at: "desc" },
@@ -238,7 +241,8 @@ export async function listarMaterias(page: number, pageSize: number) {
       activa: m.activa,
       inscriptos: m._count.inscripciones,
       secciones: m._count.secciones,
-      profesores: m.profesores.map((p) => p.profesor.usuario),
+      // `profesor_id` es el id del perfil docente (el que piden asignar y quitar); `id` es el del usuario.
+      profesores: m.profesores.map((p) => ({ ...p.profesor.usuario, profesor_id: p.profesor.id })),
     })),
     total,
     page,
@@ -371,6 +375,25 @@ export async function asignarProfesor(materiaId: string, input: AsignarProfesorI
   };
 }
 
+/**
+ * CU-AD02: quita a un docente de una materia sin tocar su usuario ni nada de lo que hizo
+ * (actividades, rubricas, notas y entregas se conservan; solo pierde el acceso).
+ */
+export async function desasignarProfesor(materiaId: string, profesorId: string) {
+  assertUuid(materiaId, "Materia no encontrada");
+  assertUuid(profesorId, "Profesor no encontrado");
+
+  const previa = await prisma.materiaProfesor.findUnique({
+    where: { materia_id_profesor_id: { materia_id: materiaId, profesor_id: profesorId } },
+  });
+
+  if (!previa?.activo) {
+    throw new AppError(404, "El profesor no está asignado a esta materia");
+  }
+
+  return asignarProfesor(materiaId, { profesor_id: profesorId, activo: false });
+}
+
 function toClaveDto(clave: {
   id: string;
   materia_id: string;
@@ -459,159 +482,14 @@ export async function revocarClaveAdmin(claveId: string) {
   return toClaveDto(clave);
 }
 
-interface StatItem {
-  label: string;
-  value: string;
-}
+export type { Reporte, FiltrosReporte } from "./admin.reportes";
 
-interface Reporte {
-  type: string;
-  title: string;
-  description: string;
-  headline: string;
-  stats: StatItem[];
-  footnote: string;
-}
-
-const REPORTES_METADATA: { type: string; title: string; description: string }[] = [
-  { type: "asistencia", title: "📊 Asistencia general", description: "Asistencia promedio por materia y período" },
-  { type: "notas", title: "📈 Notas y rendimiento", description: "Promedio global y distribución de calificaciones" },
-  { type: "tutor", title: "🤖 Uso Tutor IA", description: "Consultas, materias más consultadas y sesiones activas" },
-  { type: "retencion", title: "👥 Retención de alumnos", description: "Alumnos activos, inscriptos y en riesgo" },
-  { type: "mau", title: "🔑 Consumo MAU", description: "Alumnos activos e inscripciones por período" },
-  { type: "ejecutivo", title: "📋 Resumen ejecutivo", description: "Informe completo para dirección institucional" },
-];
-
-export async function reportesAdmin() {
-  const [usuarios, inscripcionesCount, materiasCount, notas, asistencia, sesionesCount, mensajesCount, alertas, claves, sesionesTop] =
-    await Promise.all([
-      prisma.usuario.groupBy({ by: ["rol"], _count: { _all: true } }),
-      prisma.inscripcion.count(),
-      prisma.materia.count(),
-      prisma.nota.findMany({
-        select: { calificacion: true, materia_id: true },
-      }),
-      prisma.asistencia.groupBy({ by: ["estado"], _count: { _all: true } }),
-      prisma.sesionIA.count(),
-      prisma.mensajeIA.count(),
-      prisma.alertaRiesgoAcademico.groupBy({ by: ["nivel_severidad"], where: { activa: true }, _count: { _all: true } }),
-      prisma.claveMatriculacion.aggregate({ _sum: { usos_actuales: true } }),
-      prisma.sesionIA.groupBy({ by: ["materia_id"], _count: { _all: true }, orderBy: { _count: { materia_id: "desc" } }, take: 5 }),
-    ]);
-
-  const contarRol = (rol: string) => usuarios.find((u) => u.rol === rol)?._count._all ?? 0;
-  const alumnos = contarRol("ALUMNO");
-  const docentes = contarRol("PROFESOR");
-
-  const notasCount = notas.length;
-  const promedioGlobal = notasCount > 0 ? notas.reduce((a, b) => a + b.calificacion.toNumber(), 0) / notasCount : 0;
-  const aprobadas = notas.filter((n) => n.calificacion.toNumber() >= 6).length;
-  const tasaAprobacion = notasCount > 0 ? Math.round((aprobadas / notasCount) * 100) : 0;
-
-  const sumaAsistencia = asistencia.reduce((a, b) => a + b._count._all, 0);
-  const presentes = asistencia.filter((a) => a.estado === "PRESENTE" || a.estado === "JUSTIFICADO").reduce((a, b) => a + b._count._all, 0);
-  const ausentes = asistencia.filter((a) => a.estado === "AUSENTE").reduce((a, b) => a + b._count._all, 0);
-  const tardanzas = asistencia.filter((a) => a.estado === "TARDANZA").reduce((a, b) => a + b._count._all, 0);
-  const tasaAsistencia = sumaAsistencia > 0 ? Math.round((presentes / sumaAsistencia) * 100) : 0;
-
-  const topMaterias = await prisma.materia.findMany({
-    where: { id: { in: sesionesTop.map((s) => s.materia_id) } },
-    select: { id: true, nombre: true },
+/** Los reportes usan la misma retencion mensual que «Metricas de exito»: una sola definicion. */
+export async function reportesAdmin(filtros: FiltrosReporte = {}) {
+  return consultarReportes(filtros, async () => {
+    const m = await metricasDeExito();
+    return { valor: m.retencion_mensual.valor, detalle: m.retencion_mensual.detalle };
   });
-  const nombreMateria = new Map(topMaterias.map((m) => [m.id, m.nombre]));
-
-  const alumnosInscriptos = await prisma.inscripcion.groupBy({ by: ["alumno_id"], _count: { _all: true } });
-  const tasaRetencion = alumnos > 0 ? Math.round((alumnosInscriptos.length / alumnos) * 100) : 0;
-
-  const alertasCount = alertas.reduce((a, b) => a + b._count._all, 0);
-  const alertasAlta = alertas.find((x) => x.nivel_severidad === "ALTA")?._count._all ?? 0;
-  const usosClaves = claves._sum.usos_actuales ?? 0;
-
-  const reports: Record<string, Reporte> = {
-    asistencia: {
-      type: "asistencia",
-      title: "📊 Asistencia general",
-      description: "Asistencia promedio por materia y período",
-      headline: `${tasaAsistencia}% de asistencia`,
-      stats: [
-        { label: "Registros totales", value: String(sumaAsistencia) },
-        { label: "Presentes", value: String(presentes) },
-        { label: "Ausencias", value: String(ausentes) },
-        { label: "Tardanzas", value: String(tardanzas) },
-      ],
-      footnote: "Sobre la totalidad de asistencias registradas en el sistema.",
-    },
-    notas: {
-      type: "notas",
-      title: "📈 Notas y rendimiento",
-      description: "Promedio global y distribución de calificaciones",
-      headline: `Promedio ${promedioGlobal.toFixed(2)}`,
-      stats: [
-        { label: "Calificaciones cargadas", value: String(notasCount) },
-        { label: "Aprobadas (≥6)", value: `${aprobadas} (${tasaAprobacion}%)` },
-        { label: "Docentes", value: String(docentes) },
-      ],
-      footnote: `Tasa de aprobación del ${tasaAprobacion}% sobre las notas registradas.`,
-    },
-    tutor: {
-      type: "tutor",
-      title: "🤖 Uso Tutor IA",
-      description: "Consultas, materias más consultadas y sesiones activas",
-      headline: `${sesionesCount} sesiones de tutor`,
-      stats: [
-        { label: "Sesiones IA", value: String(sesionesCount) },
-        { label: "Mensajes intercambiados", value: String(mensajesCount) },
-        ...sesionesTop.slice(0, 3).map((s) => ({
-          label: nombreMateria.get(s.materia_id) ?? "Materia",
-          value: `${s._count._all} consultas`,
-        })),
-      ],
-      footnote: "Top de materias por cantidad de sesiones del tutor.",
-    },
-    retencion: {
-      type: "retencion",
-      title: "👥 Retención de alumnos",
-      description: "Alumnos activos, inscriptos y en riesgo",
-      headline: `${tasaRetencion}% de retención`,
-      stats: [
-        { label: "Alumnos registrados", value: String(alumnos) },
-        { label: "Alumnos inscriptos a ≥1 materia", value: String(alumnosInscriptos.length) },
-        { label: "Alertas académicas activas", value: String(alertasCount) },
-        { label: "Alertas de severidad ALTA", value: String(alertasAlta) },
-      ],
-      footnote: "La retención mide alumnos con al menos una inscripción activa.",
-    },
-    mau: {
-      type: "mau",
-      title: "🔑 Consumo MAU",
-      description: "Alumnos activos e inscripciones por período",
-      headline: `${alumnosInscriptos.length} alumnos activos`,
-      stats: [
-        { label: "Alumnos con actividad", value: String(alumnosInscriptos.length) },
-        { label: "Inscripciones totales", value: String(inscripcionesCount) },
-        { label: "Materias registradas", value: String(materiasCount) },
-        { label: "Usos de claves de acceso", value: String(usosClaves) },
-      ],
-      footnote: "Alumno activo = cuenta con al menos una inscripción a materias.",
-    },
-    ejecutivo: {
-      type: "ejecutivo",
-      title: "📋 Resumen ejecutivo",
-      description: "Informe completo para dirección institucional",
-      headline: `${alumnos} alumnos · ${docentes} docentes · ${materiasCount} materias`,
-      stats: [
-        { label: "Inscripciones totales", value: String(inscripcionesCount) },
-        { label: "Asistencia promedio", value: `${tasaAsistencia}%` },
-        { label: "Promedio de notas", value: promedioGlobal.toFixed(2) },
-        { label: "Tasa de aprobación", value: `${tasaAprobacion}%` },
-        { label: "Retención de alumnos", value: `${tasaRetencion}%` },
-        { label: "Alertas activas", value: String(alertasCount) },
-      ],
-      footnote: "Datos globales de la institución al momento de la consulta.",
-    },
-  };
-
-  return REPORTES_METADATA.map((meta) => ({ ...meta, ...reports[meta.type] }));
 }
 
 function escapeCsvCell(cell: string): string {
@@ -632,8 +510,12 @@ export function csvFromReporte(r: Reporte): string {
   return "\uFEFF" + lines.map((line) => line.map(escapeCsvCell).join(";")).join("\r\n");
 }
 
-export async function exportarReporteCsv(type: string) {
-  const reportes = await reportesAdmin();
+function sufijoArchivo(filtros: FiltrosReporte): string {
+  return [filtros.periodo, filtros.materia_id ? "materia" : ""].filter(Boolean).map((s) => `-${s}`).join("");
+}
+
+export async function exportarReporteCsv(type: string, filtros: FiltrosReporte = {}) {
+  const reportes = await reportesAdmin(filtros);
   const reporte = reportes.find((r) => r.type === type);
 
   if (!reporte) {
@@ -641,13 +523,13 @@ export async function exportarReporteCsv(type: string) {
   }
 
   return {
-    filename: `reporte-${type}.csv`,
+    filename: `reporte-${type}${sufijoArchivo(filtros)}.csv`,
     csv: csvFromReporte(reporte),
   };
 }
 
-export async function exportarReportePdf(type: string) {
-  const reportes = await reportesAdmin();
+export async function exportarReportePdf(type: string, filtros: FiltrosReporte = {}) {
+  const reportes = await reportesAdmin(filtros);
   const reporte = reportes.find((r) => r.type === type);
 
   if (!reporte) {
@@ -657,48 +539,45 @@ export async function exportarReportePdf(type: string) {
   const buffer = await renderReportePdf(reporte);
 
   return {
-    filename: `reporte-${type}.pdf`,
+    filename: `reporte-${type}${sufijoArchivo(filtros)}.pdf`,
     pdf: buffer.toString("base64"),
   };
 }
 
-export async function exportarReporte(type: string, formato: "csv" | "pdf" = "csv") {
-  return formato === "pdf" ? exportarReportePdf(type) : exportarReporteCsv(type);
+export async function exportarReporte(type: string, formato: "csv" | "pdf" = "csv", filtros: FiltrosReporte = {}) {
+  return formato === "pdf" ? exportarReportePdf(type, filtros) : exportarReporteCsv(type, filtros);
 }
 
-const PLANES_LICENCIA: {
-  name: string;
-  maxMau: number;
-  range: string;
-  features: string;
-}[] = [
-  { name: "Starter", maxMau: 100, range: "≤ 100 MAU", features: "LMS + IA básico" },
-  { name: "Growth", maxMau: 500, range: "101 – 500 MAU", features: "+ Corrección + Analítica" },
-  { name: "Scale", maxMau: 2000, range: "501 – 2K MAU", features: "+ SSO + Integración" },
-  { name: "Enterprise", maxMau: Number.POSITIVE_INFINITY, range: "2K+ MAU", features: "Personalizado" },
-];
+/** Lo que incluye la licencia: es el mismo producto completo para todas las instituciones. */
+const LICENCIA_INCLUYE = [
+  "Campus virtual: materias, contenidos, actividades y calificaciones",
+  "Tutor IA con respuestas basadas en el material de la materia",
+  "Corrección asistida por IA con revisión del docente",
+  "Asistente de planificación para docentes",
+  "Analítica académica y alertas de riesgo",
+  "Reportes institucionales (CSV y PDF)",
+  "Recuperación de contraseña y administración de usuarios",
+] as const;
 
-const LIMITE_MAU = 5000;
-
+/**
+ * Licencia unica: se vende un solo producto, sin importar la cantidad de alumnos. El uso se informa
+ * pero no hay topes, planes ni cobro por alumno activo.
+ */
 export async function obtenerEstadoLicencia() {
-  const maus = await prisma.usuario.count({
-    where: { rol: "ALUMNO", activo: true },
-  });
-
-  const planActual = PLANES_LICENCIA.find((p) => maus <= p.maxMau) ?? PLANES_LICENCIA[PLANES_LICENCIA.length - 1];
-  const limite = Number.isFinite(planActual.maxMau) ? planActual.maxMau : LIMITE_MAU;
+  const [alumnos, docentes, materias] = await Promise.all([
+    prisma.usuario.count({ where: { rol: "ALUMNO", activo: true } }),
+    prisma.usuario.count({ where: { rol: "PROFESOR", activo: true } }),
+    prisma.materia.count({ where: { activa: true } }),
+  ]);
 
   return {
-    uso: {
-      current: maus,
-      limit: limite,
+    licencia: {
+      nombre: "EduAI — Licencia institucional",
+      tipo: "UNICA" as const,
+      estado: "ACTIVA" as const,
+      incluye: [...LICENCIA_INCLUYE],
     },
-    planes: PLANES_LICENCIA.map((p) => ({
-      name: p.name,
-      range: p.range,
-      features: p.features,
-      current: p.name === planActual.name,
-    })),
+    uso: { alumnos, docentes, materias },
   };
 }
 

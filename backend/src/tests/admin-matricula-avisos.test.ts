@@ -201,6 +201,57 @@ describe("admin: desmatriculacion, asignacion de docentes y avisos in-app", () =
       expect((await asignar(false)).status).toBe(409);
     });
 
+    describe("quitar un docente (DELETE explícito)", () => {
+      const quitar = (profesorId = PROFESOR_ID) =>
+        request(server)
+          .delete(`/api/admin/materias/${MATERIA_ID}/profesores/${profesorId}`)
+          .set(con(tokenAdmin()));
+
+      it("marca la asignación como inactiva, avisa al docente y no toca su usuario", async () => {
+        prismaMock.materiaProfesor.findUnique.mockResolvedValue({ activo: true });
+        prismaMock.materiaProfesor.upsert.mockResolvedValue({ activo: false });
+
+        const res = await quitar();
+
+        expect(res.status).toBe(200);
+        expect(res.body.asignacion).toEqual({ materia_id: MATERIA_ID, profesor_id: PROFESOR_ID, activo: false });
+        expect(prismaMock.materiaProfesor.upsert).toHaveBeenCalledWith(
+          expect.objectContaining({ update: expect.objectContaining({ activo: false, desasignado_en: expect.any(Date) }) })
+        );
+        expect(prismaMock.notificacion.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ usuario_id: PROFESOR_USUARIO_ID, titulo: "Materia desasignada" }),
+          })
+        );
+        // Solo cambia la asignación: ni el usuario ni nada de lo que el docente creó.
+        expect(prismaMock.usuario.findFirst).not.toHaveBeenCalled();
+      });
+
+      it("404 si el docente no estaba asignado, y también si ya lo habían quitado", async () => {
+        prismaMock.materiaProfesor.findUnique.mockResolvedValue(null);
+        expect((await quitar()).status).toBe(404);
+
+        prismaMock.materiaProfesor.findUnique.mockResolvedValue({ activo: false });
+        expect((await quitar()).status).toBe(404);
+        expect(prismaMock.materiaProfesor.upsert).not.toHaveBeenCalled();
+      });
+
+      it("404 con un id mal formado y 403 si no es administrador", async () => {
+        expect((await quitar("no-es-uuid")).status).toBe(404);
+
+        const res = await request(server)
+          .delete(`/api/admin/materias/${MATERIA_ID}/profesores/${PROFESOR_ID}`)
+          .set(con(tokenAlumno()));
+        expect(res.status).toBe(403);
+      });
+
+      it("se puede volver a asignar al docente después de quitarlo", async () => {
+        prismaMock.materiaProfesor.findUnique.mockResolvedValue({ activo: false });
+
+        expect((await asignar()).status).toBe(201);
+      });
+    });
+
     it("si falla el aviso igual se completa la asignacion", async () => {
       prismaMock.materiaProfesor.findUnique.mockResolvedValue(null);
       prismaMock.notificacion.create.mockRejectedValue(new Error("db caida"));

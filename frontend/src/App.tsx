@@ -323,7 +323,7 @@ export function App(): React.ReactElement {
         path="/admin/licencias"
         element={
           <ProtectedRoute allow="ADMIN">
-            <Shell title="Licencias">
+            <Shell title="Licencia">
               <AdminLicenciasPage />
             </Shell>
           </ProtectedRoute>

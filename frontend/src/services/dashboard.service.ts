@@ -6,6 +6,24 @@ export interface DashboardResumenComun {
   alertasActivas: number;
 }
 
+export interface DashboardNota {
+  id: string;
+  evaluacion: string;
+  categoria: string | null;
+  calificacion: number;
+  fecha: string;
+}
+
+export interface DashboardAlumnoMateria {
+  id: string;
+  nombre: string;
+  promedio: number | null;
+  progreso: number;
+  /** Las notas mas recientes de la materia (como mucho 5), ya filtradas por el periodo elegido. */
+  notas: DashboardNota[];
+  total_notas: number;
+}
+
 export interface DashboardAlumno {
   rol: "ALUMNO";
   periodos: string[];
@@ -14,7 +32,7 @@ export interface DashboardAlumno {
     promedioGlobal: number;
     promedioPeriodoActual: number | null;
   };
-  materias: { id: string; nombre: string; promedio: number | null; progreso: number }[];
+  materias: DashboardAlumnoMateria[];
   asistencia: { estado: string; count: number }[];
   proximasActividades: { id: string; nombre: string; materia: string; fecha_limite: string }[];
 }

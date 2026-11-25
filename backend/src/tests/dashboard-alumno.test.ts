@@ -26,6 +26,25 @@ const prismaMock = prisma as unknown as {
 const materia = (id: string, nombre: string) => ({ id, nombre });
 const dec = (n: number) => ({ toNumber: () => n });
 
+const nota = (
+  id: string,
+  materiaId: string,
+  valor: number,
+  periodo: string,
+  registrado: Date,
+  evaluacion = "",
+  categoria: string | null = null
+) => ({
+  id,
+  materia_id: materiaId,
+  calificacion: dec(valor),
+  periodo,
+  categoria_id: null,
+  evaluacion,
+  registrado_en: registrado,
+  categoria: categoria ? { nombre: categoria } : null,
+});
+
 const actividad = (id: string, materiaId: string, entregada: boolean, dias: number) => ({
   id,
   nombre: `Actividad ${id}`,
@@ -44,8 +63,8 @@ describe("dashboardAlumno", () => {
       { materia_id: "m2", materia: materia("m2", "Redes") },
     ]);
     prismaMock.nota.findMany.mockResolvedValue([
-      { materia_id: "m1", calificacion: dec(8), periodo: "2026-1" },
-      { materia_id: "m1", calificacion: dec(6), periodo: "2026-1" },
+      nota("n1", "m1", 8, "2026-1", new Date(Date.UTC(2026, 3, 10)), "Parcial 1", "Parcial"),
+      nota("n2", "m1", 6, "2026-1", new Date(Date.UTC(2026, 4, 2)), "", null),
     ]);
     prismaMock.asistencia.findMany.mockResolvedValue([
       {
@@ -65,10 +84,44 @@ describe("dashboardAlumno", () => {
   it("calcula el progreso por materia como actividades entregadas sobre activas", async () => {
     const d = await dashboardAlumno(ALUMNO_ID);
 
-    expect(d.materias).toEqual([
+    expect(d.materias.map(({ id, nombre, promedio, progreso }) => ({ id, nombre, promedio, progreso }))).toEqual([
       { id: "m1", nombre: "Bases de Datos", promedio: 7, progreso: 50 },
       { id: "m2", nombre: "Redes", promedio: null, progreso: 0 },
     ]);
+  });
+
+  it("devuelve las notas propias agrupadas por materia, la mas reciente primero", async () => {
+    const d = await dashboardAlumno(ALUMNO_ID);
+
+    const bd = d.materias.find((m) => m.id === "m1");
+    expect(bd?.total_notas).toBe(2);
+    expect(bd?.notas.map((n) => [n.id, n.evaluacion, n.categoria, n.calificacion])).toEqual([
+      ["n2", "Calificación del período", null, 6],
+      ["n1", "Parcial 1", "Parcial", 8],
+    ]);
+    // Una materia sin notas no inventa ninguna.
+    expect(d.materias.find((m) => m.id === "m2")).toMatchObject({ total_notas: 0, notas: [] });
+  });
+
+  it("muestra solo las 5 ultimas por materia pero informa el total", async () => {
+    prismaMock.nota.findMany.mockResolvedValue(
+      Array.from({ length: 7 }, (_, i) => nota(`x${i}`, "m1", 5 + i * 0.5, "2026-1", new Date(Date.UTC(2026, 0, i + 1))))
+    );
+
+    const d = await dashboardAlumno(ALUMNO_ID);
+    const bd = d.materias.find((m) => m.id === "m1");
+
+    expect(bd?.total_notas).toBe(7);
+    expect(bd?.notas).toHaveLength(5);
+    expect(bd?.notas[0].id).toBe("x6");
+  });
+
+  it("consulta solo las notas del alumno autenticado", async () => {
+    await dashboardAlumno(ALUMNO_ID);
+
+    expect(prismaMock.nota.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { alumno_id: ALUMNO_ID } })
+    );
   });
 
   it("cuenta como pendientes solo las actividades sin entrega y las lista por fecha", async () => {
@@ -92,8 +145,8 @@ describe("dashboardAlumno", () => {
 
   it("filtra notas y asistencias por período", async () => {
     prismaMock.nota.findMany.mockResolvedValue([
-      { materia_id: "m1", calificacion: dec(4), periodo: "2026-1" },
-      { materia_id: "m1", calificacion: dec(10), periodo: "2026-2" },
+      nota("p1", "m1", 4, "2026-1", new Date(Date.UTC(2026, 2, 1))),
+      nota("p2", "m1", 10, "2026-2", new Date(Date.UTC(2026, 8, 1))),
     ]);
     prismaMock.asistencia.findMany.mockResolvedValue([
       { estado: "AUSENTE", fecha_clase: new Date(Date.UTC(2026, 2, 1)) },
@@ -107,6 +160,8 @@ describe("dashboardAlumno", () => {
     expect(d.materias.find((m) => m.id === "m1")?.promedio).toBe(10);
     expect(d.resumen.promedioGlobal).toBe(10);
     expect(d.asistencia).toEqual([{ estado: "PRESENTE", count: 1 }]);
+    // Las notas de la lista respetan el mismo filtro de periodo.
+    expect(d.materias.find((m) => m.id === "m1")?.notas.map((n) => n.id)).toEqual(["p2"]);
   });
 
   it("devuelve todo en cero para un alumno sin actividades ni notas", async () => {

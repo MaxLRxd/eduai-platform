@@ -1,6 +1,6 @@
 # Guía de estudio para la defensa
 
-Complemento de la presentación (35 diapositivas, con notas del orador). Sirve para estudiar las respuestas a
+Complemento de la presentación (41 diapositivas, con notas del orador). Sirve para estudiar las respuestas a
 las preguntas probables de los profesores, **con el dato y el archivo del código donde se comprueba**.
 Si un profesor pide ver algo, ahí está dónde mirar.
 
@@ -35,6 +35,8 @@ Se ejecuta **en local con Docker Compose** (acordado con la cátedra; el desplie
 | Vector | 1536 números (modelo `gemini-embedding-2`) |
 | Caché de respuestas | Redis, 1 hora |
 | Latencia medida | mediana **6,84 s** contra el objetivo de **3 s** → **no cumple** |
+| Grafo de conocimiento | 3.174 nodos · 7.896 relaciones · 145 comunidades · 96 % extraído del código |
+| Ahorro de tokens medido | consulta al grafo ≈ 503 tokens vs ≈ 7.030 leyendo 6 archivos (14×) vs ≈ 390.000 todo el repo |
 
 ---
 
@@ -126,6 +128,24 @@ Encuesta a 42 personas (34 estudiantes y 8 docentes), relevamiento de producto E
 **¿Qué metodología usaron y por qué?**
 Scrum, con sprints de 2 semanas, porque el proyecto es iterativo y necesitaba validar y absorber cambios.
 Roles: Product Owner (Acevedo), Scrum Master (Canello), equipo de desarrollo.
+
+**¿Cómo desarrollaron? ¿Qué es spec-driven?**
+Además de Scrum (que organiza al equipo), desarrollamos dirigidos por especificaciones. (1) **Especificar:** los 26
+casos de uso con flujos y excepciones (Anexo B) y los **contratos** de entrada y salida (Zod en el backend,
+Pydantic en el servicio de IA y el cliente `aiClient.ts` que los une). (2) **Planificar:** plan por fases con
+reglas del proyecto y tareas con estado (`PLAN_DE_ACCION.md`). (3) **Implementar:** contrato primero y después las
+tres capas con patrones ya probados (el asistente docente copió el patrón del tutor; la corrección copió el patrón
+de salida estructurada del simulacro). (4) **Verificar:** pruebas por capa con la IA simulada (`FakeLLM`,
+`FakeEmbeddings`, `FakeRetrieval`) y pruebas punta a punta. (5) **Trazar:** `MATRIZ_CASOS_DE_USO.md` cruza cada
+caso de uso con su código y su prueba. Encaja porque tres tecnologías (React, Node, Python) se hablan por
+contratos: definirlos primero permitió avanzar en paralelo. *Evidencia en el repo:* `PLAN_DE_ACCION.md` (regla 6
+«contrato primero» y los contratos 1.1, 2.1 y 2.2) y `docs/PROMPTS_DESARROLLO.md`.
+
+**¿Cómo se relaciona con el ahorro de tokens al desarrollar?**
+La especificación evita re-explicar el contexto en cada pedido; el grafo orienta sobre qué archivos abrir (unos
+500 tokens por consulta) y se leen solo esos; las pruebas con la IA simulada no gastan tokens del modelo real; y el
+grafo se reconstruye solo con lo que cambió, sin costo. Ahorro medido en un caso: ≈ 500 tokens contra ≈ 7.030
+leyendo los archivos (14×) y ≈ 390.000 pegando todo el repositorio.
 
 **¿Qué diferencia hubo entre lo planificado y lo hecho?**
 Cinco desvíos, todos documentados: Gemini en lugar de OpenAI/Claude (cuota gratuita), embeddings de Gemini,
@@ -263,6 +283,49 @@ El cupo se reserva con un `UPDATE` condicional atómico: solo uno lo consigue.
 **¿Qué pasa si se cae la IA o Gemini?**
 Reintentos con espera creciente (hasta 4); si no responde, el alumno ve un aviso con botón *Reintentar* y el
 resto de la plataforma sigue funcionando.
+
+### Sobre el grafo de conocimiento y el ahorro de tokens
+
+**¿Qué es el grafo de conocimiento que mencionan?**
+Una herramienta de **desarrollo** (graphify), distinta del tutor del producto. Lee la estructura de cada archivo del
+repositorio y arma un mapa: qué llama a qué, qué importa qué, qué contiene qué. Datos del último reporte
+(2026-11-24, `graphify-out/GRAPH_REPORT.md`): 329 archivos (~207 mil palabras) → **3.174 nodos**, **7.896
+relaciones** y **145 comunidades** (subsistemas). El 96 % de las relaciones salen directo del código; el 4 %
+(313) son inferidas, con confianza media de 0,88. Construirlo costó 0 tokens de entrada y salida y se actualiza
+solo con lo que cambió.
+
+**¿Para qué lo usaron?**
+Antes de tocar una clase le preguntamos al grafo qué usa y quién la usa (`graphify explain "<archivo>::<símbolo>"`),
+y recién después leemos solo esos archivos. El mapa de arquitectura del equipo (`graphify-out/README.md`) se
+escribió a partir del grafo y se verificó contra el código.
+
+**¿Qué ventaja tiene frente a mandarle prompts a una IA?**
+Contexto completo del repositorio sin pegar código a mano; cada relación trae archivo y línea y está marcada como
+extraída o inferida (se puede comprobar); persiste entre conversaciones y se actualiza incrementalmente; y una
+consulta devuelve solo lo relevante, en lugar de reenviar código en cada pregunta.
+
+**¿Cuántos tokens ahorra? (medición real)**
+Caso medido: «¿qué usa y qué usa a `AskTutorUseCase`?». El grafo respondió con **22 relaciones, 2.012 caracteres
+≈ 503 tokens**. Obtener lo mismo leyendo a mano los 6 archivos involucrados (`ask_tutor.py`, `main.py` y 4 de
+pruebas) son 28.120 caracteres ≈ **7.030 tokens**: **14 veces más**. Pegar el repositorio completo (~340
+archivos, ~1,5 MB) serían ≈ **390.000 tokens**: **más de 700 veces más**. Método: tokens ≈ caracteres ÷ 4 (la
+misma regla que usa el proyecto). *Es un caso, no un promedio; no digas «ahorra 700 veces» en general.*
+
+**¿El grafo reemplaza leer el código?**
+No: orienta sobre qué leer. Y las relaciones inferidas (4 %) hay que verificarlas contra el archivo y la línea que
+indica cada una.
+
+**¿El tutor usa un grafo de conocimiento?**
+No. El tutor busca **por significado con vectores** (RAG sobre pgvector). El grafo es una herramienta de
+desarrollo. Las dos comparten la idea de darle al modelo solo lo relevante.
+
+**¿Cómo ahorra tokens el producto?**
+(1) Hay casos en que no se llama al modelo: un saludo solo, una pregunta frecuente cargada por el docente o una
+materia sin material indexado. (2) El depurador quita saludos, muletillas y repeticiones y registra los tokens
+ahorrados. (3) La caché de Redis reutiliza la respuesta de la misma pregunta (misma materia y modo) por 1 hora.
+(4) El contexto son solo los 5 fragmentos más cercanos (~500 tokens cada uno, unos 2.500 tokens), sin importar
+cuánto material tenga la materia. (5) Los resúmenes de documentos muy largos se hacen desde el comienzo con un tope
+de 60.000 caracteres y se avisa.
 
 ### Sobre calidad y honestidad
 

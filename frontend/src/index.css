@@ -14,6 +14,16 @@
   html {
     font-size: 14px;
   }
+  /* El unico scroll es el de <main>: el documento nunca desborda ni deja ver un bloque en blanco debajo. */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html,
+  body {
+    overflow: hidden;
+  }
   body {
     @apply bg-bg text-text-1 font-sans antialiased;
   }

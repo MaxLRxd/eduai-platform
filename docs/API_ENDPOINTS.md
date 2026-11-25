@@ -2,7 +2,7 @@
 
 > Generado automáticamente desde `backend/src/**/*.routes.ts` con `npm run docs:api`. No editar a mano.
 
-Total: **131 endpoints** en 18 módulos.
+Total: **132 endpoints** en 18 módulos.
 
 **Acceso:** *Público* no pide sesión; *Autenticado* cualquier rol con sesión; los demás exigen ese rol.
 **Validación:** esquema Zod que valida el cuerpo antes de llegar al controlador. **Límite:** limitador de intentos.
@@ -157,6 +157,7 @@ Total: **131 endpoints** en 18 módulos.
 | POST | `/api/admin/materias` | ADMIN | `crearMateriaAdminSchema` |  |
 | PUT | `/api/admin/materias/:materiaId` | ADMIN | `actualizarMateriaAdminSchema` |  |
 | POST | `/api/admin/materias/:materiaId/profesores` | ADMIN | `asignarProfesorSchema` |  |
+| DELETE | `/api/admin/materias/:materiaId/profesores/:profesorId` | ADMIN |  |  |
 | DELETE | `/api/admin/materias/:materiaId/inscripciones/:alumnoId` | ADMIN |  |  |
 | DELETE | `/api/admin/materias/:materiaId/inscripciones` | ADMIN |  |  |
 | GET | `/api/admin/metricas-exito` | ADMIN |  |  |

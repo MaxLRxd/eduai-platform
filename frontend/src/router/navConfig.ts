@@ -60,7 +60,7 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { icon: "materias", label: "Materias", path: "/admin/materias" },
         { icon: "licencias", label: "Claves de Matriculación", path: "/admin/claves" },
         { icon: "usuarios", label: "Usuarios", path: "/admin/usuarios" },
-        { icon: "licencias", label: "Licencias", path: "/admin/licencias" },
+        { icon: "licencias", label: "Licencia", path: "/admin/licencias" },
         { icon: "reports", label: "Reportes", path: "/admin/reports" },
       ],
     },

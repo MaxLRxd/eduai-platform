@@ -733,6 +733,110 @@ describe(`EduAI E2E (${BASE})${CON_IA ? " + IA" : ""}`, { concurrency: false }, 
     });
   });
 
+  describe("Revisión del proyecto (Fase 6): licencia única, reportes, notas y baja de docente", () => {
+    it("6.1: la licencia es una sola, sin planes ni topes, y solo la ve el administrador", async () => {
+      const r = await llamar("GET", "/api/admin/license", { token: ctx.admin });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.licencia.tipo, "UNICA");
+      assert.equal(r.body.licencia.estado, "ACTIVA");
+      assert.ok(r.body.licencia.incluye.length > 3, "lista lo que incluye");
+      assert.ok(Number.isInteger(r.body.uso.alumnos) && r.body.uso.alumnos >= 2, "informa el uso");
+      assert.ok(!("planes" in r.body), "ya no hay planes");
+      assert.doesNotMatch(JSON.stringify(r.body), /MAU|limit|Starter|Enterprise/i);
+      assert.equal((await llamar("GET", "/api/admin/license", { token: ctx.tokDocente })).status, 403);
+    });
+
+    it("6.4: el dashboard del alumno trae sus propias notas agrupadas por materia", async () => {
+      const a = await llamar("GET", "/api/dashboard/alumno", { token: ctx.tokA });
+      assert.equal(a.status, 200);
+      const materia = a.body.materias.find((m) => m.id === ctx.materiaId);
+      assert.ok(materia, "ve su materia");
+      assert.ok(materia.total_notas >= 1, "tiene al menos la nota que cargó el docente");
+      assert.ok(materia.notas.some((n) => Number(n.calificacion) === 8), "aparece la nota de 8");
+      assert.ok(materia.notas.length <= 5, "como máximo las 5 últimas");
+      for (const n of materia.notas) assert.ok(n.id && n.evaluacion && n.fecha, "cada nota trae evaluación y fecha");
+
+      // El otro alumno no ve notas ajenas: la nota de 8 es de A.
+      const b = await llamar("GET", "/api/dashboard/alumno", { token: ctx.tokB });
+      const deB = b.body.materias.find((m) => m.id === ctx.materiaId);
+      assert.ok(!deB.notas.some((n) => Number(n.calificacion) === 8 && n.id === materia.notas[0].id), "no ve notas de otro alumno");
+    });
+
+    it("6.2: los reportes respetan los filtros y las cifras coinciden con lo cargado", async () => {
+      const pedir = (consulta) => llamar("GET", `/api/admin/reports${consulta}`, { token: ctx.admin });
+      const stat = (res, tipo, label) =>
+        res.body.reports.find((r) => r.type === tipo).stats.find((s) => s.label === label)?.value;
+
+      // Asistencia cargada arriba: una clase (2026-10-01, período 2026-2), A presente y B ausente.
+      const porMateria = await pedir(`?materia_id=${ctx.materiaId}`);
+      assert.equal(porMateria.status, 200, JSON.stringify(porMateria.body));
+      assert.equal(stat(porMateria, "asistencia", "Registros totales"), "2");
+      assert.equal(stat(porMateria, "asistencia", "Presentes (incluye justificados)"), "1");
+      assert.equal(stat(porMateria, "asistencia", "Ausencias"), "1");
+      assert.equal(porMateria.body.reports.find((r) => r.type === "asistencia").headline, "50% de asistencia");
+      assert.match(porMateria.body.reports.find((r) => r.type === "asistencia").description, new RegExp(`E2E Materia ${SUFIJO}`));
+
+      const enPeriodo = await pedir(`?materia_id=${ctx.materiaId}&periodo=2026-2`);
+      assert.equal(stat(enPeriodo, "asistencia", "Registros totales"), "2");
+      const otroPeriodo = await pedir(`?materia_id=${ctx.materiaId}&periodo=2026-1`);
+      assert.equal(stat(otroPeriodo, "asistencia", "Registros totales"), "0");
+
+      // Notas: la materia tiene la nota de 8 y su promedio aparece en el desglose.
+      assert.ok(Number(stat(porMateria, "notas", "Calificaciones cargadas")) >= 1);
+      assert.ok(porMateria.body.reports.find((r) => r.type === "notas").stats.some((s) => s.label === `E2E Materia ${SUFIJO}`));
+
+      // Sin MAU: el reporte nuevo es «uso» y la retención es la mensual real.
+      const todos = await pedir("");
+      const tipos = todos.body.reports.map((r) => r.type);
+      assert.ok(tipos.includes("uso") && !tipos.includes("mau"));
+      assert.match(todos.body.reports.find((r) => r.type === "retencion").headline, /retención mensual/);
+
+      // Filtros inválidos.
+      assert.equal((await pedir("?periodo=2026-9")).status, 400);
+      assert.equal((await pedir("?materia_id=no-es-uuid")).status, 404);
+      assert.equal((await pedir("?materia_id=00000000-0000-4000-8000-000000000000")).status, 404);
+
+      // La exportación lleva los mismos números.
+      const csv = await llamar("GET", `/api/admin/reports/asistencia/export?materia_id=${ctx.materiaId}`, { token: ctx.admin });
+      assert.equal(csv.status, 200);
+      assert.match(csv.body.csv, /"Registros totales";"2"/);
+    });
+
+    it("6.3: se quita al docente de la materia sin borrar su usuario; pierde el acceso y se le avisa", async () => {
+      const listado = await llamar("GET", "/api/admin/materias?pageSize=100", { token: ctx.admin });
+      const materia = listado.body.items.find((m) => m.id === ctx.materiaId);
+      const asignado = materia.profesores.find((p) => p.profesor_id === ctx.docente.perfilId);
+      assert.ok(asignado, "el listado trae el id del perfil docente");
+
+      const quitar = () =>
+        llamar("DELETE", `/api/admin/materias/${ctx.materiaId}/profesores/${ctx.docente.perfilId}`, { token: ctx.admin });
+      assert.equal((await quitar()).status, 200);
+      assert.equal((await quitar()).status, 404, "quitarlo dos veces no es válido");
+
+      // El usuario sigue activo, pero ya no entra a la materia.
+      assert.equal((await llamar("POST", "/api/auth/login", { cuerpo: { email: ctx.docente.email, password: PASSWORD } })).status, 200);
+      assert.equal((await llamar("GET", `/api/materias/${ctx.materiaId}/notas`, { token: ctx.tokDocente })).status, 403);
+
+      const despues = await llamar("GET", "/api/admin/materias?pageSize=100", { token: ctx.admin });
+      assert.ok(!despues.body.items.find((m) => m.id === ctx.materiaId).profesores.some((p) => p.profesor_id === ctx.docente.perfilId));
+
+      const avisos = lista((await llamar("GET", "/api/notificaciones", { token: ctx.tokDocente })).body, "notificaciones", "items");
+      assert.ok(avisos.some((n) => /materia desasignada/i.test(n.titulo)));
+
+      // No se perdió nada: la nota que había cargado sigue en el dashboard del alumno.
+      const a = await llamar("GET", "/api/dashboard/alumno", { token: ctx.tokA });
+      assert.ok(a.body.materias.find((m) => m.id === ctx.materiaId).notas.some((n) => Number(n.calificacion) === 8));
+
+      // Se puede volver a asignar.
+      const otra = await llamar("POST", `/api/admin/materias/${ctx.materiaId}/profesores`, {
+        token: ctx.admin,
+        cuerpo: { profesor_id: ctx.docente.perfilId, activo: true },
+      });
+      assert.equal(otra.status, 201);
+      assert.equal((await llamar("GET", `/api/materias/${ctx.materiaId}/notas`, { token: ctx.tokDocente })).status, 200);
+    });
+  });
+
   describe("Administrador: baja de materia (CU-AD01 A3.1)", () => {
     it("no se puede dar de baja una materia con alumnos inscriptos", async () => {
       const r = await llamar("PUT", `/api/admin/materias/${ctx.materiaId}`, { token: ctx.admin, cuerpo: { activa: false } });

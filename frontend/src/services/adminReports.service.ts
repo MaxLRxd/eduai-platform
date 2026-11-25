@@ -14,8 +14,25 @@ const EXPORT_LABELS: Record<string, string> = {
   ejecutivo: "Generar",
 };
 
-export async function getAdminReports(): Promise<ReportCard[]> {
-  const data = await api<{ reports: ReportApi[] }>("/api/admin/reports");
+export interface FiltrosReporte {
+  /** AAAA-1 (ene-jun) o AAAA-2 (jul-dic); vacio = todos. */
+  periodo: string;
+  /** Id de materia; vacio = todas. */
+  materiaId: string;
+}
+
+export const SIN_FILTROS: FiltrosReporte = { periodo: "", materiaId: "" };
+
+function consulta(filtros: FiltrosReporte, extra: Record<string, string> = {}): string {
+  const params = new URLSearchParams(extra);
+  if (filtros.periodo) params.set("periodo", filtros.periodo);
+  if (filtros.materiaId) params.set("materia_id", filtros.materiaId);
+  const texto = params.toString();
+  return texto ? `?${texto}` : "";
+}
+
+export async function getAdminReports(filtros: FiltrosReporte = SIN_FILTROS): Promise<ReportCard[]> {
+  const data = await api<{ reports: ReportApi[] }>(`/api/admin/reports${consulta(filtros)}`);
   return (data.reports ?? []).map((r) => ({
     ...r,
     actionLabel: EXPORT_LABELS[r.type] ?? "Exportar",
@@ -33,13 +50,13 @@ export interface ExportPdfResult {
 }
 
 // GET /api/admin/reports/:type/export — CSV con el detalle del reporte.
-export async function exportReport(type: string): Promise<ExportResult> {
-  return api<ExportResult>(`/api/admin/reports/${type}/export`);
+export async function exportReport(type: string, filtros: FiltrosReporte = SIN_FILTROS): Promise<ExportResult> {
+  return api<ExportResult>(`/api/admin/reports/${type}/export${consulta(filtros)}`);
 }
 
 // GET /api/admin/reports/:type/export?format=pdf — PDF con el detalle del reporte.
-export async function exportReportPdf(type: string): Promise<ExportPdfResult> {
-  return api<ExportPdfResult>(`/api/admin/reports/${type}/export?format=pdf`);
+export async function exportReportPdf(type: string, filtros: FiltrosReporte = SIN_FILTROS): Promise<ExportPdfResult> {
+  return api<ExportPdfResult>(`/api/admin/reports/${type}/export${consulta(filtros, { format: "pdf" })}`);
 }
 
 export function downloadCsv(result: ExportResult): void {

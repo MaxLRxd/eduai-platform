@@ -9,7 +9,7 @@ interface MateriaApi {
   activa: boolean;
   inscriptos: number;
   secciones: number;
-  profesores?: { id: string; nombre: string; email: string }[];
+  profesores?: { id: string; profesor_id: string; nombre: string; email: string }[];
 }
 
 function toAdminSubject(m: MateriaApi): AdminSubject {
@@ -19,6 +19,7 @@ function toAdminSubject(m: MateriaApi): AdminSubject {
     descripcion: m.descripcion,
     nivelEducativo: m.nivel_educativo,
     profesor: (m.profesores ?? []).map((p) => p.nombre).join(", "),
+    profesores: (m.profesores ?? []).map((p) => ({ profesorId: p.profesor_id, nombre: p.nombre })),
     alumnos: m.inscriptos,
     estado: m.activa ? "Activa" : "Inactiva",
   };
@@ -70,4 +71,9 @@ export async function assignAdminProfessor(materiaId: string, profesorId: string
     method: "POST",
     body: JSON.stringify({ profesor_id: profesorId, activo: true }),
   });
+}
+
+// DELETE /api/admin/materias/:id/profesores/:profesorId — quita al docente de la materia (su usuario no se toca).
+export async function unassignAdminProfessor(materiaId: string, profesorId: string): Promise<void> {
+  await api(`/api/admin/materias/${materiaId}/profesores/${profesorId}`, { method: "DELETE" });
 }

@@ -152,6 +152,14 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 - Probado contra el stack real: `GET /rag/materias` y `npm run rag:reindex -- --huerfanos` (borró las 71
   fragmentos huérfanos de una materia inexistente y conservó el resto).
 
+### 20. ✅ Fase 6: correcciones de la revisión del proyecto (2026-11-25)
+- **6.1 Licencia única:** `GET /api/admin/license` devuelve `{ licencia: { nombre, tipo: "UNICA", estado, incluye[] }, uso: { alumnos, docentes, materias } }`; se eliminaron planes, `LIMITE_MAU` y la barra de capacidad. La página pasa a «Licencia».
+- **6.2 Reportes:** nuevo módulo `admin.reportes.ts` (`armarReportes` pura + consulta). Filtros `?periodo=` y `?materia_id=` en la lista y en las exportaciones; promedio **ponderado** por materia, distribución por rangos, asistencia y notas por materia, retención mensual real (la misma de «Métricas de éxito»), «Consumo MAU» reemplazado por «Uso de la plataforma», y solo cuentan cuentas activas. Prueba con valores exactos (`reportes-admin-valores.test.ts`) y cifras contrastadas con SQL sobre la base real (186/123/33/30 de asistencia; 93 notas, 92 aprobadas).
+- **6.3 Quitar docente:** `DELETE /api/admin/materias/:materiaId/profesores/:profesorId` (404 si no estaba asignado; no borra nada); el listado de materias trae `profesor_id`; chips «Quitar» con confirmación.
+- **6.4 Notas en el dashboard:** `materias[].notas` (5 últimas, solo las propias, respeta el período) y `total_notas`; componente «Mis notas».
+- **6.5 / 6.6 Layout:** el bloque blanco no se reprodujo; se endureció el layout (`html/body/#root` con altura fija y sin desborde, `h-dvh`) y el menú lateral se contrae solo bajo 1024 px (a 375 px pasa de 256 a 69 px). Falta que el usuario confirme dónde lo veía.
+- **Pruebas:** backend 402, frontend 240, E2E 57 (56 + 1 omitida) con el bloque nuevo «Revisión del proyecto (Fase 6)».
+
 ### 19. ✅ E2E de las funciones nuevas (2026-11-24)
 La suite punta a punta pasó de 44 a **53** pruebas, todas verdes contra el stack real: recuperación de contraseña (pedido sin enumeración de cuentas, enlace emitido por el administrador, un solo uso, sesiones previas cerradas) y asistente docente persistente (conversaciones, permisos, materiales inválidos y, con `E2E_AI=1 E2E_LLM=1`, una consulta real a Gemini). Al correrla se vio además que el contenedor del frontend entraba en bucle (`npm install` fallaba con ENOTEMPTY sobre el volumen con dependencias viejas, tras subir vite 8 y vitest 5): se recreó el volumen `eduai_frontend_modules` y se reconstruyó la imagen. Detalle y estado en `PLAN_DE_ACCION.md`, tarea 5.1.
 
@@ -416,7 +424,7 @@ Detalle del reporte de 2026-11-17:
 - **Claves de matriculación:** listado con inscriptos, generación y revocación — `GET/POST /api/admin/enrollment-keys` + `PATCH /:id/revocar`
 - **Ajustes/Branding:** `GET/PUT /api/admin/branding` — pantalla `AdminSettingsPage` + hook reales.
   - Resuelto: presets de color servidos por el backend y logo en storage (entrada 6)
-- **Reportes:** `GET /api/admin/reports` — 6 reportes con datos reales (asistencia, notas, tutor IA, retención, MAU, resumen ejecutivo)
+- **Reportes:** `GET /api/admin/reports` — 6 reportes con datos reales y filtros por período y materia (asistencia, notas, tutor IA, retención, uso de la plataforma, resumen ejecutivo)
   - Exportación real por reporte: `GET /api/admin/reports/:type/export?format=csv|pdf` (entrada 5)
 - **Logo/escudo:** preview y "quitar logo" funcionan; la subida va al storage (local o R2) y se guarda solo la URL (entrada 6)
 

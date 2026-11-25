@@ -1,5 +1,4 @@
 import { queryClient } from "../queryClient";
-import { reiniciarCacheDeLicencias } from "../services/adminLicensing.service";
 
 const PREFIJO_ULTIMA_SESION_TUTOR = "tutor:ultima-sesion:";
 
@@ -9,7 +8,6 @@ const PREFIJO_ULTIMA_SESION_TUTOR = "tutor:ultima-sesion:";
  */
 export function limpiarEstadoDeSesion(): void {
   queryClient.clear();
-  reiniciarCacheDeLicencias();
   try {
     const claves: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {

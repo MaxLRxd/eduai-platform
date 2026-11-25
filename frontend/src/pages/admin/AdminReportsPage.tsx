@@ -1,18 +1,27 @@
 import React, { useState } from "react";
 import { useAdminReports, useExportReport, useExportReportPdf } from "../../hooks/useAdminReports";
-import { downloadCsv, downloadPdf } from "../../services/adminReports.service";
+import { useAdminSubjects } from "../../hooks/useAdminSubjects";
+import { downloadCsv, downloadPdf, SIN_FILTROS, type FiltrosReporte } from "../../services/adminReports.service";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 
+/** Periodos ofrecidos: el anio en curso y el anterior (AAAA-1 = ene-jun, AAAA-2 = jul-dic). */
+function periodosDisponibles(): string[] {
+  const anio = new Date().getFullYear();
+  return [`${anio}-2`, `${anio}-1`, `${anio - 1}-2`, `${anio - 1}-1`];
+}
+
 export function AdminReportsPage(): React.ReactElement {
-  const { data: reports, isLoading } = useAdminReports();
+  const [filtros, setFiltros] = useState<FiltrosReporte>(SIN_FILTROS);
+  const { data: reports, isLoading } = useAdminReports(filtros);
+  const { data: materias } = useAdminSubjects();
   const exportReport = useExportReport();
   const exportReportPdf = useExportReportPdf();
   const [generating, setGenerating] = useState<string | null>(null);
 
   const handleExportCsv = (type: string): void => {
     setGenerating(`${type}:csv`);
-    exportReport.mutate(type, {
+    exportReport.mutate({ type, filtros }, {
       onSuccess: (result) => downloadCsv(result),
       onSettled: () => setGenerating(null),
     });
@@ -20,7 +29,7 @@ export function AdminReportsPage(): React.ReactElement {
 
   const handleExportPdf = (type: string): void => {
     setGenerating(`${type}:pdf`);
-    exportReportPdf.mutate(type, {
+    exportReportPdf.mutate({ type, filtros }, {
       onSuccess: (result) => downloadPdf(result),
       onSettled: () => setGenerating(null),
     });
@@ -31,6 +40,53 @@ export function AdminReportsPage(): React.ReactElement {
       <div className="mb-6">
         <h2 className="font-display text-[22px] font-extrabold text-text-1 tracking-tight mb-1">Reportes</h2>
         <p className="text-[13px] text-text-2">Generación y exportación de informes institucionales</p>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3 mb-5">
+        <div>
+          <label htmlFor="reporte-periodo" className="block text-[11px] font-semibold text-text-2 mb-1">
+            Período
+          </label>
+          <select
+            id="reporte-periodo"
+            value={filtros.periodo}
+            onChange={(e) => setFiltros({ ...filtros, periodo: e.target.value })}
+            className="px-3 py-2 border border-border rounded text-sm bg-surface"
+          >
+            <option value="">Todos los períodos</option>
+            {periodosDisponibles().map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="reporte-materia" className="block text-[11px] font-semibold text-text-2 mb-1">
+            Materia
+          </label>
+          <select
+            id="reporte-materia"
+            value={filtros.materiaId}
+            onChange={(e) => setFiltros({ ...filtros, materiaId: e.target.value })}
+            className="px-3 py-2 border border-border rounded text-sm bg-surface"
+          >
+            <option value="">Todas las materias</option>
+            {(materias ?? []).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(filtros.periodo || filtros.materiaId) && (
+          <Button variant="ghost" size="sm" onClick={() => setFiltros(SIN_FILTROS)}>
+            Quitar filtros
+          </Button>
+        )}
+        <p className="text-[11px] text-text-3 basis-full">
+          El filtro aplica a asistencia, notas, tutor y alertas. Retención y uso de la plataforma miden los últimos 30 días.
+        </p>
       </div>
 
       {isLoading && <p className="text-sm text-text-2">Cargando reportes…</p>}

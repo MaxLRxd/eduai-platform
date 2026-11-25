@@ -67,6 +67,8 @@ Mensajes posibles de error: *clave inválida*, *clave vencida* o *la clave alcan
 
 Resume tu situación real: promedio general, asistencia, entregas pendientes, alertas activas, el avance en cada materia (entregadas sobre el total de actividades) y las **próximas actividades**, ordenadas por fecha límite. Una actividad vencida se marca en rojo.
 
+Más abajo, **Mis notas** muestra, por cada materia, tu promedio y tus **5 últimas notas** (evaluación, categoría, fecha y calificación). Si tenés más, se avisa cuántas se muestran y **Ver todas** te lleva al detalle completo. Respeta el selector de **Período**.
+
 ### 2.3 Mis cursos: material de estudio
 
 Al abrir una materia ves sus **unidades y clases**: cada unidad tiene sus propios materiales y sus clases (con la fecha de cada una), y cada clase tiene los suyos.
@@ -280,7 +282,7 @@ En la entrega de un alumno, si adjuntó un archivo, lo abrís desde **Correccion
 
 ## 4. Manual del administrador
 
-Menú: **Panel · Materias · Claves de Matriculación · Usuarios · Licencias · Reportes · Apariencia**.
+Menú: **Panel · Materias · Claves de Matriculación · Usuarios · Licencia · Reportes · Apariencia**.
 
 ### 4.1 Panel
 
@@ -301,6 +303,7 @@ Si alguien no tiene acceso a su correo, tocá **Recuperar** en su fila: se gener
 - **Crear**: completá nombre, nivel educativo y descripción (**Crear / Guardar**). El nombre no puede coincidir con el de otra materia. Podés elegir el docente en el mismo formulario.
 - **Editar**: **Editar** en la fila de la materia.
 - **Asignar docente**: elegilo en el formulario. Un docente puede tener varias materias. Si ya estaba asignado, el sistema te avisa; el docente recibe un aviso cuando lo asignás o lo desasignás.
+- **Quitar a un docente de una materia**: en la fila de la materia, tocá **Quitar** junto a su nombre y confirmá. El docente **pierde el acceso a esa materia** y se le avisa, pero **su usuario sigue activo** con sus otras materias y **no se pierde nada** de lo que cargó (actividades, notas, entregas). Podés volver a asignarlo cuando quieras; si era el único, la materia queda «Sin asignar».
 - **Dar de baja una materia**: cambiá el estado a *Inactiva*. **Si tiene alumnos inscriptos no se permite** hasta desmatricularlos:
   1. Tocá **Alumnos** en la fila de la materia.
   2. **Desmatricular** a uno por uno, o **Desmatricular a todos**.
@@ -316,8 +319,8 @@ Podés ver quiénes se inscribieron con cada clave y **Revocar** una clave: los 
 
 ### 4.5 Reportes, licencias y apariencia
 
-- **Reportes**: indicadores de uso de la plataforma, incluido el uso del tutor IA. Se exportan a CSV con **Exportar** o a PDF con **Exportar PDF**.
-- **Licencias**: estado del plan de la institución.
+- **Reportes**: seis informes con datos reales (asistencia, notas, tutor IA, retención, uso de la plataforma y resumen ejecutivo). Arriba elegís el **período** (AAAA-1 = enero a junio, AAAA-2 = julio a diciembre) y la **materia**; el filtro vale para asistencia, notas, tutor y alertas, y la exportación (CSV o PDF) lleva el mismo filtro. Las notas usan el **promedio ponderado** de cada materia, igual que ve el alumno. *Retención* y *Uso de la plataforma* miden los últimos 30 días y no dependen del período. Solo cuentan los alumnos con la cuenta activa.
+- **Licencia**: la institución tiene **una única licencia con todo el producto**, sin importar la cantidad de alumnos. La pantalla muestra qué incluye y el uso (alumnos, docentes y materias activas), solo a modo informativo: no hay planes, topes ni cobro por alumno.
 - **Apariencia**: nombre, logo y colores de la institución. **Restaurar por defecto** vuelve a los valores originales.
 
 ---
