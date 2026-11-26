@@ -137,11 +137,15 @@ export interface TeacherStudentRow {
   name: string;
   legajo: string;
   average: string;
+  /** Promedio numerico para ordenar (null si todavia no tiene notas). */
+  averageValue: number | null;
   attendance: string;
+  /** % de asistencia numerico para ordenar (null si no hay clases registradas). */
+  attendanceValue: number | null;
   standing: StudentStanding;
 }
 
-export type DailyAttendanceStatus = "present" | "absent" | "late";
+export type DailyAttendanceStatus = "present" | "absent" | "late" | "justified";
 
 export interface StudentAttendanceState {
   id: string;

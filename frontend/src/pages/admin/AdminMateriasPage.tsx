@@ -132,16 +132,16 @@ export function AdminMateriasPage(): React.ReactElement {
                       {s.profesores.length === 0 ? (
                         "— Sin asignar —"
                       ) : (
-                        <ul className="flex flex-col gap-1">
+                        <ul className="flex flex-col gap-1 min-w-[150px]">
                           {s.profesores.map((p) => (
-                            <li key={p.profesorId} className="flex items-center gap-2">
-                              <span>{p.nombre}</span>
+                            <li key={p.profesorId} className="flex items-center justify-between gap-3">
+                              <span className="truncate" title={p.nombre}>{p.nombre}</span>
                               <button
                                 type="button"
                                 aria-label={`Quitar a ${p.nombre} de ${s.nombre}`}
                                 disabled={unassign.isPending}
                                 onClick={() => handleUnassign(s.id, s.nombre, p.profesorId, p.nombre)}
-                                className="text-[11px] font-semibold text-red-600 hover:underline disabled:opacity-50"
+                                className="shrink-0 w-[52px] text-right text-[11px] font-semibold text-red-600 hover:underline disabled:opacity-50"
                               >
                                 Quitar
                               </button>

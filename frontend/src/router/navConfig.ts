@@ -5,6 +5,8 @@ export interface NavItem {
   icon: IconKey;
   label: string;
   path: string;
+  /** Pantallas que pertenecen a este item aunque su ruta no empiece igual (mantienen el item activo). */
+  relatedPaths?: string[];
   badge?: string;
   badgeColor?: "amber" | "danger" | "green";
 }
@@ -40,8 +42,8 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         { icon: "panel", label: "Inicio", path: "/teacher" },
         { icon: "courses", label: "Mis materias", path: "/teacher/courses" },
-        { icon: "students", label: "Mis estudiantes", path: "/teacher/students" },
-        { icon: "assignments", label: "Evaluaciones", path: "/teacher/activities" },
+        { icon: "students", label: "Mis estudiantes", path: "/teacher/students", relatedPaths: ["/teacher/grades", "/teacher/attendance"] },
+        { icon: "assignments", label: "Evaluaciones", path: "/teacher/activities", relatedPaths: ["/teacher/corrections", "/teacher/activities/grades"] },
         { icon: "analytics", label: "Analytics", path: "/teacher/analytics" },
         { icon: "ai", label: "Asistente IA", path: "/teacher/ai" },
         { icon: "messages", label: "Mensajes", path: "/teacher/messages" },

@@ -8,6 +8,9 @@ import { useBranding } from "../../contexts/BrandingContext";
 import { SuccessMetricsCard } from "../../components/admin/SuccessMetricsCard";
 import { TutorLatencyCard } from "../../components/teacher/TutorLatencyCard";
 
+/** Plural de cada rol tal como se muestra (no se arma agregando una «s»: «profesors» no existe). */
+const ROL_PLURAL: Record<string, string> = { ALUMNO: "Alumnos", PROFESOR: "Profesores", ADMIN: "Administradores" };
+
 export function AdminDashboardPage(): React.ReactElement {
   const { user } = useAuth();
   const branding = useBranding();
@@ -38,7 +41,7 @@ export function AdminDashboardPage(): React.ReactElement {
             {(d?.resumen.usuarios ?? []).map((u) => (
               <div key={u.rol}>
                 <div className="flex justify-between mb-1.5">
-                  <span className="font-semibold text-[13px] capitalize">{u.rol.toLowerCase()}s</span>
+                  <span className="font-semibold text-[13px]">{ROL_PLURAL[u.rol] ?? u.rol}</span>
                   <span className="text-xs text-text-3">
                     <strong style={{ color: "#003d7a" }}>{u.count}</strong>
                   </span>

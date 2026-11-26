@@ -235,11 +235,14 @@ La IA **solo sugiere**: nada llega al alumno hasta que vos publiques. Si la IA n
   4. Con **Ver notas** de cada alumno ves todas sus notas y las editás. Si una categoría todavía no tiene notas de un alumno, no lo perjudica: su peso se reparte entre las demás.
   5. Las notas **sin categoría** no cuentan en la nota final mientras la materia use categorías: la pantalla te avisa para que se la asignes.
   El filtro **Período** limita la tabla a un período. Cada cambio queda registrado.
-- **Asistencia**: elegí la clase, marcá *presente*, *ausente* o *tardanza* para cada alumno y tocá **Confirmar asistencia del día**. Si ya cargaste esa clase, el sistema te ofrece editar el registro existente en vez de duplicarlo.
+- **Asistencia**: elegí la clase, marcá *presente*, *ausente*, *tardanza* o *justificado* (J) para cada alumno y tocá **Confirmar asistencia del día**. Si ya cargaste esa clase, el sistema te ofrece editar el registro existente en vez de duplicarlo.
+  - **Cómo se calcula el % de asistencia** (el mismo criterio en todo el sistema: docente, alumno, reportes y exportación): *presente* y *justificado* no restan, la *tardanza* cuenta como **media falta** y la *ausencia* como una falta. Fórmula: (clases registradas − faltas) ÷ clases registradas. Ejemplo: 10 clases con 6 presentes, 1 justificada, 2 ausentes y 1 tardanza = 2,5 faltas = **75 %**.
+  - **Justificado:** una falta con aviso o certificado. Sale como «J» en la exportación.
+  - **Exportar CSV (Excel)** descarga un archivo con un alumno por fila y una columna por clase (P presente, A ausente, T tardanza, J justificado), los totales y el % de asistencia. Se abre en Excel con los acentos bien. Solo incluye a los alumnos inscriptos hoy; si todavía no hay registros, te avisa.
 
 ### 3.5 Mis estudiantes y perfil del alumno
 
-**Mis estudiantes** lista los alumnos de cada materia con su promedio, asistencia y estado (*Regular* o *En riesgo*). Con **Ver perfil** ves todo sobre un alumno:
+**Mis estudiantes** lista los alumnos de cada materia con su promedio, asistencia y estado (*Regular* o *En riesgo*). Arriba podés **buscar** por nombre o legajo, **filtrar por estado** y **ordenar** por nombre, por promedio (de mayor a menor o al revés) o por asistencia; quien todavía no tiene notas queda siempre al final. El contador muestra «N de M alumnos» cuando hay un filtro activo. Con **Ver perfil** ves todo sobre un alumno:
 
 - alertas de riesgo académico, promedio de notas, asistencia, entregas realizadas y material visto;
 - **uso del tutor IA**: cuántas consultas hizo y cuáles fueron las últimas, para detectar dudas;

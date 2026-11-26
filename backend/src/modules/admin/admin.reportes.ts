@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { calcularPromediosPorMateria } from "../notas/notas.service";
+import { faltasEquivalentes, porcentajeAsistencia } from "../asistencias/asistencia.calculo";
 
 /**
  * Reportes del administrador (CU-AD04). Cada cifra sale de una consulta a la base y se puede reproducir:
@@ -116,11 +117,13 @@ export function armarReportes(d: DatosReportes): Reporte[] {
   const presentes = sumar(["PRESENTE", "JUSTIFICADO"]);
   const ausentes = sumar(["AUSENTE"]);
   const tardanzas = sumar(["TARDANZA"]);
-  const tasaAsistencia = pct(presentes, total);
+  // La tardanza cuenta como media falta y el justificado no resta (ver asistencia.calculo.ts).
+  const tasaAsistencia = porcentajeAsistencia({ total, ausentes, tardanzas });
   const asistenciaPorMateria = porMateria(d.asistencias, d.nombreMateria, (r) => r.materia_id).map((g) => {
+    const cuenta = (estado: string) => g.valores.filter((r) => r.estado === estado).reduce((a, r) => a + r.cantidad, 0);
     const tot = g.valores.reduce((a, r) => a + r.cantidad, 0);
-    const pres = g.valores.filter((r) => r.estado === "PRESENTE" || r.estado === "JUSTIFICADO").reduce((a, r) => a + r.cantidad, 0);
-    return { label: g.nombre, value: `${mostrarPct(pct(pres, tot))} (${tot} registros)` };
+    const pctMateria = porcentajeAsistencia({ total: tot, ausentes: cuenta("AUSENTE"), tardanzas: cuenta("TARDANZA") });
+    return { label: g.nombre, value: `${mostrarPct(pctMateria)} (${tot} registros)` };
   });
 
   // --- Notas ---
@@ -155,10 +158,12 @@ export function armarReportes(d: DatosReportes): Reporte[] {
         { label: "Registros totales", value: String(total) },
         { label: "Presentes (incluye justificados)", value: String(presentes) },
         { label: "Ausencias", value: String(ausentes) },
-        { label: "Tardanzas", value: String(tardanzas) },
+        { label: "Tardanzas (media falta cada una)", value: String(tardanzas) },
+        { label: "Faltas equivalentes", value: dec(faltasEquivalentes({ ausentes, tardanzas })) },
         ...limitar(asistenciaPorMateria),
       ],
-      footnote: "Asistencia = (presentes + justificados) / registros. Solo alumnos con cuenta activa.",
+      footnote:
+        "Asistencia = (registros - ausencias - 0,5 por tardanza) / registros; el justificado no resta. Solo alumnos con cuenta activa.",
     },
     notas: {
       type: "notas",

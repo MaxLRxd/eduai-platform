@@ -837,6 +837,68 @@ describe(`EduAI E2E (${BASE})${CON_IA ? " + IA" : ""}`, { concurrency: false }, 
     });
   });
 
+  describe("Segunda revisión (Fase 7): exportar asistencia", () => {
+    it("7.6: el docente exporta la asistencia de su materia y el archivo trae los registros cargados", async () => {
+      const r = await llamar("GET", `/api/materias/${ctx.materiaId}/asistencias/export`, { token: ctx.tokDocente });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.match(r.body.filename, /^asistencia-.*\.csv$/);
+      assert.ok(r.body.csv.startsWith("\uFEFF"), "lleva BOM para que Excel respete los acentos");
+
+      const lineas = r.body.csv.replace("\uFEFF", "").split("\r\n");
+      assert.match(lineas[0], /^"Alumno";"Email";"2026-10-01";"Presentes"/);
+      const ana = lineas.find((l) => l.includes(ctx.alumnoA.email.toLowerCase()));
+      const beto = lineas.find((l) => l.includes(ctx.alumnoB.email.toLowerCase()));
+      assert.match(ana, /;"P";"1";"0";"0";"0";"100%"$/, ana);
+      assert.match(beto, /;"A";"0";"1";"0";"0";"0%"$/, beto);
+
+      const acotado = await llamar("GET", `/api/materias/${ctx.materiaId}/asistencias/export?desde=2026-11-01`, { token: ctx.tokDocente });
+      assert.equal(acotado.status, 404, "sin registros en ese rango no se genera un archivo vacío");
+      assert.equal((await llamar("GET", `/api/materias/${ctx.materiaId}/asistencias/export?desde=ayer`, { token: ctx.tokDocente })).status, 400);
+    });
+
+    it("7.6: solo exporta el docente asignado a la materia", async () => {
+      assert.equal((await llamar("GET", `/api/materias/${ctx.materiaId}/asistencias/export`, { token: ctx.tokA })).status, 403);
+      assert.equal((await llamar("GET", `/api/materias/${ctx.materiaId}/asistencias/export`, { token: ctx.profeSeed })).status, 403);
+    });
+
+    it("7.7: la tardanza cuenta como media falta y el justificado no resta, en todas las vistas", async () => {
+      // Segunda clase: A llega tarde y B está presente. Con la primera (A presente, B ausente):
+      //   A: P + T  → 0,5 faltas de 2 → 75 %      B: A + P → 1 falta de 2 → 50 %
+      const clase = await llamar("POST", `/api/materias/${ctx.materiaId}/asistencias`, {
+        token: ctx.tokDocente,
+        cuerpo: {
+          fecha_clase: "2026-10-08",
+          registros: [
+            { alumno_id: ctx.alumnoA.id, estado: "TARDANZA" },
+            { alumno_id: ctx.alumnoB.id, estado: "PRESENTE" },
+          ],
+        },
+      });
+      assert.ok([200, 201].includes(clase.status), JSON.stringify(clase.body));
+
+      const exp = await llamar("GET", `/api/materias/${ctx.materiaId}/asistencias/export`, { token: ctx.tokDocente });
+      const lineas = exp.body.csv.replace("\uFEFF", "").split("\r\n");
+      assert.match(lineas.find((l) => l.includes(ctx.alumnoA.email.toLowerCase())), /;"P";"T";"1";"0";"1";"0";"75%"$/);
+      assert.match(lineas.find((l) => l.includes(ctx.alumnoB.email.toLowerCase())), /;"A";"P";"1";"1";"0";"0";"50%"$/);
+
+      // Reporte de la materia: 4 registros, 1 ausencia + 1 tardanza = 1,5 faltas → 63 %.
+      const rep = await llamar("GET", `/api/admin/reports?materia_id=${ctx.materiaId}`, { token: ctx.admin });
+      const asistencia = rep.body.reports.find((r) => r.type === "asistencia");
+      assert.equal(asistencia.headline, "63% de asistencia");
+      assert.equal(asistencia.stats.find((s) => s.label === "Faltas equivalentes").value, "1,50");
+
+      // Perfil del alumno visto por el docente: el mismo 75 % de A.
+      const perfil = await llamar("GET", `/api/materias/${ctx.materiaId}/alumnos/${ctx.alumnoA.id}/perfil`, { token: ctx.tokDocente });
+      assert.equal(perfil.body.perfil.asistencia.porcentaje, 75);
+
+      // Estadísticas del propio alumno: coincide con lo que ve el docente (75 %).
+      const mias = await llamar("GET", "/api/analytics/progreso", { token: ctx.tokA });
+      assert.equal(mias.status, 200, JSON.stringify(mias.body));
+      assert.equal(mias.body.asistencia_global, 75);
+    });
+  });
+
+
   describe("Administrador: baja de materia (CU-AD01 A3.1)", () => {
     it("no se puede dar de baja una materia con alumnos inscriptos", async () => {
       const r = await llamar("PUT", `/api/admin/materias/${ctx.materiaId}`, { token: ctx.admin, cuerpo: { activa: false } });

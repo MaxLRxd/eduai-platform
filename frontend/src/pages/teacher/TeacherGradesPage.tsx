@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
 import { Modal } from "../../components/ui/Modal";
 import { apiErrorMessage } from "../../services/api";
-import { STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
+import { EVALUATIONS_AREA_TABS, STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 import { CategoriasNotaEditor } from "../../components/teacher/CategoriasNotaEditor";
 import { ImportarNotasActividad } from "../../components/teacher/ImportarNotasActividad";
 import { formatoNota, type NotaDetalle } from "../../services/calificaciones.service";
@@ -25,7 +25,8 @@ interface FormNota {
   ligadaAActividad: boolean;
 }
 
-export function TeacherGradesPage(): React.ReactElement {
+/** `area` define bajo que menu se muestra la pantalla: se la abre desde Mis estudiantes o desde Evaluaciones. */
+export function TeacherGradesPage({ area = "estudiantes" }: { area?: "estudiantes" | "evaluaciones" }): React.ReactElement {
   const { data: courses } = useTeacherCourses();
   const [selected, setSelected] = useState("");
   const [filtroPeriodo, setFiltroPeriodo] = useState("");
@@ -113,7 +114,7 @@ export function TeacherGradesPage(): React.ReactElement {
         </p>
       </div>
 
-      <TeacherAreaTabs tabs={STUDENTS_AREA_TABS} />
+      <TeacherAreaTabs tabs={area === "evaluaciones" ? EVALUATIONS_AREA_TABS : STUDENTS_AREA_TABS} />
 
       <CourseFilter courses={courses ?? []} value={courseId} onChange={(id) => { setSelected(id); setFiltroPeriodo(""); setAbierto(null); setForm(null); }} />
 

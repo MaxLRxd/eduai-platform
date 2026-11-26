@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useBranding } from "../../contexts/BrandingContext";
 import { NAV_BY_ROLE } from "../../router/navConfig";
@@ -21,6 +21,7 @@ const BADGE_CLASSES: Record<string, string> = {
 export function Sidebar({ collapsed = false }: { collapsed?: boolean }): React.ReactElement {
   const { user, logout } = useAuth();
   const { nombre, logoUrl } = useBranding();
+  const { pathname } = useLocation();
   if (!user) return <></>;
 
   const sections = NAV_BY_ROLE[user.role];
@@ -65,10 +66,16 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }): React.R
                 className={({ isActive }) =>
                   `relative flex items-center py-2 rounded text-[13px] font-medium mb-px transition-colors ${
                     collapsed ? "justify-center px-2" : "gap-2.5 px-2.5"
-                  } ${isActive ? "bg-white/15 text-white font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"}`
+                  } ${
+                    isActive || item.relatedPaths?.includes(pathname)
+                      ? "bg-white/15 text-white font-semibold"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  }`
                 }
               >
-                {({ isActive }) => (
+                {({ isActive: activoPorRuta }) => {
+                  const isActive = activoPorRuta || Boolean(item.relatedPaths?.includes(pathname));
+                  return (
                   <>
                     {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/80 rounded-r" />}
                     <span className="w-5 flex justify-center shrink-0">
@@ -85,7 +92,8 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }): React.R
                       </span>
                     )}
                   </>
-                )}
+                  );
+                }}
               </NavLink>
             ))}
           </div>

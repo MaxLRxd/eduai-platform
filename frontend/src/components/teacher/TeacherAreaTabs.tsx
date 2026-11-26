@@ -38,5 +38,6 @@ export const STUDENTS_AREA_TABS: TeacherAreaTab[] = [
 export const EVALUATIONS_AREA_TABS: TeacherAreaTab[] = [
   { label: "Actividades", path: "/teacher/activities" },
   { label: "Correcciones", path: "/teacher/corrections" },
-  { label: "Calificaciones", path: "/teacher/grades" },
+  // Misma pantalla que en Mis estudiantes, pero bajo Evaluaciones: asi no cambia de menu al entrar.
+  { label: "Calificaciones", path: "/teacher/activities/grades" },
 ];

@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { useTeacherCourses } from "../../hooks/useTeacherCourses";
-import { useAttendanceState, useSaveAttendance } from "../../hooks/useAttendance";
+import { useAttendanceState, useExportAttendance, useSaveAttendance } from "../../hooks/useAttendance";
 import { CourseFilter } from "../../components/ui/CourseFilter";
 import { Table, TableWrap, Td, Th, Thead } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { InfoBox } from "../../components/ui/InfoBox";
+import { apiErrorMessage } from "../../services/api";
+import { descargarCsv } from "../../utils/descargarCsv";
 import type { DailyAttendanceStatus } from "../../types/domain";
 import { STUDENTS_AREA_TABS, TeacherAreaTabs } from "../../components/teacher/TeacherAreaTabs";
 
@@ -12,6 +14,7 @@ const STATUS_META: Record<DailyAttendanceStatus, { label: string; short: string;
   present: { label: "Presente", short: "P", classes: "bg-emerald-100 border-success text-emerald-800" },
   absent: { label: "Ausente", short: "A", classes: "bg-red-100 border-danger text-red-900" },
   late: { label: "Tardanza", short: "T", classes: "bg-amber-100 border-warning text-amber-900" },
+  justified: { label: "Justificado", short: "J", classes: "bg-sky-100 border-sky-500 text-sky-900" },
 };
 
 export function TeacherAttendancePage(): React.ReactElement {
@@ -20,6 +23,7 @@ export function TeacherAttendancePage(): React.ReactElement {
   const courseId = selected || courses?.[0]?.id || "";
   const { data: students, isLoading, refetch } = useAttendanceState(courseId);
   const save = useSaveAttendance();
+  const exportar = useExportAttendance();
 
   const [today, setToday] = useState(() => new Date().toISOString().split("T")[0]);
   const [statuses, setStatuses] = useState<Record<string, DailyAttendanceStatus>>({});
@@ -37,7 +41,7 @@ export function TeacherAttendancePage(): React.ReactElement {
   };
 
   const summary = useMemo(() => {
-    const counts = { present: 0, absent: 0, late: 0 };
+    const counts = { present: 0, absent: 0, late: 0, justified: 0 };
     all.forEach((s) => {
       counts[statuses[s.id] ?? s.status]++;
     });
@@ -52,6 +56,18 @@ export function TeacherAttendancePage(): React.ReactElement {
     }
     return [...set];
   }, [all]);
+
+  const handleExport = (): void => {
+    if (!courseId) return;
+    setSavedMsg("");
+    exportar.mutate(courseId, {
+      onSuccess: (resultado) => {
+        descargarCsv(resultado);
+        setSavedMsg("✅ Archivo descargado");
+      },
+      onError: (e) => setSavedMsg(apiErrorMessage(e, "No se pudo exportar la asistencia.")),
+    });
+  };
 
   const handleConfirm = async (): Promise<void> => {
     if (!courseId) return;
@@ -96,6 +112,7 @@ export function TeacherAttendancePage(): React.ReactElement {
           <span className="text-success">● {summary.present} presentes</span>
           <span className="text-danger">● {summary.absent} ausentes</span>
           <span className="text-warning">● {summary.late} tardanzas</span>
+          <span className="text-sky-700">● {summary.justified} justificados</span>
         </div>
       </div>
 
@@ -106,7 +123,7 @@ export function TeacherAttendancePage(): React.ReactElement {
             {STATUS_META[k].short}
           </span>
         ))}
-        <span>Presente · Ausente · Tardanza</span>
+        <span>Presente · Ausente · Tardanza · Justificado</span>
       </div>
 
       {isLoading && <p className="text-sm text-text-2">Cargando asistencia…</p>}
@@ -190,8 +207,14 @@ export function TeacherAttendancePage(): React.ReactElement {
         <Button onClick={handleConfirm} disabled={save.isPending || all.length === 0}>
           {save.isPending ? "Guardando…" : "✅ Confirmar asistencia del día"}
         </Button>
-        <Button variant="secondary" size="sm">
-          Exportar Excel
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleExport}
+          disabled={!courseId || exportar.isPending}
+          title="Descarga un CSV que se abre en Excel"
+        >
+          {exportar.isPending ? "Generando…" : "Exportar CSV (Excel)"}
         </Button>
         {savedMsg && <span className="text-xs text-text-2">{savedMsg}</span>}
       </div>

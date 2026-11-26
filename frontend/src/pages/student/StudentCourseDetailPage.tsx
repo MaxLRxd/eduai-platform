@@ -137,8 +137,8 @@ export function StudentCourseDetailPage(): React.ReactElement {
         </div>
       </Card>
 
-      <div className="grid xl:grid-cols-[2fr_1fr] gap-5">
-        <Card>
+      <div className="grid xl:grid-cols-2 gap-5">
+        <Card className="min-w-0">
           <CardHeader title="Unidades y clases" />
           <div className="flex flex-col gap-3">
             {course.units.map((u) => {
@@ -202,7 +202,7 @@ export function StudentCourseDetailPage(): React.ReactElement {
           </div>
         </Card>
 
-        <aside className="flex flex-col gap-4.5">
+        <aside className="flex flex-col gap-4.5 min-w-0">
           {chatExpandido && (
             <button
               type="button"

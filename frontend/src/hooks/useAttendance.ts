@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getAttendanceState, saveAttendance } from "../services/attendance.service";
+import { exportAttendance, getAttendanceState, saveAttendance } from "../services/attendance.service";
 import type { DailyAttendanceStatus } from "../types/domain";
 
 export function useAttendanceState(courseId: string | null) {
@@ -22,4 +22,8 @@ export function useSaveAttendance() {
       registros: { alumno_id: string; estado: DailyAttendanceStatus }[];
     }) => saveAttendance(courseId, fechaClase, registros),
   });
+}
+
+export function useExportAttendance() {
+  return useMutation({ mutationFn: (courseId: string) => exportAttendance(courseId) });
 }

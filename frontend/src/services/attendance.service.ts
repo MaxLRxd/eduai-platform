@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { faltasEquivalentes } from "../utils/asistencia";
 import type { DailyAttendanceStatus, StudentAttendanceState } from "../types/domain";
 
 interface AsistenciaApi {
@@ -10,10 +11,11 @@ interface AsistenciaApi {
   alumno?: { id: string; nombre: string; email: string };
 }
 
-const FRONT_TO_BACK: Record<DailyAttendanceStatus, "PRESENTE" | "AUSENTE" | "TARDANZA"> = {
+const FRONT_TO_BACK: Record<DailyAttendanceStatus, "PRESENTE" | "AUSENTE" | "TARDANZA" | "JUSTIFICADO"> = {
   present: "PRESENTE",
   absent: "AUSENTE",
   late: "TARDANZA",
+  justified: "JUSTIFICADO",
 };
 
 export async function getAttendanceState(courseId: string): Promise<StudentAttendanceState[]> {
@@ -28,28 +30,30 @@ export async function getAttendanceState(courseId: string): Promise<StudentAtten
     {
       id: string;
       name: string;
-      presentCount: number;
+      ausentes: number;
+      tardanzas: number;
       total: number;
       fechas: Map<string, "PRESENTE" | "AUSENTE" | "TARDANZA" | "JUSTIFICADO">;
     }
   >();
 
   for (const a of inscriptosRes.alumnos ?? []) {
-    porAlumno.set(a.id, { id: a.id, name: a.nombre, presentCount: 0, total: 0, fechas: new Map() });
+    porAlumno.set(a.id, { id: a.id, name: a.nombre, ausentes: 0, tardanzas: 0, total: 0, fechas: new Map() });
   }
 
   for (const r of registros) {
     const entry = porAlumno.get(r.alumno_id) ?? {
       id: r.alumno_id,
       name: r.alumno?.nombre ?? "—",
-      presentCount: 0,
+      ausentes: 0,
+      tardanzas: 0,
       total: 0,
       fechas: new Map(),
     };
     entry.total += 1;
-    if (r.estado === "PRESENTE" || r.estado === "TARDANZA") {
-      entry.presentCount += 1;
-    }
+    // Criterio: la ausencia es una falta, la tardanza media falta y el justificado no resta.
+    if (r.estado === "AUSENTE") entry.ausentes += 1;
+    if (r.estado === "TARDANZA") entry.tardanzas += 1;
     entry.fechas.set(r.fecha_clase, r.estado);
     porAlumno.set(r.alumno_id, entry);
   }
@@ -62,7 +66,13 @@ export async function getAttendanceState(courseId: string): Promise<StudentAtten
   for (const [, e] of porAlumno) {
     const statusHoy = e.fechas.get(hoy);
     const status: DailyAttendanceStatus =
-      statusHoy === "AUSENTE" ? "absent" : statusHoy === "TARDANZA" || statusHoy === "JUSTIFICADO" ? "late" : "present";
+      statusHoy === "AUSENTE"
+        ? "absent"
+        : statusHoy === "TARDANZA"
+          ? "late"
+          : statusHoy === "JUSTIFICADO"
+            ? "justified"
+            : "present";
     const history = fechasOrdenadas.map((f) => {
       const est = e.fechas.get(f);
       return est === "PRESENTE" || est === "TARDANZA" || est === "JUSTIFICADO";
@@ -73,7 +83,7 @@ export async function getAttendanceState(courseId: string): Promise<StudentAtten
       status,
       history,
       total: e.total,
-      absent: e.total - e.presentCount,
+      absent: faltasEquivalentes(e.ausentes, e.tardanzas),
     });
   }
 
@@ -93,4 +103,9 @@ export async function saveAttendance(
     }),
   });
   return { success: true };
+}
+
+// GET /api/materias/:id/asistencias/export — CSV (abre en Excel): un alumno por fila y una columna por clase.
+export async function exportAttendance(courseId: string): Promise<{ filename: string; csv: string }> {
+  return api<{ filename: string; csv: string }>(`/api/materias/${courseId}/asistencias/export`);
 }

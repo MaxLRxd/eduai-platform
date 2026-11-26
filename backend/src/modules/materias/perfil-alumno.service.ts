@@ -1,4 +1,5 @@
 import { calcularPromediosPorMateria } from "../notas/notas.service";
+import { porcentajeAsistencia } from "../asistencias/asistencia.calculo";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
 import { obtenerProfesorAsignado } from "./materias.service";
@@ -68,9 +69,13 @@ export async function perfilAlumno(materiaId: string, alumnoId: string, docenteU
     ]);
 
   const totalAsistencias = asistencias.reduce((s, a) => s + a._count._all, 0);
-  const presentes = asistencias
-    .filter((a) => a.estado === "PRESENTE" || a.estado === "TARDANZA")
-    .reduce((s, a) => s + a._count._all, 0);
+  const cantidad = (estado: string) => asistencias.find((a) => a.estado === estado)?._count._all ?? 0;
+  // La tardanza cuenta como media falta y el justificado no resta (ver asistencia.calculo.ts).
+  const porcentajeAsist = porcentajeAsistencia({
+    total: totalAsistencias,
+    ausentes: cantidad("AUSENTE"),
+    tardanzas: cantidad("TARDANZA"),
+  });
 
   const entregadas = actividades.filter((a) => a.entregas.length > 0);
   const calificadas = entregadas
@@ -101,7 +106,7 @@ export async function perfilAlumno(materiaId: string, alumnoId: string, docenteU
     },
     asistencia: {
       registros: totalAsistencias,
-      porcentaje: totalAsistencias ? Math.round((presentes / totalAsistencias) * 100) : null,
+      porcentaje: porcentajeAsist,
       por_estado: Object.fromEntries(asistencias.map((a) => [a.estado, a._count._all])),
     },
     entregas: {

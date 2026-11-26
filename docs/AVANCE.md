@@ -152,6 +152,17 @@ limpiaron las entradas `chroma/`/`chromadb/` de `.gitignore` y las menciones a C
 - Probado contra el stack real: `GET /rag/materias` y `npm run rag:reindex -- --huerfanos` (borró las 71
   fragmentos huérfanos de una materia inexistente y conservó el resto).
 
+### 21. ✅ Fase 7: correcciones de la segunda revisión (2026-11-26)
+- **7.1** «Profesors» en el panel del admin: el plural ahora sale de un mapa explícito (Alumnos, Profesores, Administradores).
+- **7.2** Botones «Quitar» docente alineados en una columna (nombre a la izquierda, botón fijo a la derecha).
+- **7.3** Curso del alumno: unidades y tutor con el mismo ancho (`xl:grid-cols-2`); medido en el navegador: 548 px y 548 px a 1440 px.
+- **7.4** «Calificaciones» ya no cambia de menú: ruta nueva `/teacher/activities/grades` para Evaluaciones (la de Mis estudiantes sigue en `/teacher/grades`); cada una muestra sus pestañas, y el ítem del menú lateral queda activo también en Correcciones, Asistencia y Calificaciones (`relatedPaths`).
+- **7.5** Mis estudiantes: búsqueda, filtro por estado y orden por nombre, promedio o asistencia (sin nota siempre al final).
+- **7.6** Exportar asistencia: `GET /api/materias/:materiaId/asistencias/export` (CSV con BOM y «;»; solo el docente asignado; 404 sin registros; 400 con fechas mal formadas). El botón nunca había estado conectado. Utilidad compartida `utils/csv.ts` (también la usan los reportes).
+- **7.7 Estado «Justificado» al tomar asistencia** (pedido aparte): el backend ya lo aceptaba pero la pantalla solo ofrecía P, A y T. Botón «J» con su contador y leyenda; se guarda como `JUSTIFICADO`. Además se corrigió que un justificado ya guardado volvía como «tardanza» al reabrir la pantalla (y se pisaba al guardar de nuevo), y que no sumaba como asistencia en el porcentaje del docente, del alumno y de Mis estudiantes.
+- **7.8 Criterio único de asistencia** (decisión del usuario): la tardanza cuenta como **media falta** (`PESO_TARDANZA = 0,5`, fijo), el justificado y el presente no restan. % = (clases − faltas) ÷ clases. Antes había tres criterios distintos (tardanza como presente en el front, como no asistida en reportes y exportación, y el justificado sin reglas). Ahora una sola fórmula: `backend/src/modules/asistencias/asistencia.calculo.ts` y su gemela `frontend/src/utils/asistencia.ts`. Aplicada en reportes (agrega «Faltas equivalentes»), exportación, estadísticas del alumno, perfil del alumno, pantalla de asistencia, Mis estudiantes y panel del alumno. Se evaluó hacerlo configurable por materia y se descartó: queda fijo.
+- **Pruebas:** backend 417, frontend 269, E2E 60 (59 + 1 omitida por LLM). Verificado en el navegador: los seis puntos.
+
 ### 20. ✅ Fase 6: correcciones de la revisión del proyecto (2026-11-25)
 - **6.1 Licencia única:** `GET /api/admin/license` devuelve `{ licencia: { nombre, tipo: "UNICA", estado, incluye[] }, uso: { alumnos, docentes, materias } }`; se eliminaron planes, `LIMITE_MAU` y la barra de capacidad. La página pasa a «Licencia».
 - **6.2 Reportes:** nuevo módulo `admin.reportes.ts` (`armarReportes` pura + consulta). Filtros `?periodo=` y `?materia_id=` en la lista y en las exportaciones; promedio **ponderado** por materia, distribución por rangos, asistencia y notas por materia, retención mensual real (la misma de «Métricas de éxito»), «Consumo MAU» reemplazado por «Uso de la plataforma», y solo cuentan cuentas activas. Prueba con valores exactos (`reportes-admin-valores.test.ts`) y cifras contrastadas con SQL sobre la base real (186/123/33/30 de asistencia; 93 notas, 92 aprobadas).

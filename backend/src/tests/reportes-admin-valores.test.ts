@@ -3,7 +3,8 @@ import { armarReportes, rangoDePeriodo, validarPeriodo, type DatosReportes } fro
 /**
  * Datos conocidos con resultados calculados a mano: cada cifra del reporte se puede reproducir.
  *  - Asistencia: Redes 8 presentes + 2 justificados + 2 ausentes + 0 tardanzas (12 → 83%);
- *                BD 3 presentes + 1 tardanza + 2 ausentes (6 → 50%). Total 18 registros, 13 presentes.
+ *                BD 3 presentes + 1 tardanza + 2 ausentes (6 → faltas 2,5 → 58%).
+ *                Total 18 registros, 13 presentes; faltas = 4 ausencias + 0,5 por la tardanza = 4,5 → 75%.
  *  - Notas: 2, 5, 6, 8, 9, 10 → 6 notas, 4 aprobadas (≥6 → 67%). Promedio ponderado: Redes 8,00, BD 6,00 → 7,00.
  */
 const datos: DatosReportes = {
@@ -59,13 +60,14 @@ describe("reportes del administrador: cifras exactas", () => {
   it("asistencia: totales, tasa y desglose por materia", () => {
     const r = reporte("asistencia");
 
-    expect(r.headline).toBe("72% de asistencia");
+    expect(r.headline).toBe("75% de asistencia");
     expect(valor("asistencia", "Registros totales")).toBe("18");
     expect(valor("asistencia", "Presentes (incluye justificados)")).toBe("13");
     expect(valor("asistencia", "Ausencias")).toBe("4");
-    expect(valor("asistencia", "Tardanzas")).toBe("1");
+    expect(valor("asistencia", "Tardanzas (media falta cada una)")).toBe("1");
+    expect(valor("asistencia", "Faltas equivalentes")).toBe("4,50");
     expect(valor("asistencia", "Redes")).toBe("83% (12 registros)");
-    expect(valor("asistencia", "Bases de Datos")).toBe("50% (6 registros)");
+    expect(valor("asistencia", "Bases de Datos")).toBe("58% (6 registros)");
   });
 
   it("notas: promedio ponderado por materia, aprobación y distribución por rangos", () => {
@@ -121,7 +123,7 @@ describe("reportes del administrador: cifras exactas", () => {
     const r = reporte("ejecutivo");
 
     expect(r.headline).toBe("16 alumnos · 5 docentes · 3 materias");
-    expect(valor("ejecutivo", "Asistencia promedio")).toBe("72%");
+    expect(valor("ejecutivo", "Asistencia promedio")).toBe("75%");
     expect(valor("ejecutivo", "Promedio de notas")).toBe("7,00");
     expect(valor("ejecutivo", "Tasa de aprobación")).toBe("67%");
     expect(valor("ejecutivo", "Retención mensual")).toBe("75%");

@@ -90,7 +90,7 @@ describe("perfil del alumno para el docente", () => {
     const perfil = res.body.perfil;
     expect(perfil.alumno).toMatchObject({ id: ALUMNO_ID, nombre: "Ana", email: "ana@edu.ai" });
     expect(perfil.notas.promedio).toBe(7);
-    expect(perfil.asistencia).toMatchObject({ registros: 10, porcentaje: 80 }); // presente + tardanza
+    expect(perfil.asistencia).toMatchObject({ registros: 10, porcentaje: 70 }); // 2 ausentes + 2 tardanzas (media falta) = 3 faltas
     expect(perfil.entregas).toMatchObject({
       actividades: 3,
       entregadas: 2,

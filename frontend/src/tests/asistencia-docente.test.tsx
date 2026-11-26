@@ -11,6 +11,7 @@ vi.mock("../hooks/useTeacherCourses", () => ({
 }));
 
 vi.mock("../hooks/useAttendance", () => ({
+  useExportAttendance: () => ({ mutate: vi.fn(), isPending: false }),
   useAttendanceState: () => ({
     data: [
       { id: "a1", name: "Ana", status: "present", history: [true, true, true, false], total: 4, absent: 1 },

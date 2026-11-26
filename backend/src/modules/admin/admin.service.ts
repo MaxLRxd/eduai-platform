@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { TipoProfesor } from "@prisma/client";
 import { renderReportePdf } from "./reportsPdf";
+import { armarCsv } from "../../utils/csv";
 import { reportesAdmin as consultarReportes, type FiltrosReporte, type Reporte } from "./admin.reportes";
 import { prisma } from "../../config/prisma";
 import { permitirAcceso, revocarAcceso } from "../../config/cache";
@@ -492,10 +493,6 @@ export async function reportesAdmin(filtros: FiltrosReporte = {}) {
   });
 }
 
-function escapeCsvCell(cell: string): string {
-  return `"${cell.replace(/"/g, '""')}"`;
-}
-
 export function csvFromReporte(r: Reporte): string {
   const lines: string[][] = [
     [r.title],
@@ -506,8 +503,7 @@ export function csvFromReporte(r: Reporte): string {
     [],
     [r.footnote],
   ];
-  // BOM para que Excel lo abra como UTF-8 y ";" para la configuración regional es-AR.
-  return "\uFEFF" + lines.map((line) => line.map(escapeCsvCell).join(";")).join("\r\n");
+  return armarCsv(lines);
 }
 
 function sufijoArchivo(filtros: FiltrosReporte): string {

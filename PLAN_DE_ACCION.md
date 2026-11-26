@@ -26,8 +26,16 @@
 | 6.4 | Notas por materia en el dashboard del alumno | ✅ Hecha y verificada (2026-11-25) |
 | 6.5 | Bloque blanco al final de las páginas | ✅ Layout endurecido; el usuario confirmó que desapareció (2026-11-25) |
 | 6.6 | Barra lateral responsive | ✅ Hecha (menú se contrae bajo 1024 px) |
+| 7.1 | Admin: «Profesors» en el panel | ✅ Hecha y verificada (2026-11-26) |
+| 7.2 | Admin: alinear el botón «Quitar» docente | ✅ Hecha y verificada (2026-11-26) |
+| 7.3 | Alumno: unidades y tutor con el mismo ancho | ✅ Hecha y verificada (2026-11-26) |
+| 7.4 | Docente: «Calificaciones» desde Evaluaciones salta a Mis estudiantes | ✅ Hecha y verificada (2026-11-26) |
+| 7.5 | Docente: filtros y orden en Mis estudiantes | ✅ Hecha y verificada (2026-11-26) |
+| 7.6 | Docente: «Exportar Excel» de asistencia no funciona | ✅ Hecha y verificada (2026-11-26) |
+| 7.7 | Docente: estado «Justificado» al tomar asistencia | ✅ Hecha (2026-11-26) |
+| 7.8 | Criterio único de asistencia: tardanza = 0,5 falta | ✅ Hecha y verificada (2026-11-26) |
 
-Todo lo demás está hecho y verificado (detalle abajo), incluida la 5.1 (E2E de las funciones nuevas). La Fase 6 sale de la revisión del proyecto completo del 2026-11-24. Lo que **no** se hará para esta entrega: deploy en la nube.
+Todo lo demás está hecho y verificado (detalle abajo), incluida la 5.1 (E2E de las funciones nuevas). La Fase 6 sale de la revisión del proyecto completo del 2026-11-24 (cerrada) y la Fase 7, de la segunda revisión del 2026-11-26. Lo que **no** se hará para esta entrega: deploy en la nube.
 
 ---
 
@@ -118,6 +126,42 @@ Todo lo demás está hecho y verificado (detalle abajo), incluida la 5.1 (E2E de
   - Las decisiones (a)–(d) se aplicaron con la propuesta marcada (licencia informativa sin vigencia, filtros por período y materia, no se borra nada al quitar un docente, 5 notas por materia).
 - **Verificación de toda la fase:** `npx prisma generate` (si cambia el esquema), `npm run lint`, `npm test`, tipos de backend y frontend, `npm run e2e` con los casos nuevos (licencia, quitar docente, reportes, notas en el dashboard), `npm run docs:api`, y una entrada por tarea en `docs/AVANCE.md`.
 
+## Fase 7 — Correcciones de la segunda revisión (2026-11-26)
+
+> Origen: segunda revisión del usuario, con el stack levantado. Diagnóstico verificado en el código. Orden sugerido: **7.1 → 7.2 → 7.3** (cambios de una o dos líneas), **7.4**, **7.6**, **7.5** (la más grande). Regla de la fase: cada punto lleva una prueba que fije el comportamiento y una comprobación en el navegador antes de marcarlo.
+>
+> **Decisiones que necesita del usuario** (la propuesta va marcada; si no hay respuesta se implementa la propuesta): (a) 7.4: ¿«Calificaciones» pertenece a Evaluaciones, a Mis estudiantes o a ambas? *Propuesta: a ambas, con dos rutas, y cada una conserva su propio menú.* (b) 7.6: ¿Excel real (.xlsx) o CSV que Excel abre? *Propuesta: CSV con BOM y «;», igual que los reportes, sin dependencias nuevas; si se quiere .xlsx hay que sumar una librería y revisar `npm audit`.* (c) 7.5: ¿qué filtros? *Propuesta: estado, búsqueda por nombre o legajo y orden por nota, asistencia o nombre.*
+
+- [x] **7.1** **«Profesors» en el panel del administrador.**
+  - *Diagnóstico:* `AdminDashboardPage.tsx:41` arma el plural con `{u.rol.toLowerCase()}s`: «alumno» pasa a «alumnos» y sale bien, pero «profesor» pasa a «profesors» y «admin» a «admins».
+  - *Pasos:* (1) reemplazar por un mapa explícito `{ ALUMNO: "Alumnos", PROFESOR: "Profesores", ADMIN: "Administradores" }`; (2) buscar otros plurales armados con `+ "s"` en la interfaz; (3) prueba de frontend que renderice los tres roles y compruebe los textos.
+  - *Aceptación:* el panel dice «Profesores» y «Administradores»; ninguna palabra queda mal pluralizada.
+- [x] **7.2** **Alinear el botón «Quitar» al quitar un docente de una materia.**
+  - *Diagnóstico:* en `AdminMateriasPage.tsx` cada docente es un `<li>` con el nombre y el botón pegados (`flex gap-2`): el botón queda donde termina el nombre, así que con nombres de distinto largo los «Quitar» no forman una columna.
+  - *Pasos:* (1) cada fila con el nombre a la izquierda (`flex-1`, `truncate`) y «Quitar» fijo a la derecha, con el mismo estilo que los botones «Editar» y «Alumnos»; (2) comprobar con 1, 2 y 3 docentes en una materia y con un nombre largo; (3) mantener el `aria-label` actual para no romper la prueba existente.
+  - *Aceptación:* los botones «Quitar» quedan alineados en una columna, sin importar el largo del nombre.
+- [x] **7.3** **Unidades y tutor con el mismo ancho en el curso del alumno.**
+  - *Diagnóstico:* `StudentCourseDetailPage.tsx:140` define `grid xl:grid-cols-[2fr_1fr]`: las unidades ocupan el doble que el tutor.
+  - *Pasos:* (1) pasar a `xl:grid-cols-2` (dos columnas iguales, con `min-w-0` para que un contenido largo no ensanche una de ellas); (2) revisar que el chat del tutor, los botones de modo y el modo ampliado (`useScrollLock`) sigan bien con el nuevo ancho; (3) comprobar a 1024, 1440 y 1920 px y que bajo `xl` siga apilado.
+  - *Aceptación:* en pantallas grandes los dos paneles miden lo mismo (se verifica con `getBoundingClientRect`).
+- [x] **7.4** **«Calificaciones» desde Evaluaciones salta a Mis estudiantes.**
+  - *Diagnóstico (por lectura del código, falta reproducirlo en el navegador):* las pestañas de Evaluaciones son Actividades · Correcciones · Calificaciones (`EVALUATIONS_AREA_TABS`) y la de Calificaciones apunta a `/teacher/grades`. Pero `TeacherGradesPage` dibuja siempre las pestañas de Mis estudiantes (`STUDENTS_AREA_TABS`: Estudiantes · Calificaciones · Asistencia). Al hacer clic, el menú cambia y parece que el usuario fue a «Mis estudiantes». Es una ruta compartida por dos áreas.
+  - *Pasos:* (1) reproducirlo en el navegador; (2) la página recibe el área de la que se entró («estudiantes» o «evaluaciones»); (3) segunda ruta `/teacher/activities/grades` para Evaluaciones, la actual queda para Mis estudiantes; (4) las pestañas de Evaluaciones apuntan a la ruta nueva y la página muestra el menú del área de origen; (5) el ítem del menú lateral correspondiente queda activo en cada caso (hoy en `/teacher/grades` no hay ninguno activo); (6) las rutas viejas siguen funcionando (marcadores y avisos); (7) prueba de frontend: entrar a Calificaciones desde Evaluaciones conserva las pestañas y el ítem activo de Evaluaciones, y lo mismo desde Mis estudiantes.
+  - *Aceptación:* desde Evaluaciones, Calificaciones no cambia de menú; desde Mis estudiantes tampoco.
+- [x] **7.5** **Filtros y orden en Mis estudiantes.**
+  - *Diagnóstico:* `TeacherStudentsPage` solo filtra por materia y muestra la lista tal como llega. El «estado» sale del promedio (`>= 7` es «Regular», si no «En riesgo») en `teacherCourses.service.ts`.
+  - *Pasos:* (1) filtro por **estado** (Todos · Regular · En riesgo); (2) **búsqueda** por nombre o legajo; (3) **orden** por promedio (mayor a menor y menor a mayor), por asistencia y por nombre; (4) los alumnos sin nota van siempre al final al ordenar por promedio; (5) contador «N de M alumnos» y estado vacío «ningún alumno coincide»; (6) los filtros se aplican en el cliente (la lista ya está cargada) y se reinician al cambiar de materia; (7) pruebas de frontend con datos conocidos: orden exacto, filtro por estado, búsqueda y sin notas al final.
+  - *Aceptación:* el docente filtra por estado, busca y ordena por nota de mayor a menor y de menor a mayor.
+- [x] **7.6** **«Exportar Excel» de asistencia no funciona.**
+  - *Diagnóstico:* el botón de `TeacherAttendancePage.tsx` (línea ~193) **no tiene `onClick`** y el backend no ofrece ninguna exportación de asistencia: no se rompió, nunca se implementó.
+  - *Contrato propuesto:* `GET /api/materias/:materiaId/asistencias/export?desde=&hasta=` → `{ filename, csv }` (mismo formato que los reportes: BOM y «;»), con una fila por alumno y una columna por fecha de clase (P / A / T / J) más el porcentaje de asistencia. Valida la asignación con `obtenerProfesorAsignado()` (regla 3). Los alumnos desmatriculados no aparecen.
+  - *Pasos:* (1) backend: servicio, ruta y controlador, reutilizando el escape de celdas de `csvFromReporte`; (2) frontend: servicio, hook y `onClick` con descarga (la función `downloadCsv` ya existe en `adminReports.service.ts`: moverla a `utils` y reutilizarla); (3) rótulo «Exportar CSV (abre en Excel)» si se mantiene CSV; (4) estado de carga y de error, y mensaje si la materia no tiene registros en vez de un archivo vacío; (5) pruebas de backend con valores exactos (fechas, estados, porcentaje) y 403 para un docente no asignado, y de frontend (llama a la API con la materia y descarga); (6) E2E: el docente exporta y el archivo contiene los registros cargados; (7) Manual del docente y `API_ENDPOINTS.md` (`npm run docs:api`).
+  - *Aceptación:* el botón descarga un archivo que Excel abre bien, con los acentos correctos y los mismos números que la pantalla.
+- **Resultado de la fase (2026-11-26):** backend 411 pruebas, frontend 259, E2E 59 (58 + 1 omitida por LLM), lint, tipos y `docs:api` (133 endpoints) en verde. Verificado en el navegador: el menú de Calificaciones no salta; el orden por promedio y el filtro «En riesgo» (3 de 11) funcionan; el botón de asistencia descarga `asistencia-programacion-ii.csv`; unidades y tutor miden 548 px cada uno a 1440 px; los seis «Quitar» quedan con el mismo borde derecho. Decisiones (a), (b) y (c) aplicadas con la propuesta marcada (dos rutas, CSV que abre en Excel, filtros por estado, búsqueda y orden).
+- [x] **7.7** **Estado «Justificado» al tomar asistencia** (pedido el 2026-11-26). *Diagnóstico:* el backend y la base ya admitían `JUSTIFICADO`, pero `TeacherAttendancePage` solo ofrecía P, A y T, y el servicio del front mapeaba un justificado guardado a «tardanza». *Hecho:* botón «J» (azul) con su contador y leyenda; se envía como `JUSTIFICADO`; un justificado no cuenta como inasistencia en la pantalla de asistencia, en Mis estudiantes ni en el panel del alumno (igual que en reportes y exportación). *Criterio resuelto (7.8):* la tardanza cuenta como media falta en todo el sistema (ver abajo).
+- [x] **7.8** **Criterio único de asistencia: la tardanza cuenta como media falta** (decisión del usuario, 2026-11-26; valor **fijo**, no configurable por materia). *Diagnóstico:* el porcentaje se calculaba en ocho lugares con reglas distintas. *Regla:* presente y justificado no restan; tardanza = 0,5 falta; ausente = 1 falta; % = (clases − faltas) ÷ clases, redondeado, y sin registros no hay porcentaje. *Hecho:* una función por capa (`asistencia.calculo.ts` y `utils/asistencia.ts`, con `PESO_TARDANZA` en un solo lugar) usada por reportes (que suma «Faltas equivalentes»), exportación, estadísticas y perfil del alumno, pantalla de asistencia, Mis estudiantes y panel del alumno. *Pruebas:* unitarias con valores exactos, ajuste de las existentes y un E2E que comprueba 75 % / 50 % / 63 % en exportación, reporte, perfil y estadísticas. *Si se cambia el criterio:* tocar solo esas dos funciones y las pruebas.
+- **Verificación de toda la fase:** `npm run lint`, `npm test`, tipos de backend y frontend, `npm run e2e`, `npm run docs:api`, comprobación en el navegador de cada punto (admin, alumno y docente) y una entrada en `docs/AVANCE.md`.
+
 ## Declaraciones para la defensa
 
 - **Latencia del tutor:** no cumple el objetivo de primera respuesta en menos de 3 s. La medición real dio una mediana de **6,84 s** (1 de 9 respuestas por debajo de 3 s) con `gemini-3.5-flash-lite` y clave gratuita. La plataforma aporta ~0,6 s; el resto es la variabilidad de Gemini (0,7–22 s llamando al modelo directamente). La cadena de medición se validó con un servicio simulado (0,64 s medidos, 637 ms registrados). Para cumplirlo haría falta una clave con plan pago o cuota dedicada. Detalle en `docs/DOCUMENTACION_TECNICA.md` §12 y `docs/MATRIZ_CASOS_DE_USO.md`.
@@ -151,4 +195,4 @@ npm run e2e        # requiere el stack levantado
 
 ## Recomendación de arranque
 
-Empezar por la **Fase 6**, en este orden: **6.5** (bloque blanco, rápido y visible en toda la demo), **6.3** (el backend ya está hecho, solo falta la pantalla), **6.4**, y por último **6.1 + 6.2** juntas (licencia única y reportes). La **4.3** necesita un bucket de pruebas (opcional); 0.1, 1.2 y 3.1 están pausadas o pospuestas por decisión del usuario.
+Empezar por la **Fase 7** (la 6 está cerrada), en este orden: **7.1**, **7.2** y **7.3** (cambios chicos y visibles), **7.4** (reproducirlo primero en el navegador), **7.6** (el botón nunca estuvo conectado) y por último **7.5** (filtros). La **4.3** necesita un bucket de pruebas (opcional); 0.1, 1.2 y 3.1 están pausadas o pospuestas por decisión del usuario.

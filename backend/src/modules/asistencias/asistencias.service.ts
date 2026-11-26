@@ -1,6 +1,8 @@
 import type { EstadoAsistencia, Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../middlewares/error";
+import { armarCsv } from "../../utils/csv";
+import { porcentajeAsistencia } from "./asistencia.calculo";
 import {
   assertUuid,
   obtenerInscripcion,
@@ -177,4 +179,116 @@ export async function listarMias(usuarioId: string, rol: Rol) {
   });
 
   return registros.map(toAsistenciaDto);
+}
+
+const LETRA_ESTADO: Record<EstadoAsistencia, string> = {
+  PRESENTE: "P",
+  AUSENTE: "A",
+  TARDANZA: "T",
+  JUSTIFICADO: "J",
+};
+
+export interface FilaAsistenciaExport {
+  nombre: string;
+  email: string;
+  /** Estado de cada fecha de clase (AAAA-MM-DD). */
+  estados: Map<string, EstadoAsistencia>;
+}
+
+/**
+ * CSV de asistencia: una fila por alumno y una columna por fecha de clase (P presente, A ausente,
+ * T tardanza, J justificado), con el total de cada estado y el % de asistencia.
+ * % de asistencia: la tardanza cuenta como media falta y el justificado no resta (ver asistencia.calculo.ts).
+ */
+export function armarCsvAsistencia(fechas: string[], alumnos: FilaAsistenciaExport[]): string {
+  const cuenta = (a: FilaAsistenciaExport, estado: EstadoAsistencia) =>
+    [...a.estados.values()].filter((e) => e === estado).length;
+
+  const filas: (string | number)[][] = [
+    ["Alumno", "Email", ...fechas, "Presentes", "Ausentes", "Tardanzas", "Justificados", "% asistencia"],
+    ...alumnos.map((a) => {
+      const porcentaje = porcentajeAsistencia({
+        total: a.estados.size,
+        ausentes: cuenta(a, "AUSENTE"),
+        tardanzas: cuenta(a, "TARDANZA"),
+      });
+      return [
+        a.nombre,
+        a.email,
+        ...fechas.map((f) => (a.estados.has(f) ? LETRA_ESTADO[a.estados.get(f) as EstadoAsistencia] : "")),
+        cuenta(a, "PRESENTE"),
+        cuenta(a, "AUSENTE"),
+        cuenta(a, "TARDANZA"),
+        cuenta(a, "JUSTIFICADO"),
+        porcentaje === null ? "" : `${porcentaje}%`,
+      ];
+    }),
+  ];
+
+  return armarCsv(filas);
+}
+
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Exporta la asistencia de una materia (solo alumnos inscriptos hoy). Solo para el docente asignado. */
+export async function exportarAsistenciaCsv(
+  materiaId: string,
+  usuarioId: string,
+  rango: { desde?: string; hasta?: string } = {}
+) {
+  assertUuid(materiaId);
+
+  if (!(await obtenerProfesorAsignado(materiaId, usuarioId))) {
+    throw new AppError(403, "No tenes acceso a esta materia");
+  }
+
+  for (const f of [rango.desde, rango.hasta]) {
+    if (f && !FECHA_ISO.test(f)) throw new AppError(400, "Las fechas deben tener el formato AAAA-MM-DD");
+  }
+
+  const [materia, inscripciones, registros] = await Promise.all([
+    prisma.materia.findUnique({ where: { id: materiaId }, select: { nombre: true } }),
+    prisma.inscripcion.findMany({
+      where: { materia_id: materiaId },
+      select: { alumno: { select: { id: true, nombre: true, email: true } } },
+    }),
+    prisma.asistencia.findMany({
+      where: {
+        materia_id: materiaId,
+        ...(rango.desde || rango.hasta
+          ? {
+              fecha_clase: {
+                ...(rango.desde ? { gte: new Date(`${rango.desde}T00:00:00.000Z`) } : {}),
+                ...(rango.hasta ? { lte: new Date(`${rango.hasta}T00:00:00.000Z`) } : {}),
+              },
+            }
+          : {}),
+      },
+      select: { alumno_id: true, fecha_clase: true, estado: true },
+      orderBy: { fecha_clase: "asc" },
+    }),
+  ]);
+
+  const alumnos = inscripciones
+    .map((i) => i.alumno)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  const idsInscriptos = new Set(alumnos.map((a) => a.id));
+  const delGrupo = registros.filter((r) => idsInscriptos.has(r.alumno_id));
+
+  if (delGrupo.length === 0) {
+    throw new AppError(404, "Todavía no hay asistencia registrada para exportar");
+  }
+
+  const fechas = [...new Set(delGrupo.map((r) => r.fecha_clase.toISOString().slice(0, 10)))].sort();
+  const filas: FilaAsistenciaExport[] = alumnos.map((a) => ({
+    nombre: a.nombre,
+    email: a.email,
+    estados: new Map(
+      delGrupo.filter((r) => r.alumno_id === a.id).map((r) => [r.fecha_clase.toISOString().slice(0, 10), r.estado])
+    ),
+  }));
+
+  const nombre = (materia?.nombre ?? "materia").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+
+  return { filename: `asistencia-${nombre}.csv`, csv: armarCsvAsistencia(fechas, filas) };
 }

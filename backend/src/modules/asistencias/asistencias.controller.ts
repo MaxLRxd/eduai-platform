@@ -58,3 +58,13 @@ export async function mías(
   const asistencias = await asistenciasService.listarMias(req.user.id, req.user.rol);
   res.json({ asistencias });
 }
+export async function exportar(
+  req: Request<{ materiaId: string }, unknown, unknown, { desde?: string; hasta?: string }>,
+  res: Response
+): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "No autenticado");
+  }
+  const { desde, hasta } = req.query;
+  res.json(await asistenciasService.exportarAsistenciaCsv(req.params.materiaId, req.user.id, { desde, hasta }));
+}

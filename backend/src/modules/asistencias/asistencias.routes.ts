@@ -14,6 +14,12 @@ router.post(
   validateBody(registraAsistenciaSchema),
   asistenciasController.registrarDia
 );
+router.get(
+  "/materias/:materiaId/asistencias/export",
+  requireAuth,
+  requireRole("PROFESOR"),
+  asistenciasController.exportar
+);
 router.get("/asistencias/mias", requireAuth, asistenciasController.mías);
 router.put(
   "/asistencias/:asistenciaId",

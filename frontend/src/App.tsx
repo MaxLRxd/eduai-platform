@@ -186,6 +186,16 @@ export function App(): React.ReactElement {
         }
       />
       <Route
+        path="/teacher/activities/grades"
+        element={
+          <ProtectedRoute allow="PROFESOR">
+            <Shell title="Calificaciones">
+              <TeacherGradesPage area="evaluaciones" />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/teacher/attendance"
         element={
           <ProtectedRoute allow="PROFESOR">

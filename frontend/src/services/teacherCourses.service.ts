@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { porcentajeAsistencia } from "../utils/asistencia";
 import type { StudentStanding, TeacherCourse, TeacherStudentRow } from "../types/domain";
 import { getResumenCalificaciones } from "./calificaciones.service";
 
@@ -50,24 +51,27 @@ export async function getTeacherCourseStudents(courseId: string): Promise<Teache
     getAsistenciasMateria(courseId),
   ]);
 
-  const asistenciaPorAlumno = new Map<string, { total: number; presentes: number }>();
+  const asistenciaPorAlumno = new Map<string, { total: number; ausentes: number; tardanzas: number }>();
   for (const a of asistencias) {
-    const entry = asistenciaPorAlumno.get(a.alumno_id) ?? { total: 0, presentes: 0 };
+    const entry = asistenciaPorAlumno.get(a.alumno_id) ?? { total: 0, ausentes: 0, tardanzas: 0 };
     entry.total += 1;
-    if (a.estado === "PRESENTE" || a.estado === "TARDANZA") entry.presentes += 1;
+    if (a.estado === "AUSENTE") entry.ausentes += 1;
+    if (a.estado === "TARDANZA") entry.tardanzas += 1;
     asistenciaPorAlumno.set(a.alumno_id, entry);
   }
 
   const filas: TeacherStudentRow[] = resumen.alumnos.map((al) => {
-    const asist = asistenciaPorAlumno.get(al.alumno_id) ?? { total: 0, presentes: 0 };
-    const attendance = asist.total ? Math.round((asist.presentes / asist.total) * 100) : 0;
+    const asist = asistenciaPorAlumno.get(al.alumno_id) ?? { total: 0, ausentes: 0, tardanzas: 0 };
+    const attendance = porcentajeAsistencia(asist.total, asist.ausentes, asist.tardanzas);
     const standing: StudentStanding = (al.promedio ?? 0) >= 7 ? "Regular" : "En riesgo";
     return {
       id: al.alumno_id,
       name: al.nombre,
       legajo: al.email,
       average: fmtNum(al.promedio ?? undefined),
-      attendance: asist.total ? `${attendance}%` : "—",
+      averageValue: al.promedio ?? null,
+      attendance: attendance === null ? "—" : `${attendance}%`,
+      attendanceValue: attendance,
       standing,
     };
   });

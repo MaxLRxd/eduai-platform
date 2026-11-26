@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { descargarCsv } from "../utils/descargarCsv";
 import type { ReportCard } from "../types/domain";
 
 interface ReportApi {
@@ -59,17 +60,7 @@ export async function exportReportPdf(type: string, filtros: FiltrosReporte = SI
   return api<ExportPdfResult>(`/api/admin/reports/${type}/export${consulta(filtros, { format: "pdf" })}`);
 }
 
-export function downloadCsv(result: ExportResult): void {
-  const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = result.filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+export const downloadCsv = descargarCsv;
 
 export function downloadPdf(result: ExportPdfResult): void {
   const bytes = Uint8Array.from(atob(result.pdf), (c) => c.charCodeAt(0));

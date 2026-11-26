@@ -1,4 +1,5 @@
 import { calcularDesglosePorMateria } from "../notas/notas.service";
+import { conteoDeEstados, porcentajeAsistencia } from "../asistencias/asistencia.calculo";
 import type {
   EstadoAsistencia,
   NivelSeveridad,
@@ -372,18 +373,13 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
     [...desglosePorMateria.values()].flatMap((d) => d.categorias.map((c) => [c.id, c.nombre] as const))
   );
 
-  const esAsistido = (estado: EstadoAsistencia) =>
-    estado === "PRESENTE" || estado === "TARDANZA";
-
   const resumen = inscripciones.map((insc) => {
     const desglose = desglosePorMateria.get(insc.materia_id);
     const promedio = desglose?.promedio ?? null;
 
     const estados = asistenciasPorMateria.get(insc.materia_id) ?? [];
-    const porcentajeAsistencia =
-      estados.length > 0
-        ? (estados.filter(esAsistido).length / estados.length) * 100
-        : 0;
+    // La tardanza cuenta como media falta y el justificado no resta.
+    const porcentajeAsistenciaMateria = porcentajeAsistencia(conteoDeEstados(estados)) ?? 0;
 
     return {
       materia_id: insc.materia.id,
@@ -392,7 +388,7 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
       // Como se compone la nota: categorias con su peso y el promedio del alumno en cada una.
       categorias: desglose?.categorias ?? [],
       sin_categoria: desglose?.sin_categoria ?? 0,
-      asistencia: Math.round(porcentajeAsistencia),
+      asistencia: porcentajeAsistenciaMateria,
     };
   });
 
@@ -408,13 +404,7 @@ export async function progresoAlumno(alumnoId: string, periodo?: string) {
   const notasTotales = notas.map((n) => n.calificacion.toNumber());
   const mejorNota = notasTotales.length > 0 ? Math.max(...notasTotales) : 0;
 
-  const estadosTotales = asistencias.map((a) => a.estado);
-  const asistenciaGlobal =
-    estadosTotales.length > 0
-      ? Math.round(
-          (estadosTotales.filter(esAsistido).length / estadosTotales.length) * 100
-        )
-      : 0;
+  const asistenciaGlobal = porcentajeAsistencia(conteoDeEstados(asistencias.map((a) => a.estado))) ?? 0;
 
   return {
     periodos,
